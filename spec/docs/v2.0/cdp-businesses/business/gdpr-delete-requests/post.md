@@ -1,0 +1,1 @@
+Create a request to delete a business in complaince with GDPR rules.

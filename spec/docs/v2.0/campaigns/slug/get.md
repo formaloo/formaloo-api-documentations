@@ -1,0 +1,1 @@
+Show a campaign's full data.

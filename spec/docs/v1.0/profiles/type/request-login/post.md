@@ -1,0 +1,1 @@
+Use this endpoint to send a login token to user

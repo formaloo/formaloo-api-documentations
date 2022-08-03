@@ -1,0 +1,1 @@
+Takes a list of customers and adds a tag to them.

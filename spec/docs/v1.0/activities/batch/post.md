@@ -1,0 +1,1 @@
+Create a batch activity creation job based on json data or json file.

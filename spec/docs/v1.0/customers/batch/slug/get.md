@@ -1,0 +1,1 @@
+Get a customer batch import object to see its status.

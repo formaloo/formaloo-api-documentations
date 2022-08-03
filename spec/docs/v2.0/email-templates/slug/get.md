@@ -1,0 +1,1 @@
+Use to get the email template object.

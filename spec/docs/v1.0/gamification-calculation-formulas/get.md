@@ -1,0 +1,1 @@
+Get a list of gamification calculation formulas either created by the current business or public.

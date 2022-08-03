@@ -1,0 +1,1 @@
+Get a list of user's forms' categories.

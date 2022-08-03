@@ -1,0 +1,1 @@
+Use this endpoint to get a list of all tags on a business.

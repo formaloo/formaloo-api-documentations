@@ -1,0 +1,1 @@
+update a field's data. Although it only shows the general fields options on the schema, it accepts and excepts all the options needed for the given field's type.

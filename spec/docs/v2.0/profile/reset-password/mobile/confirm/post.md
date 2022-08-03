@@ -1,0 +1,1 @@
+Use this endpoint to finish sms reset password process.

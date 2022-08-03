@@ -1,0 +1,1 @@
+Get a gamification calculation formula object.

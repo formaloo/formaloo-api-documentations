@@ -1,0 +1,1 @@
+Show a list of all submitted data for user.

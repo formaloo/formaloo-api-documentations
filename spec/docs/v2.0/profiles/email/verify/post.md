@@ -1,0 +1,1 @@
+Use this endpoint to verify user email

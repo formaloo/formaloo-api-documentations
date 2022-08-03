@@ -1,0 +1,1 @@
+Implements an endpoint to revoke access or refresh tokens

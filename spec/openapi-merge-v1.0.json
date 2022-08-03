@@ -1,0 +1,23 @@
+{
+  "inputs": [
+    {
+      "inputFile": "./v1.0.yaml"
+    },
+    {
+      "inputFile": "./icas.yaml"
+    },
+    {
+      "inputFile": "./formz.yaml"
+    },
+    {
+      "inputFile": "./storage.yaml"
+    },
+    {
+      "inputFile": "./actions.yaml"
+    },
+    {
+      "inputFile": "./crm.yaml"
+    }
+  ], 
+  "output": "../openapi-v1.0.yaml"
+}

@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  app:
+    container_name: spec
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: bash -c "./files/generate.sh"
+    volumes:
+      - ./:/files/
+  
+networks:
+  default:
+    external:
+      name: formaloo

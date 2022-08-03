@@ -1,0 +1,1 @@
+Gives full profile information for current user.

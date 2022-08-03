@@ -1,0 +1,1 @@
+Get a new board for the form.

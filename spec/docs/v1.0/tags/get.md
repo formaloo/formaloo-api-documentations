@@ -1,0 +1,1 @@
+Use this endpoint to create a tag to use in action types' setttings.

@@ -1,0 +1,1 @@
+Un-register a user from receiving notifications on a device.

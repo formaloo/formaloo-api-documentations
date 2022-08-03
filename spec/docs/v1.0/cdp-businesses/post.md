@@ -1,0 +1,1 @@
+Create a new business for the current user.

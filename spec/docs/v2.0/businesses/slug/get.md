@@ -1,0 +1,1 @@
+Use to get a business by it's slug (icas slug).

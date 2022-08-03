@@ -1,0 +1,1 @@
+Takes a list of customers and deletes them.

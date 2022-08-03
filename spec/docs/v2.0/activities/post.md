@@ -1,0 +1,1 @@
+Use this endpoint to create an activity for a new or existing customer (e.g. An rer was created, a form was submitted, etc).

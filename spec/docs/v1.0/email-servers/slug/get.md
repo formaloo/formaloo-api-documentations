@@ -1,0 +1,1 @@
+Get an email server object.

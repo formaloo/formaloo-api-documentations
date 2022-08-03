@@ -1,0 +1,1 @@
+create a gamification calculation job for the current business.
