@@ -1,22 +1,22 @@
 {
   "inputs": [
     {
-      "inputFile": "./v1.0.yaml"
+      "inputFile": "./v1.0-bundeled.yaml"
     },
     {
-      "inputFile": "./icas.yaml"
+      "inputFile": "./icas-bundeled.yaml"
     },
     {
-      "inputFile": "./formz.yaml"
+      "inputFile": "./formz-bundeled.yaml"
     },
     {
-      "inputFile": "./storage.yaml"
+      "inputFile": "./storage-bundeled.yaml"
     },
     {
-      "inputFile": "./actions.yaml"
+      "inputFile": "./actions-bundeled.yaml"
     },
     {
-      "inputFile": "./crm.yaml"
+      "inputFile": "./crm-bundeled.yaml"
     }
   ], 
   "output": "../openapi-v1.0.yaml"

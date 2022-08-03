@@ -2,6 +2,5 @@ spec/formz*
 spec/crm*
 spec/icas*
 spec/actions*
-spec/storage*
-spec/v*.yaml
+spec/*bundeled.yaml
 openapi-v*
