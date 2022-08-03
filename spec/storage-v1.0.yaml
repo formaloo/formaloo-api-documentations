@@ -1,0 +1,397 @@
+openapi: 3.0.3
+info:
+  title: Formaloo Storage Service
+  version: 1.0.0 (v1)
+paths:
+  /v1.0/files/:
+    post:
+      operationId: filesCreate
+      description:
+        $ref: ./docs/v1.0/files/post.md
+      summary: File Upload
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - files
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileUploadRequest'
+        required: true
+      security:
+      - JWT Authentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUpload'
+          description: ''
+components:
+  schemas:
+    BulkFileVerify:
+      type: object
+      properties:
+        valid_types:
+          type: array
+          items: {}
+        forbidden_types:
+          type: array
+          items: {}
+        max_size:
+          type: integer
+        delete_old_file:
+          type: boolean
+          default: true
+        slugs:
+          type: array
+          items: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        model:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which model. (Example: Form)'
+          maxLength: 255
+        object_slug:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which object. (Example: Form object)'
+          maxLength: 255
+        field:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which field. (Example: logo)'
+          maxLength: 255
+        uploaded_file:
+          type: string
+          format: uri
+          nullable: true
+          title: File
+        is_active:
+          type: boolean
+          description: shows if this file is active or not
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+        app:
+          type: integer
+          nullable: true
+          description: shows this file belongs to which app.
+      required:
+      - slugs
+    BulkFileVerifyRequest:
+      type: object
+      properties:
+        valid_types:
+          type: array
+          items: {}
+        forbidden_types:
+          type: array
+          items: {}
+        max_size:
+          type: integer
+        delete_old_file:
+          type: boolean
+          default: true
+        slugs:
+          type: array
+          items: {}
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        model:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which model. (Example: Form)'
+          maxLength: 255
+        object_slug:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which object. (Example: Form object)'
+          maxLength: 255
+        field:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which field. (Example: logo)'
+          maxLength: 255
+        uploaded_file:
+          type: string
+          format: binary
+          nullable: true
+          title: File
+        is_active:
+          type: boolean
+          description: shows if this file is active or not
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+        app:
+          type: integer
+          nullable: true
+          description: shows this file belongs to which app.
+      required:
+      - slugs
+    FileRetrieve:
+      type: object
+      properties:
+        path:
+          type: string
+          readOnly: true
+        uploaded_file:
+          type: string
+          format: uri
+          nullable: true
+          title: File
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+    FileUpload:
+      type: object
+      properties:
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        url:
+          type: string
+          readOnly: true
+        meta_data:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+          description: meta data for file.
+        uploaded_file:
+          type: string
+          format: uri
+          readOnly: true
+          title: File
+    FileUploadRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          writeOnly: true
+        upload_to:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - file
+    FileVerify:
+      type: object
+      properties:
+        path:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        model:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which model. (Example: Form)'
+          maxLength: 255
+        object_slug:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which object. (Example: Form object)'
+          maxLength: 255
+        field:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which field. (Example: logo)'
+          maxLength: 255
+        uploaded_file:
+          type: string
+          format: uri
+          nullable: true
+          title: File
+        is_active:
+          type: boolean
+          description: shows if this file is active or not
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+        app:
+          type: integer
+          nullable: true
+          description: shows this file belongs to which app.
+    FileVerifyRequest:
+      type: object
+      properties:
+        valid_types:
+          type: array
+          items: {}
+          writeOnly: true
+        forbidden_types:
+          type: array
+          items: {}
+          writeOnly: true
+        max_size:
+          type: integer
+          writeOnly: true
+        delete_old_file:
+          type: boolean
+          writeOnly: true
+          default: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        model:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which model. (Example: Form)'
+          maxLength: 255
+        object_slug:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which object. (Example: Form object)'
+          maxLength: 255
+        field:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which field. (Example: logo)'
+          maxLength: 255
+        uploaded_file:
+          type: string
+          format: binary
+          nullable: true
+          title: File
+        is_active:
+          type: boolean
+          description: shows if this file is active or not
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+        app:
+          type: integer
+          nullable: true
+          description: shows this file belongs to which app.
+    PatchedFileVerifyRequest:
+      type: object
+      properties:
+        valid_types:
+          type: array
+          items: {}
+          writeOnly: true
+        forbidden_types:
+          type: array
+          items: {}
+          writeOnly: true
+        max_size:
+          type: integer
+          writeOnly: true
+        delete_old_file:
+          type: boolean
+          writeOnly: true
+          default: true
+        slug:
+          type: string
+          nullable: true
+          maxLength: 63
+          pattern: ^[-a-zA-Z0-9_]+$
+        model:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which model. (Example: Form)'
+          maxLength: 255
+        object_slug:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which object. (Example: Form object)'
+          maxLength: 255
+        field:
+          type: string
+          nullable: true
+          description: 'shows this file belongs to which field. (Example: logo)'
+          maxLength: 255
+        uploaded_file:
+          type: string
+          format: binary
+          nullable: true
+          title: File
+        is_active:
+          type: boolean
+          description: shows if this file is active or not
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        meta_data:
+          type: object
+          additionalProperties: {}
+          description: meta data for file.
+        app:
+          type: integer
+          nullable: true
+          description: shows this file belongs to which app.
+    TypeEnum:
+      enum:
+      - image
+      - video
+      - pdf
+      - excel
+      - unknown
+      type: string
+
+  securitySchemes:
+    JWT Authentication:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "JWT"
