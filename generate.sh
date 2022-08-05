@@ -1,6 +1,6 @@
 #!/bin/sh
  cd /files/spec/ && \
- wget -O icas.yaml https://icas.formaloo.net/docs/openapi/yaml/
+ wget -O icas.yaml https://accounts.formaloo.net/docs/openapi/yaml/
  wget -O formz.yaml https://api.formaloo.net/docs/openapi/yaml/
  wget -O actions.yaml https://actions.formaloo.net/docs/openapi/yaml
  wget -O crm.yaml https://cdpapi.formaloo.net/docs/openapi/yaml
@@ -12,7 +12,7 @@
  redocly bundle v1.0.yaml -o v1.0-bundeled.yaml
  npx openapi-merge-cli --config openapi-merge-v1.0.json
  rm actions* formz* icas* crm* storage-bundeled.yaml v1.0-bundeled.yaml
- wget -O icas.yaml https://icas.formaloo.net/docs/openapi/yaml/?version=2.0
+ wget -O icas.yaml https://accounts.formaloo.net/docs/openapi/yaml/?version=2.0
  wget -O formz.yaml https://api.formaloo.net/docs/openapi/yaml/?version=2.0
  wget -O actions.yaml https://actions.formaloo.net/docs/openapi/yaml?version=2.0
  wget -O crm.yaml https://cdpapi.formaloo.net/docs/openapi/yaml?version=2.0
