@@ -127,3 +127,33 @@ https://api.formaloo.net/v1.0/businesses/{business_slug}/plans/ (POST)
 ## Purchasing plan subscriptions
 
 In order to purchase a plan subscription, you follow the same flow as buying a normal plan. You send the plan deal's slug to the server, and redirect the user to the payment link returned from the server.
+
+## Purchasing an exclusive plan
+
+In order to purchase an exclusive plan, you follow the same flow as buying a normal plan. You send the plan deal's slug to the server, and redirect the user to the payment link returned from the server.
+
+If the exclusive plan is not available for the intended business, you will receive a 400 error containing a proper message.
+
+### Example (error)
+
+```json
+**// Request**
+https://api.formaloo.net/v1.0/businesses/{business_slug}/plans/ (POST)
+{
+    "plan_deal": "{plan_deal_slug}"
+}
+
+**//Response**
+{
+    "status": 400,
+    "errors": {
+        "general_errors": [
+            [
+                "this plan is not available for your workspace!"
+            ]
+        ],
+        "form_errors": {}
+    },
+    "data": {}
+}
+```

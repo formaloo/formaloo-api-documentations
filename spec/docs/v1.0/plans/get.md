@@ -25,6 +25,7 @@ https://api.formaloo.net/v1.0/plans/ (GET)
         "plan_type": "plus",
         "description": "<div class='plan-long-description'></div>",
         "slug": "plus",
+        "exclusive": false,
         "deals": [
           {
             "slug": "ru5f7arb",
@@ -47,6 +48,7 @@ https://api.formaloo.net/v1.0/plans/ (GET)
         "plan_type": "pro",
         "description": "<div class='plan-long-description'></div>",
         "slug": "pro",
+        "exclusive": false,
         "deals": [
           {
             "slug": "1monthpro",
@@ -69,6 +71,7 @@ https://api.formaloo.net/v1.0/plans/ (GET)
         "plan_type": "advance",
         "description": "<div class='plan-long-description'></div>",
         "slug": "vip",
+        "exclusive": false,
         "deals": [
             ...
         ]
@@ -78,6 +81,7 @@ https://api.formaloo.net/v1.0/plans/ (GET)
         "plan_type": "enterprise",
         "description": "<div class='plan-long-description'></div>",
         "slug": "enterprise",
+        "exclusive": false,
         "deals": [
           ...
         ]
@@ -184,6 +188,55 @@ https://api.formaloo.net/v1.0/plans/ (GET)
         "plan_type": "plus",
         "description": "<div class='plan-long-description'></div>",
         "slug": "plus",
+        "exclusive": false,
+        "deals": [
+          {
+            "slug": "ru5f7arb",
+            "price": "19.00",
+            "position": 1,
+            "title": "Monthly subscription",
+            "display_title": "Plus",
+            "duration": 30,
+            "description": "",
+            "is_active": true,
+            "from_date": null,
+            "to_date": null,
+            "is_subscription": true
+          },
+          ...
+        ]
+      },
+      ...
+    ]
+  }
+}
+```
+
+## Exclusive plans
+
+Some of the plans may be exclusive to some specific workspaces (businesses). Only members of this workspace are allowed to see and purchase these plans in their list. These plans are marked with `exclusive=true` in the list of plans. In order to see the exclusive plans, you will have to specify the current workspace in your request (using the `x-workspace` header). If a plan is exclusive, all of it's deal are exclusive as well.
+
+### Example
+
+```json
+// **Request**
+https://api.formaloo.net/v1.0/plans/ (GET)
+
+// **Response**
+{
+  "status": 200,
+  "errors": { 
+      "general_errors": [], 
+      "form_errors": {} 
+  },
+  "data": {
+    "plans": [
+      {
+        "title": "Plus",
+        "plan_type": "plus",
+        "description": "<div class='plan-long-description'></div>",
+        "slug": "plus",
+        "exclusive": true,
         "deals": [
           {
             "slug": "ru5f7arb",
