@@ -1,4 +1,4 @@
-# Submit a form
+# Add a row to a form
 
 You can use this endpoint to submit a form. In order to do so, you should send a `post` request, containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For the choice fields, you should send the desired choice's slug, and so on.
 
