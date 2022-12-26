@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd /files/spec/ && \
+cd /files/spec/
 
 wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/
 wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
@@ -12,7 +12,7 @@ for file in "${files[@]}";
 do
     grep -o 'docs.*.md' $file | while read -r line ; 
     do
-        echo "${line%/*}" && echo "$line"
+        mkdir -p "${line%/*}" && touch "$line"
     done
 done
 
@@ -49,7 +49,7 @@ redocly bundle storage.yaml -o storage-bundeled.yaml
 redocly bundle v2.0.yaml -o v2.0-bundeled.yaml
 
 npx openapi-merge-cli --config openapi-merge-v2.0.json
-rm actions* formz* icas* crm* storage-bundeled.yaml v2.0-bundeled.yaml 
+rm actions* formz* icas* crm* storage.yml storage-bundeled.yaml v2.0-bundeled.yaml 
 
 mkdir -p /files/html/ && rm -r /files/html/*
 cp /files/v*.html /files/html/
