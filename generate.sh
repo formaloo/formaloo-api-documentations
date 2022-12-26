@@ -7,7 +7,11 @@ wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
 wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml
 
-bash /files/makefiles.bash
+for file in "icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml"; do
+    grep -o 'docs.*.md' $file | while read -r line ; do
+        mkdir -p "${line%/*}" && touch "$line"
+    done
+done
 
 redocly bundle icas.yaml -o icas-bundeled.yaml
 redocly bundle formz.yaml -o formz-bundeled.yaml
@@ -25,7 +29,11 @@ wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml?vers
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml?version=2.0
 wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
 
-bash /files/makefiles.bash
+for file in "icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml"; do
+    grep -o 'docs.*.md' $file | while read -r line ; do
+        mkdir -p "${line%/*}" && touch "$line"
+    done
+done
 
 redocly bundle icas.yaml -o icas-bundeled.yaml
 redocly bundle formz.yaml -o formz-bundeled.yaml
