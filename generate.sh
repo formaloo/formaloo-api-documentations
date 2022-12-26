@@ -7,9 +7,12 @@ wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
 wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml
 
-for file in "icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml"; do
-    grep -o 'docs.*.md' $file | while read -r line ; do
-        mkdir -p "${line%/*}" && touch "$line"
+files=( icas.yaml formz.yaml actions.yaml crm.yaml )
+for file in "${files[@]}"; 
+do
+    grep -o 'docs.*.md' $file | while read -r line ; 
+    do
+        echo "${line%/*}" && echo "$line"
     done
 done
 
@@ -29,9 +32,12 @@ wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml?vers
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml?version=2.0
 wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
 
-for file in "icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml"; do
-    grep -o 'docs.*.md' $file | while read -r line ; do
-        mkdir -p "${line%/*}" && touch "$line"
+files=( icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml )
+for file in "${files[@]}"; 
+do
+    grep -o 'docs.*.md' $file | while read -r line ; 
+    do
+        echo "${line%/*}" && echo "$line"
     done
 done
 
