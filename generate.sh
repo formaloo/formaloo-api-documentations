@@ -7,7 +7,7 @@ wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
 wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml
 
-/files/makefiles.bash
+bash /files/makefiles.bash
 
 redocly bundle icas.yaml -o icas-bundeled.yaml
 redocly bundle formz.yaml -o formz-bundeled.yaml
@@ -25,7 +25,7 @@ wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml?vers
 wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml?version=2.0
 wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
 
-/files/makefiles.bash
+bash /files/makefiles.bash
 
 redocly bundle icas.yaml -o icas-bundeled.yaml
 redocly bundle formz.yaml -o formz-bundeled.yaml
