@@ -37,7 +37,7 @@ for file in "${files[@]}";
 do
     grep -o 'docs.*.md' $file | while read -r line ; 
     do
-        echo "${line%/*}" && echo "$line"
+        mkdir -p "${line%/*}" && touch "$line"
     done
 done
 
