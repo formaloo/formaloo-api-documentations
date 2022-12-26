@@ -6,7 +6,7 @@ services:
     build:
       dockerfile: Dockerfile
       context: .
-    command: bash -c "./files/generate.sh"
+    command: bash -c "bash ./files/generate.sh"
     volumes:
       - ./:/files/
   
