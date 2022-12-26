@@ -4,7 +4,7 @@ update a field's data. Although it only shows the general fields options on the 
 
 <br>
 
-### Setting a default value on the field
+## Setting a default value on the field
 
 Most of the fields accept a default value on the edit request, by setting it on `default`. If set, the default value will be automatically set for any response on the form, if the end user does not provide any value for this fields. for example, on a `number` field, if the value is set to `12`, and users does fill this field on their submission, the value `12` will be automatically set for the field.
 
@@ -15,6 +15,7 @@ If upon updating the field settings, the value for `default` becomes invalid, it
 <br>
 
 **Fields that don't accept `default`**
+
 - `file`
 - `signature`
 - `matrix`
@@ -23,3 +24,8 @@ If upon updating the field settings, the value for `default` becomes invalid, it
 - `success_page`
 - `email_verification`
 - `phone_verification`
+
+## Decimal values
+
+The number field and money fields support decimal values. Read the documentation for creating a number field to see how it works.
+You can add the support for decimal values by updating an existing number/money field, and not just by creating a new one.
