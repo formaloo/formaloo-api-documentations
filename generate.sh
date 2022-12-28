@@ -2,10 +2,10 @@
 
 cd /files/spec/
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
-wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml
-wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml
+wget -O icas-raw.yaml http://icas/docs/openapi/yaml/
+wget -O formz-raw.yaml http://formz/docs/openapi/yaml/
+wget -O actions-raw.yaml http://actions/docs/openapi/yaml
+wget -O crm-raw.yaml http://crm/docs/openapi/yaml
 
 files=( icas.yaml formz.yaml actions.yaml crm.yaml )
 for file in "${files[@]}"; 
@@ -26,11 +26,11 @@ redocly bundle v1.0.yaml -o v1.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v1.0.json
 rm actions* formz* icas* crm* storage-bundeled.yaml v1.0-bundeled.yaml
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/?version=2.0
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=2.0
-wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
+wget -O icas-raw.yaml http://icas/docs/openapi/yaml/?version=2.0
+wget -O formz-raw.yaml http://formz/docs/openapi/yaml/?version=2.0
+wget -O actions-raw.yaml http://actions/docs/openapi/yaml?version=2.0
+wget -O crm-raw.yaml http://crm/docs/openapi/yaml?version=2.0
+wget -O storage-raw.yaml http://storage/docs/openapi/yaml/?version=2.0
 
 files=( icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml )
 for file in "${files[@]}"; 
