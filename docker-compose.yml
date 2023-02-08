@@ -9,8 +9,3 @@ services:
     command: bash -c "bash ./files/generate.sh"
     volumes:
       - ./:/files/
-  
-networks:
-  default:
-    external:
-      name: formaloo
