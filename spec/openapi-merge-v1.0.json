@@ -17,6 +17,9 @@
     },
     {
       "inputFile": "./crm-bundeled.yaml"
+    },
+    {
+      "inputFile": "./authentication-bundeled.yaml"
     }
   ], 
   "output": "../openapi-v1.0.yaml"
