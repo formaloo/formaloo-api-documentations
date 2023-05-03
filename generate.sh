@@ -80,7 +80,7 @@ redocly bundle storage.yaml -o storage-bundeled.yaml
 redocly bundle v3.0.yaml -o v3.0-bundeled.yaml
 
 npx openapi-merge-cli --config openapi-merge-v3.0.json
-rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v2.0-bundeled.yaml 
+rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v3.0-bundeled.yaml 
 
 mkdir -p /files/html/ && rm -r /files/html/*
 cp /files/v*.html /files/html/
