@@ -1,0 +1,26 @@
+{
+  "inputs": [
+    {
+      "inputFile": "./v3.0-bundeled.yaml"
+    },
+    {
+      "inputFile": "./icas-bundeled.yaml"
+    },
+    {
+      "inputFile": "./formz-bundeled.yaml"
+    },
+    {
+      "inputFile": "./storage-bundeled.yaml"
+    },
+    {
+      "inputFile": "./actions-bundeled.yaml"
+    },
+    {
+      "inputFile": "./crm-bundeled.yaml"
+    },
+    {
+      "inputFile": "./authentication-bundeled.yaml"
+    }
+  ], 
+  "output": "../openapi-v3.0.yaml"
+}
