@@ -55,14 +55,9 @@ redocly bundle v2.0.yaml -o v2.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v2.0.json
 rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v2.0-bundeled.yaml 
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/?version=2.0
 wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=3.0
-wget -O actions.yaml https://staging.actions.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O crm.yaml https://api.staging.crm.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O authentication.yaml https://staging.auth.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
 
-files=( icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml authentication.yaml )
+files=( formz.yaml )
 for file in "${files[@]}"; 
 do
     grep -o 'docs.*.md' $file | while read -r line ; 
@@ -71,16 +66,11 @@ do
     done
 done
 
-redocly bundle icas.yaml -o icas-bundeled.yaml
 redocly bundle formz.yaml -o formz-bundeled.yaml
-redocly bundle actions.yaml -o actions-bundeled.yaml
-redocly bundle crm.yaml -o crm-bundeled.yaml
-redocly bundle authentication.yaml -o authentication-bundeled.yaml
-redocly bundle storage.yaml -o storage-bundeled.yaml
 redocly bundle v3.0.yaml -o v3.0-bundeled.yaml
 
 npx openapi-merge-cli --config openapi-merge-v3.0.json
-rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v3.0-bundeled.yaml 
+rm formz* v3.0-bundeled.yaml 
 
 mkdir -p /files/html/ && rm -r /files/html/*
 cp /files/v*.html /files/html/

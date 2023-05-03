@@ -1,1 +1,0 @@
-Get a list of cities in a state.

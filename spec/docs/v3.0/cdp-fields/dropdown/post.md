@@ -1,1 +1,0 @@
-Use this endpoint to create a dropdown choice input field.

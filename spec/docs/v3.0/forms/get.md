@@ -1,1 +1,0 @@
-Give a list of all forms created by or shared with the current user.

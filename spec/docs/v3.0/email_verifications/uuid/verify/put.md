@@ -1,1 +1,0 @@
-Update an Email OTP. (give the UUID and token.)

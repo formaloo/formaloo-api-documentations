@@ -1,1 +1,0 @@
-Get a list of states in a country.

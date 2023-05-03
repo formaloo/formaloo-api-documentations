@@ -1,1 +1,0 @@
-Create a request to delete a customer in complaince with GDPR rules.

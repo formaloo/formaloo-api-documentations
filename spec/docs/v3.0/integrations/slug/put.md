@@ -1,1 +1,0 @@
-Update an integration's data.

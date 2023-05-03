@@ -1,1 +1,0 @@
-Update a gamification calculation formula owned by the current business.
