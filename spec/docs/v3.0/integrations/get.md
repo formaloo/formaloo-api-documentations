@@ -1,0 +1,1 @@
+Get a list of integrations created or accessed by the current user.

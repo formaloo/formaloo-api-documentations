@@ -1,0 +1,1 @@
+Use to revoke an invitation to join a workspace or the public join link.

@@ -1,0 +1,1 @@
+Use this endpoint to change user password

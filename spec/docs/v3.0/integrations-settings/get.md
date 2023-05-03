@@ -1,0 +1,1 @@
+Get the gamification setting for the current business.

@@ -1,0 +1,1 @@
+Use this endpoint to create a custom action type on your integration, if you want to catch a desired activity (e.g. visiting a page).
