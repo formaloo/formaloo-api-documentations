@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: Formaloo API Documentation
-  version: 2.0.0
+  version: 3.0.0
   description:
     $ref: ./docs/v3.0/intro.md
   termsOfService: http://example.com/terms/
