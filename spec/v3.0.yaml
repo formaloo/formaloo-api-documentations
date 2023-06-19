@@ -1,0 +1,27 @@
+openapi: 3.0.3
+
+info:
+  title: Formaloo API Documentation
+  version: 3.0.0
+  description:
+    $ref: ./docs/v3.0/intro.md
+  termsOfService: http://example.com/terms/
+  contact:
+    name: Support
+    email: dev@formaloo.com
+    url: https://help.formaloo.com/en/
+  externalDocs:
+    description: Find out more
+    url: https://help.formaloo.com/en/
+
+servers:
+  - url: https://api.staging.formaloo.com
+    description: Staging Server
+
+components:
+  securitySchemes:
+    JWT Authentication:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "JWT"
