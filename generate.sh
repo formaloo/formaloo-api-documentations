@@ -2,11 +2,11 @@
 
 cd /files/spec/
 
-wget -O icas.yaml https://accounts.formaloo.net/docs/openapi/yaml/
-wget -O formz.yaml https://api.formaloo.net/docs/openapi/yaml/
-wget -O actions.yaml https://actions.formaloo.net/docs/openapi/yaml
-wget -O crm.yaml https://cdpapi.formaloo.net/docs/openapi/yaml
-wget -O authentication.yaml https://auth.formaloo.net/docs/openapi/yaml
+wget -O icas.yaml https://accounts.formaloo.co/docs/openapi/yaml/
+wget -O formz.yaml https://api.formaloo.co/docs/openapi/yaml/
+wget -O actions.yaml https://actions.formaloo.co/docs/openapi/yaml
+wget -O crm.yaml https://cdpapi.formaloo.co/docs/openapi/yaml
+wget -O authentication.yaml https://auth.formaloo.co/docs/openapi/yaml
 
 files=( icas.yaml formz.yaml actions.yaml crm.yaml authentication.yaml )
 for file in "${files[@]}"; 
@@ -28,12 +28,12 @@ redocly bundle v1.0.yaml -o v1.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v1.0.json
 rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v1.0-bundeled.yaml
 
-wget -O icas.yaml https://accounts.formaloo.net/docs/openapi/yaml/?version=2.0
-wget -O formz.yaml https://api.formaloo.net/docs/openapi/yaml/?version=2.0
-wget -O actions.yaml https://actions.formaloo.net/docs/openapi/yaml?version=2.0
-wget -O crm.yaml https://cdpapi.formaloo.net/docs/openapi/yaml?version=2.0
-wget -O storage.yaml https://storage.formaloo.net/docs/openapi/yaml/?version=2.0
-wget -O authentication.yaml https://auth.formaloo.net/docs/openapi/yaml?version=2.0
+wget -O icas.yaml https://accounts.formaloo.co/docs/openapi/yaml/?version=2.0
+wget -O formz.yaml https://api.formaloo.co/docs/openapi/yaml/?version=2.0
+wget -O actions.yaml https://actions.formaloo.co/docs/openapi/yaml?version=2.0
+wget -O crm.yaml https://cdpapi.formaloo.co/docs/openapi/yaml?version=2.0
+wget -O storage.yaml https://storage.formaloo.co/docs/openapi/yaml/?version=2.0
+wget -O authentication.yaml https://auth.formaloo.co/docs/openapi/yaml?version=2.0
 
 files=( icas.yaml formz.yaml actions.yaml crm.yaml storage.yaml authentication.yaml )
 for file in "${files[@]}"; 
@@ -55,7 +55,7 @@ redocly bundle v2.0.yaml -o v2.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v2.0.json
 rm actions* formz* icas* crm* authentication* storage-bundeled.yaml v2.0-bundeled.yaml 
 
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=3.0
+wget -O formz.yaml https://api.formaloo.co/docs/openapi/yaml/?version=3.0
 
 files=( formz.yaml )
 for file in "${files[@]}"; 
