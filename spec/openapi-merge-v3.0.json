@@ -4,6 +4,9 @@
       "inputFile": "./v3.0-bundeled.yaml"
     },
     {
+      "inputFile": "./icas-bundeled.yaml"
+    },
+    {
       "inputFile": "./formz-bundeled.yaml"
     }
   ], 
