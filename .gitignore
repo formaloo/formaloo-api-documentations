@@ -1,6 +1,7 @@
 spec/formz*
 spec/crm*
-spec/storage.yaml
+spec/storage*
+spec/icas*
 spec/*bundeled.yaml
 openapi-v*
 html/*
