@@ -1,1 +1,0 @@
-Create a request to receive a customer's data in complaince with GDPR rules.

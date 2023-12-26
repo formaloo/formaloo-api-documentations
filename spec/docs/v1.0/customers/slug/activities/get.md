@@ -1,1 +1,0 @@
-Gives a list of a customer's activities.

@@ -1,1 +1,0 @@
-Use this endpoint to get a list of available currencies for activities' monetary value.

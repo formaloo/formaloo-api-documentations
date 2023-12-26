@@ -1,1 +1,0 @@
-Use this endpoint to get a list of all action type groups, if you want to create your action type based on one of them.

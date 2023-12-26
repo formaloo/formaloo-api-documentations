@@ -1,1 +1,0 @@
-Use to get a customers' notes.
