@@ -1,1 +1,0 @@
-Get a a specific integration with its data.

@@ -1,1 +1,0 @@
-Get a list of gamification calculation job along with status and data.

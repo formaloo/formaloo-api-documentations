@@ -13,12 +13,6 @@
       "inputFile": "./storage-bundeled.yaml"
     },
     {
-      "inputFile": "./actions-bundeled.yaml"
-    },
-    {
-      "inputFile": "./crm-bundeled.yaml"
-    },
-    {
       "inputFile": "./authentication-bundeled.yaml"
     }
   ], 

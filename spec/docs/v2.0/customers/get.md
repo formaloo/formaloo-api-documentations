@@ -1,1 +1,0 @@
-Gives a list of all customers on the current business.

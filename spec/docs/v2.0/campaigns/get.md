@@ -1,1 +1,0 @@
-Create a campaign to send messages to list of customers.

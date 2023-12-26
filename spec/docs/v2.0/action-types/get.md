@@ -1,1 +1,0 @@
-Use this endpoint to get a list of all action types defined on your integration, or the integrations you're using.

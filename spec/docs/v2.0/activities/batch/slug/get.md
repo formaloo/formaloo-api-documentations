@@ -1,1 +1,0 @@
-Get a activity batch import object to see its status.

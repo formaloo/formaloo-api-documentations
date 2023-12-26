@@ -1,1 +1,0 @@
-Gives a list of all available languages.

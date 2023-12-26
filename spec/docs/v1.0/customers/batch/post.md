@@ -1,1 +1,0 @@
-Create a batch customer creation job based on json data or excel file.

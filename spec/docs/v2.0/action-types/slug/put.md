@@ -1,1 +1,0 @@
-Update an action type's data.

@@ -1,1 +1,0 @@
-Get a list of gamification calculation jobs created by the current business.
