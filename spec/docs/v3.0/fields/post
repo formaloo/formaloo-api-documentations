@@ -1,0 +1,26 @@
+Use this endpoint to create a repeating section field.
+create other fields like short text field, or any of the other valid fields, and then add the slug in the column field.
+
+valid fields:
+BOOLEAN,
+SHORT_TEXT,
+NUMBER,
+LONG_TEXT,
+EMAIL,
+PHONE,
+DATE,
+TIME,
+CITY,
+REGEX,
+WEBSITE
+
+example:
+{
+    "type": "repeating_section",
+    "title": "test title",
+    "column_groups": [
+        {"title": "test group 1", "column_field": field_slug},
+
+
+    ]
+}
