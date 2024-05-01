@@ -1,0 +1,1 @@
+Use to remove a member from your workspace.
