@@ -118,69 +118,53 @@ Based on the current plan, and current user's access level on the business, the 
             ...
             "available_features": [
                 {
-                    "title": "Remove Formaloo Branding",
-                    "slug": "white_label",
-                    "description": ""
+                    "title": "White Label",
+                    "slug": "u3iXpQgf",
+                    "description": "",
+                    "available": true,
+                    "upgradable": true
+                },
+                {
+                    "title": "AI",
+                    "slug": "ai",
+                    "description": "",
+                    "available": false,
+                    "upgradable": true
                 },
                 {
                     "title": "API",
                     "slug": "api",
-                    "description": ""
+                    "description": "",
+                    "available": true,
+                    "upgradable": true
                 },
                 {
-                    "title": "Custom Subdomain",
-                    "slug": "custom_subdomain",
-                    "description": ""
-                },
-                {
-                    "title": "Team Management",
-                    "slug": "team_management",
-                    "description": ""
-                },
-                {
-                    "title": "Webhook",
-                    "slug": "webhook",
-                    "description": ""
-                },
-                {
-                    "title": "Custom CSS and JS",
-                    "slug": "custom_css_js",
-                    "description": ""
-                },
-                {
-                    "title": "Custom Email",
-                    "slug": "custom_email",
-                    "description": ""
+                    "title": "Email",
+                    "slug": "email",
+                    "description": "",
+                    "available": true,
+                    "upgradable": true
                 },
                 {
                     "title": "Payment",
                     "slug": "payment",
-                    "description": ""
+                    "description": "",
+                    "available": false,
+                    "upgradable": true
                 },
                 {
-                    "title": "Backup",
-                    "slug": "backup",
-                    "description": ""
+                    "title": "Survey",
+                    "slug": "survey",
+                    "description": "",
+                    "available": false,
+                    "upgradable": true
                 },
                 {
-                    "title": "On Premise",
-                    "slug": "on_premise",
-                    "description": ""
-                },
-                {
-                    "title": "Access Management",
-                    "slug": "access_management",
-                    "description": ""
-                },
-                {
-                    "title": "Premium Integrations",
-                    "slug": "premium_integration",
-                    "description": ""
-                },
-                {
-                    "title": "Custom Domain",
-                    "slug": "custom_domain",
-                    "description": ""
+                    "title": "Translation",
+                    "slug": "translation",
+                    "description": "",
+                    "available": false,
+                    "upgradable": false
                 }
             ]
         }
