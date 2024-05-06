@@ -9,3 +9,76 @@ The `submitted_files_are_private` field on the form, defines wether the files up
 
 
  The value for `submitted_files_are_private` is `false` by default.
+
+## Form Logic
+
+### Matrix and Table fields logic
+
+When setting logic for a **Matrix Field** You can access the value selected for a given group, with the following syntax `matrix_field_slug.group_slug` and compare it with the desired choice. Type of these logic conditions are not `choice`, but `matrix`, since they're a specific case.
+
+When setting logic for a **Table Field** You can access the value selected for a given cell, with the following syntax `table_field_slug.group_slug.column_slug` and compare it with the desired value. Type of these logic conditions are not `choice`, but `table`, since they're a specific case.
+
+Example
+
+``` JSON
+{
+  "logic": [
+    {
+      "type": "field",
+      "identifier": "{field_1}",
+      "actions": [
+        {
+          "action": "hide",
+          "args": [
+            {
+              "type": "field",
+              "identifier": "{field_3}"
+            }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              {
+                "type": "matrix",
+                "value": "{field_1}.{field_1_group_1}"
+              },
+              {
+                "type": "choice",
+                "value": "{field_1_choice_1}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "field",
+      "identifier": "{field_2}",
+      "actions": [
+        {
+          "action": "hide",
+          "args": [
+            {
+              "type": "field",
+              "identifier": "{field_4}"
+            }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              {
+                "type": "table",
+                "value": "{field_2}.{field_2_group_2}.{field_2_column_2}"
+              },
+              {
+                "type": "constant",
+                "value": "Tango"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
