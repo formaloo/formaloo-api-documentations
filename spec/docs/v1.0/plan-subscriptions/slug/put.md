@@ -10,7 +10,7 @@ Depending on the subscription method (e.g. Stripe), the cancellation process wil
 
 ```json
 // **Request**
-https://api.formaloo.net/v1.0/plans/{plan_slug}/ (PUT)
+https://api.formaloo.me/v1.0/plans/{plan_slug}/ (PUT)
 
 // **Request**
 {

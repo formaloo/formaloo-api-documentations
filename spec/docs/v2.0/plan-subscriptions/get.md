@@ -8,7 +8,7 @@ The list of plan subscriptions is ordered from newest to oldest, and can be filt
 
 ```json
 // **Request**
-https://api.formaloo.net/v2.0/plans/ (GET)
+https://api.formaloo.me/v2.0/plans/ (GET)
 
 // **Response**
 {

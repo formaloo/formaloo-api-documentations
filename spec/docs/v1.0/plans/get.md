@@ -9,7 +9,7 @@ Please note that when upgrading the plan for a business, you should specify the 
 
 ```json
 // **Request**
-https://api.formaloo.net/v1.0/plans/ (GET)
+https://api.formaloo.me/v1.0/plans/ (GET)
 
 // **Response**
 {
@@ -111,7 +111,7 @@ If the code is valid but does not apply to a specific deal, its data will be ret
 
 ```json
 **// Request**
-https://api.formaloo.net/v1.0/plans/?coupon_code={coupon_code} (GET)
+https://api.formaloo.me/v1.0/plans/?coupon_code={coupon_code} (GET)
 
 **//Response**
 {
@@ -172,7 +172,7 @@ Some of the plans may include a subscription. For these plans, one or more deals
 
 ```json
 // **Request**
-https://api.formaloo.net/v1.0/plans/ (GET)
+https://api.formaloo.me/v1.0/plans/ (GET)
 
 // **Response**
 {
@@ -220,7 +220,7 @@ Some of the plans may be exclusive to some specific workspaces (businesses). Onl
 
 ```json
 // **Request**
-https://api.formaloo.net/v1.0/plans/ (GET)
+https://api.formaloo.me/v1.0/plans/ (GET)
 
 // **Response**
 {

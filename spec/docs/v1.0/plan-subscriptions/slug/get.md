@@ -6,7 +6,7 @@ This endpoint will give you a plan subscription's full data, including the list 
 
 ```json
 // **Request**
-https://api.formaloo.net/v1.0/plans/{plan_slug}/ (GET)
+https://api.formaloo.me/v1.0/plans/{plan_slug}/ (GET)
 
 // **Response**
 {

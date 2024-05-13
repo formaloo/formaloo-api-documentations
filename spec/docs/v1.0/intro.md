@@ -23,7 +23,7 @@ In order to use Formaloo's REST API, first you need to get your API Key and Secr
 
 ## Get Authorization Token
 
-The next step is to use your **Secret Key** to acquire an **Authorization Token.** In order to do so, you have to simply send a post requests to the following endpoint: `https://api.formaloo.net/v1.0/oauth2/authorization-token/`
+The next step is to use your **Secret Key** to acquire an **Authorization Token.** In order to do so, you have to simply send a post requests to the following endpoint: `https://api.formaloo.me/v1.0/oauth2/authorization-token/`
 
 Your request should contain this header and body:
 
@@ -40,7 +40,7 @@ Your request should contain this header and body:
 **Example (cURL)**
 
 ```json
-curl 'https://api.formaloo.net/v1.0/oauth2/authorization-token/' \
+curl 'https://api.formaloo.me/v1.0/oauth2/authorization-token/' \
 --header 'Authorization: Basic {Secret Key}' \
 --form 'grant_type="client_credentials"'
 ```
@@ -53,7 +53,7 @@ curl 'https://api.formaloo.net/v1.0/oauth2/authorization-token/' \
 ```json
 import requests
 
-url = "https://api.formaloo.net/v1.0/oauth2/authorization-token/"
+url = "https://api.formaloo.me/v1.0/oauth2/authorization-token/"
 
 payload={'grant_type': 'client_credentials'}
 headers = {
@@ -109,7 +109,7 @@ Please note that all the APIs (except the authorization API) need the `x-api-key
 
 ```json
 
-curl 'https://api.formaloo.net/v1.0/forms/' \
+curl 'https://api.formaloo.me/v1.0/forms/' \
 --header 'x-api-key: {API Key}' \
 --header 'Authorization: JWT {Authorization Token}'
 ```
@@ -121,7 +121,7 @@ curl 'https://api.formaloo.net/v1.0/forms/' \
 ```json
 import requests
 
-url = "https://api.formaloo.net/v1.0/forms/"
+url = "https://api.formaloo.me/v1.0/forms/"
 
 headers = {
   'x-api-key': f'{api_key}',
