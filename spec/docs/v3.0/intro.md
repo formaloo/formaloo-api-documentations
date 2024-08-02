@@ -39,7 +39,7 @@ Your request should contain this header and body:
 
 **Example (cURL)**
 
-```json
+``` json
 curl 'https://api.formaloo.net/v3.0/oauth2/authorization-token/' \
 --header 'Authorization: Basic {Secret Key}' \
 --form 'grant_type="client_credentials"'
@@ -50,7 +50,7 @@ curl 'https://api.formaloo.net/v3.0/oauth2/authorization-token/' \
 
 **Example (Python)**
 
-```json
+``` json
 import requests
 
 url = "https://api.formaloo.net/v3.0/oauth2/authorization-token/"
@@ -74,7 +74,7 @@ if response.status==200:
 
 **Response**
 
-```json
+``` json
 {
     "authorization_token": "{Authorization Token}"
 }
@@ -94,7 +94,7 @@ In this step, you have a valid **API Key** and an active **Authorization Token.*
 
 **Header:**
 
-```json
+``` json
 Authorization = JWT {Authorization Token}
 x-api-key = {API Key}
 ```
@@ -107,7 +107,7 @@ Please note that all the APIs (except the authorization API) need the `x-api-key
 
 **Request Example (cURL):**
 
-```json
+``` json
 
 curl 'https://api.formaloo.net/v3.0/forms/' \
 --header 'x-api-key: {API Key}' \
@@ -118,7 +118,7 @@ curl 'https://api.formaloo.net/v3.0/forms/' \
 
 **Request Example (Python):**
 
-```json
+``` json
 import requests
 
 url = "https://api.formaloo.net/v3.0/forms/"

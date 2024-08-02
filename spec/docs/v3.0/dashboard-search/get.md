@@ -8,7 +8,8 @@ This list is searchable and does not accept pagination.
 
 Response example:
 
-```
+
+``` json
 {
     "status": 200,
     "errors": {

@@ -20,7 +20,7 @@ When setting logic for a **Table Field** You can access the value selected for a
 
 Example
 
-``` JSON
+``` json
 {
   "logic": [
     {

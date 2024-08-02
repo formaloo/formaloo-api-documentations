@@ -6,7 +6,7 @@ This endpoint will give you the full data available on a plan. This includes the
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://api.formaloo.net/v2.0/plans/KpemozRk/ (GET)
 

@@ -4,7 +4,8 @@ Please note that if the board does not have the `user_field` set on it, you cann
 User should have edit access to the board and all the forms in the request body.
 
 Example for request body:
-```
+
+``` json
 [
     {
         "form": "U0D6enFH",
@@ -27,7 +28,8 @@ Example for request body:
 
 Example of request response:
 
-```
+
+``` json
 {
     "status": 201,
     "errors": {

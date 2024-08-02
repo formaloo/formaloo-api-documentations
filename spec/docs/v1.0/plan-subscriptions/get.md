@@ -6,7 +6,7 @@ The list of plan subscriptions is ordered from newest to oldest, and can be filt
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://api.formaloo.net/v1.0/plans/ (GET)
 

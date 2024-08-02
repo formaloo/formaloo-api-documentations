@@ -3,7 +3,7 @@
 
 If a menu item under your menu block is supposed to open one or more blocks, the menu item's type should be `block` and you should send the list of blocks' slug inside it. For example:
 ‍‍‍
-```json
+``` json
 {
     "items": [
         {
