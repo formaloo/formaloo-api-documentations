@@ -4,7 +4,7 @@ You can use this endpoint to submit a form. In order to do so, you should send a
 
 The mapping should look something like this:
 
-```json
+``` json
 {
     "{short_text_field_slug}": "some short text",
     "{long_text_field_slug}": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -31,7 +31,7 @@ The mapping should look something like this:
 
 Which with real values, looks like the following:
 
-```json
+``` json
 {
     "rzkxaWgNY7": "some short text",
     "9Yyju0CAEf": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",

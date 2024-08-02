@@ -8,7 +8,7 @@ Depending on the subscription method (e.g. Stripe), the cancellation process wil
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://api.formaloo.me/v1.0/plans/{plan_slug}/ (PATCH)
 

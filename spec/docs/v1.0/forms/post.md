@@ -5,7 +5,8 @@ When creating a form, we accept the board as input, then obtain the associated f
 send board like this:
 
 
-```
+
+``` json
 {
     "board": "board_slug"
 }

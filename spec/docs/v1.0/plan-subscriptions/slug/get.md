@@ -4,7 +4,7 @@ This endpoint will give you a plan subscription's full data, including the list 
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://api.formaloo.me/v1.0/plans/{plan_slug}/ (GET)
 

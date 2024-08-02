@@ -11,7 +11,7 @@ You can send the deal’s slug to this endpoint (containing the business slug in
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://api.formaloo.me/v2.0/businesses/{business_slug}/ (POST)
 {
@@ -36,7 +36,7 @@ https://api.formaloo.me/v2.0/businesses/{business_slug}/ (POST)
 
 ### Example (Errors)
 
-```json
+``` json
 // **Response: Error on downgrading plan**
 {
     "status": 400,
@@ -74,7 +74,7 @@ In the process of buying a plan, you can pass the `coupon_code` to apply it to t
 
 ### Example
 
-```json
+``` json
 **// Request**
 https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
 {
@@ -101,7 +101,7 @@ https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
 
 ### Example (error)
 
-```json
+``` json
 **// Request**
 https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
 {

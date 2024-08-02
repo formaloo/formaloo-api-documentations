@@ -15,7 +15,7 @@ If you read a business’s data from ICAS, you can see the currently active plan
 
 ### Example
 
-```json
+``` json
 // **Request**
 https://formaloo_api_server/v2.0/businesses/{business_slug}/ (GET)
 
@@ -57,7 +57,7 @@ https://formaloo_api_server/v2.0/businesses/{business_slug}/ (GET)
 
 ### Example: No active plan
 
-```json
+``` json
 // **Request**
 https://formaloo_api_server/v2.0/businesses/{business_slug}/ (GET)
 
@@ -90,7 +90,7 @@ https://formaloo_api_server/v2.0/businesses/{business_slug}/ (GET)
 
 Based on the current plan, and current user's access level on the business, the backend will give you a list of feature available for the current user:
 
-``` JSON
+``` json
 {
     "status": 200,
     "errors": {
