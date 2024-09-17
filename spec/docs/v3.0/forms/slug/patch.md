@@ -101,13 +101,13 @@ The `submit_number` can be useful for keeping track of the order of submissions 
 When the `assign_submit_number` field is set to `true`, the following changes will be visible:
 
 - **In Submission Response**: 
-  - Every submission will have an additional field, `rowid`, which reflects its incremental number.
+  - Every submission will have an additional field, `submit_number`, which reflects its incremental number.
   
   Example:
   ```json
     {
-        "rowid": 5,
-        "tracking": "ABC123",
+        "submit_number": 5,
+        "tracking_code": "ABC123",
         ...
     }
 
