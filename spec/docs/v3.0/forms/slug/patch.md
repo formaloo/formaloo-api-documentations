@@ -82,3 +82,40 @@ Example
   ]
 }
 ```
+
+## Assign Submit Number
+
+The `assign_submit_number` field on the form defines whether each submission on a form will be assigned an incremental number starting from 1. By default, this field is set to `false`, meaning that no incremental numbering will be applied. However, when set to `true`, each new submission on the form will be given a `submit_number` that starts from `1` and increments by 1 with each new submission. 
+
+The `submit_number` can be useful for keeping track of the order of submissions or for internal referencing purposes.
+
+### Usage
+
+- **Field Name**: `assign_submit_number`
+- **Default Value**: `false`
+- **Type**: `boolean`
+- **Purpose**: If `true`, assigns an incremental `submit_number` starting from 1 to each submission.
+
+### API Behavior
+
+When the `assign_submit_number` field is set to `true`, the following changes will be visible:
+
+- **In Submission Response**: 
+  - Every submission will have an additional field, `rowid`, which reflects its incremental number.
+  
+  Example:
+  ```json
+    {
+        "rowid": 5,
+        "tracking": "ABC123",
+        ...
+    }
+
+
+
+**Notes**
+*   If a row is deleted, the submit_number for subsequent submissions will continue incrementing from the last assigned number (i.e., gaps may exist in the submit_number sequence if some submissions are deleted).
+
+*   The `submit_number` is not editable once assigned and is automatically handled by the backend.
+
+*   number is not editable once assigned and is automatically handled by the backend.
