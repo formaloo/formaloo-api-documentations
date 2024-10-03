@@ -5,3 +5,5 @@ spec/icas*
 spec/*bundeled.yaml
 openapi-v*
 html/*
+.idea
+.vscode
