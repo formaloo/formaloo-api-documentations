@@ -82,3 +82,117 @@ Example
   ]
 }
 ```
+
+### Set fields' value based on condition(s)
+
+#### Example 1 - Using Text fields
+
+Fields:
+``` 
+Text Field A: mu1oEnbp
+Text Field B: 7IdBlI0V
+```
+
+Conditions:
+```text
+if A == 'Python'
+then set B to 'Yay'
+```
+
+```json
+{
+    "logic": [
+        {
+            "type": "field",
+            "identifier": "mu1oEnbp",
+            "actions": [
+                {
+                    "action": "set",
+                    "args": [
+                        {
+                            "type": "field",
+                            "identifier": "7IdBlI0V" 
+                        },
+                        {
+                            "type": "constant",
+                            "value": "Yay"
+                        }  
+                    ],
+                    "when": {
+                        "operation": "equal",
+                        "args": [
+                            {
+                                "type": "field",
+                                "value": "mu1oEnbp"
+                            },
+                            {
+                                "type": "constant",
+                                "value": "Python"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+#### Example 2 - Using Choice fields
+
+Fields:
+``` 
+Choice Field A: PrJNHykP
+    Option 1: dgf67dGH
+    Option 2: ysFv28XR 
+
+Choice Field B: KRwEpVNX
+    Option 1: f6dyegtF
+    Option 2: rO0byBlU
+    
+```
+
+Conditions:
+```text
+if A == 'Option 2'
+then set B to 'Option 2'
+```
+
+```json
+{
+    "logic": [
+        {
+            "type": "field",
+            "identifier": "PrJNHykP",
+            "actions": [
+                {
+                    "action": "set",
+                    "args": [
+                        {
+                            "identifier": "KRwEpVNX",
+                            "type": "field"
+                        },
+                        {
+                            "identifier": "rO0byBlU",
+                            "type": "choice"
+                        }
+                    ],
+                    "when": {
+                        "operation": "is",
+                        "args": [
+                            {
+                                "type": "field",
+                                "value": "PrJNHykP"
+                            },
+                            {
+                                "type": "choice",
+                                "value": "ysFv28XR"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
