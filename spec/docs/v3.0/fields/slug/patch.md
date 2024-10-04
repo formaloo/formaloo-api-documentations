@@ -15,7 +15,7 @@ List of the newly created fields will be sent back on `new_lookup_fields` field.
 
 Request Example
 
-```
+``` json
 {
    "create_lookup_for_fields": [
        "IXVsW05e",
@@ -25,7 +25,7 @@ Request Example
 ```
 
 Response Example
-```
+``` json
 {
     "status": 200,
     "errors": {
