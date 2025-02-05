@@ -2,9 +2,9 @@
 
 cd /files/spec/
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/
-wget -O authentication.yaml https://staging.auth.formaloo.com/docs/openapi/yaml
+wget -O icas.yaml https://id.formaloo.com/docs/openapi/yaml/
+wget -O formz.yaml https://api.formaloo.me/docs/openapi/yaml/
+wget -O authentication.yaml https://auth.formaloo.me/docs/openapi/yaml
 
 files=( icas.yaml formz.yaml authentication.yaml )
 for file in "${files[@]}"; 
@@ -24,10 +24,10 @@ redocly bundle v1.0.yaml -o v1.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v1.0.json
 rm formz* icas* authentication* storage-bundeled.yaml v1.0-bundeled.yaml
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/?version=2.0
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=2.0
-wget -O authentication.yaml https://staging.auth.formaloo.com/docs/openapi/yaml?version=2.0
-wget -O storage.yaml https://staging.storage.formaloo.com/docs/openapi/yaml/?version=2.0
+wget -O icas.yaml https://id.formaloo.com/docs/openapi/yaml/?version=2.0
+wget -O formz.yaml https://api.formaloo.me/docs/openapi/yaml/?version=2.0
+wget -O authentication.yaml https://auth.formaloo.me/docs/openapi/yaml?version=2.0
+wget -O storage.yaml https://storage.formaloo.me/docs/openapi/yaml/?version=2.0
 
 files=( icas.yaml formz.yaml storage.yaml authentication.yaml )
 for file in "${files[@]}"; 
@@ -47,8 +47,8 @@ redocly bundle v2.0.yaml -o v2.0-bundeled.yaml
 npx openapi-merge-cli --config openapi-merge-v2.0.json
 rm formz* icas* authentication* storage-bundeled.yaml v2.0-bundeled.yaml 
 
-wget -O icas.yaml https://staging.icas.formaloo.com/docs/openapi/yaml/?version=3.0
-wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=3.0
+wget -O icas.yaml https://id.formaloo.com/docs/openapi/yaml/?version=3.0
+wget -O formz.yaml https://api.formaloo.me/docs/openapi/yaml/?version=3.0
 
 files=( icas.yml formz.yaml )
 for file in "${files[@]}"; 
