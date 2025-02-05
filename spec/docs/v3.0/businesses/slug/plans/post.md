@@ -13,7 +13,7 @@ You can send the deal’s slug to this endpoint (containing the business slug in
 
 ``` json
 // **Request**
-https://api.formaloo.me/v2.0/businesses/{business_slug}/ (POST)
+https://api.formaloo.net/v2.0/businesses/{business_slug}/ (POST)
 {
     "plan_deal": "{plan_deal_slug}"
 }
@@ -76,7 +76,7 @@ In the process of buying a plan, you can pass the `coupon_code` to apply it to t
 
 ``` json
 **// Request**
-https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
+https://api.formaloo.net/v2.0/businesses/{business_slug}/plans/ (POST)
 {
     "plan_deal": "{plan_deal_slug}",
     "coupon_code": "{coupon_code}"
@@ -103,7 +103,7 @@ https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
 
 ``` json
 **// Request**
-https://api.formaloo.me/v2.0/businesses/{business_slug}/plans/ (POST)
+https://api.formaloo.net/v2.0/businesses/{business_slug}/plans/ (POST)
 {
     "plan_deal": "{plan_deal_slug}",
     "coupon_code": "{coupon_code}"
