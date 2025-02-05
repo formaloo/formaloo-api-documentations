@@ -15,7 +15,7 @@ info:
     url: https://help.formaloo.com/en/
 
 servers:
-  - url: https://api.formaloo.me
+  - url: https://api.formaloo.net
     description: Main (Production) Server
 
 components:
