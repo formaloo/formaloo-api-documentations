@@ -20,3 +20,17 @@ If a menu item under your menu block is supposed to open one or more blocks, the
 ```
 
 The response contains the basic data for each block.
+
+## Enable/Disable Edit Rows for End-Users
+
+- To grant edit access to end-users on their assigned row(s), set the `assignee_can_edit` value to `true`, otherwise 
+set it to `false`.
+- You can use the `PUT` method instead of `PATCH` and get the same result.
+
+Request Body:
+
+```json
+{
+    "assignee_can_edit": true
+}
+```
