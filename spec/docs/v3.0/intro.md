@@ -40,7 +40,7 @@ Your request should contain this header and body:
 **Example (cURL)**
 
 ``` json
-curl 'https://api.formaloo.net/v3.0/oauth2/authorization-token/' \
+curl --location --request POST 'https://api.formaloo.me/v1.0/oauth2/authorization-token/' \
 --header 'Authorization: Basic {Secret Key}' \
 --form 'grant_type="client_credentials"'
 ```
