@@ -49,15 +49,7 @@ https://formaloo_api_server/v1.0/businesses/{business_slug}/ (GET)
                 ...
             ],
             "business_identifier": "oUmtrSgO",
-            "extra_data": {},
-            "icon": "https://api.staging.formaloo.net/media/businesses/f2e8d86686deb47e/icons/acc127df-65d9-40ce-93b9-5a1ba4cc2a3a.jpg",
-            "fav_icon": "https://api.staging.formaloo.net/media/businesses/f2e8d86686deb47e/favicons/104b0f7a-23ed-4e4e-8045-12f6100ac6a6.jpg",
-            "features_visibility": {
-                "templates": false,
-                "old_dashboard": true
-                "a_feature": true,
-                "another_component": false,
-            }
+            "extra_data": {}
         }
     }
 }
