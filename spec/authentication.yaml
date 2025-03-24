@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: Formaloo API Documentation
+  version: 2.0.0 (v1)
+paths:
+  /v2.0/end-users/authorize/:
+    post:
+      operationId: endUsersAuthorizeCreate
+      description:
+        $ref: ./docs/v1.0/end-users/authorize/post.md
+      summary: Obtain Authorization Token
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - end-users
+      security:
+      - JWT Authentication: []
+      responses:
+        '200':
+          description: No response body
+  /v2.0/end-users/reset-password-confirms/:
+    post:
+      operationId: endUsersResetPasswordConfirmsCreate
+      description:
+        $ref: ./docs/v1.0/end-users/reset-password-confirms/post.md
+      summary: Password Reset Confirm
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - end-users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - JWT Authentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirm'
+          description: ''
+  /v2.0/end-users/reset-password-requests/:
+    post:
+      operationId: endUsersResetPasswordRequestsCreate
+      description:
+        $ref: ./docs/v1.0/end-users/reset-password-requests/post.md
+      summary: Password Reset Request
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - end-users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+        required: true
+      security:
+      - JWT Authentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetRequest'
+          description: ''
+  /v2.0/profiles/me/:
+    get:
+      operationId: profilesMeRetrieve
+      description:
+        $ref: ./docs/v1.0/profiles/me/get.md
+      summary: Profile
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - profiles
+      security:
+      - JWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    put:
+      operationId: profilesMeUpdate
+      description:
+        $ref: ./docs/v1.0/profiles/me/put.md
+      summary: Profile
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+        required: true
+      security:
+      - JWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+    patch:
+      operationId: profilesMePartialUpdate
+      description:
+        $ref: ./docs/v1.0/profiles/me/patch.md
+      summary: Profile
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        description: The application secret provided to the client.
+        required: true
+      tags:
+      - profiles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - JWT Authentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+components:
+  schemas:
+    PasswordResetConfirm:
+      type: object
+      properties:
+        contact:
+          type: string
+        token:
+          type: string
+          title: Code
+        web_token:
+          type: string
+        password:
+          type: string
+          maxLength: 60
+      required:
+      - contact
+      - password
+      - token
+      - web_token
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+          title: Code
+        web_token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 60
+        domain:
+          type: string
+          writeOnly: true
+      required:
+      - contact
+      - domain
+      - password
+      - token
+      - web_token
+    PasswordResetRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+          title: email or phone number
+      required:
+      - contact
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        contact:
+          type: string
+          minLength: 1
+          title: email or phone number
+        domain:
+          type: string
+          writeOnly: true
+      required:
+      - contact
+      - domain
+    PatchedProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Full name
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 150
+    Profile:
+      type: object
+      properties:
+        verified_account:
+          type: boolean
+          readOnly: true
+        verified_email:
+          type: boolean
+          readOnly: true
+        verified_phone:
+          type: boolean
+          title: Verified phone number
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Full name
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+        phone_number:
+          type: string
+          readOnly: true
+      required:
+      - username
+    ProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Full name
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - username
+  securitySchemes:
+    JWT Authentication:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "JWT"
+    oauth2:
+      type: oauth2
+      flows: {}
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
