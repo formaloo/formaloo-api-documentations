@@ -8,6 +8,15 @@
     },
     {
       "inputFile": "./formz-bundeled.yaml"
+    },
+    {
+      "inputFile": "./authentication-bundeled.yaml"
+    },
+    {
+      "inputFile": "./storage-bundeled.yaml"
+    },
+    {
+      "inputFile": "./ai-bundeled.yaml"
     }
   ], 
   "output": "../openapi-v3.0.yaml"
