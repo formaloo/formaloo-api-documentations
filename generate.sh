@@ -53,7 +53,7 @@ wget -O authentication.yaml https://auth.formaloo.me/docs/openapi/yaml?version=3
 wget -O storage.yaml https://storage.formaloo.me/docs/openapi/yaml/?version=3.0
 wget -O ai.yaml https://ai-api.formaloo.co/docs/openapi/yaml/?version=3.0
 
-files=( icas.yml formz.yaml authentication.yaml storage.yaml ai.yaml )
+files=( icas.yaml formz.yaml authentication.yaml storage.yaml ai.yaml )
 for file in "${files[@]}"; 
 do
     grep -o 'docs.*.md' $file | while read -r line ; 
