@@ -1,7 +1,55 @@
 # Formaloo API Documentations
 
 This is a repository for Formaloo's API documentations. This repository contains the code, the meta data, and the descriptions needed to create the Formaloo API documentations.
-All you need to do is to run the `docker-compose up` command to run the scripts. The output is a directory that contains the html files needed to show the API documentations. All you need to do after running the container is to server the html files inside the `html` directory (which will be automatically created).
+
+## Quick Start
+
+### Option 1: Using Docker (Recommended)
+```bash
+docker-compose up
+```
+
+### Option 2: Using Node.js
+```bash
+# Generate documentation
+node generate-html-template.js
+
+# Serve locally (avoids CORS issues)
+npm start
+# or
+node serve.js
+```
+
+The output is a directory that contains the HTML files needed to show the API documentations. The `html` directory will be automatically created with all necessary files.
+
+## CORS Issues and Solutions
+
+If you encounter CORS (Cross-Origin Resource Sharing) errors when opening the HTML files directly in a browser, this is because browsers block requests to local files for security reasons.
+
+### Solutions:
+
+1. **Use the built-in server (Recommended):**
+   ```bash
+   npm start
+   # Then open http://localhost:8080
+   ```
+
+2. **Use a local web server:**
+   ```bash
+   # Python 3
+   python -m http.server 8080
+   
+   # Python 2
+   python -m SimpleHTTPServer 8080
+   
+   # Node.js (if you have http-server installed)
+   npx http-server -p 8080
+   ```
+
+3. **Use Docker (Production-ready):**
+   ```bash
+   docker-compose up
+   ```
 
 ## How does it work?
 

@@ -1,4 +1,29 @@
-<!DOCTYPE html>
+#!/usr/bin/env node
+
+/**
+ * HTML Template Generator for Formaloo API Documentation
+ * 
+ * This script generates HTML files for different API versions
+ * with consistent styling and functionality.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Configuration
+const config = {
+  versions: [
+    { version: 'latest', title: 'Formaloo API Documentation', specFile: 'openapi-v3.0.yaml' },
+    { version: 'v3.0', title: 'Formaloo API Documentation v3.0', specFile: 'openapi-v3.0.yaml' },
+    { version: 'v2.0', title: 'Formaloo API Documentation v2.0', specFile: 'openapi-v2.0.yaml' },
+    { version: 'v1.0', title: 'Formaloo API Documentation v1.0', specFile: 'openapi-v1.0.yaml' }
+  ],
+  outputDir: './',
+  templateDir: './templates'
+};
+
+// HTML Template
+const generateHTML = (version, title, specFile) => `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -6,8 +31,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
-    <title>Formaloo API Documentation v3.0</title>
-    <meta name="description" content="Complete API documentation for Formaloo's platform services v3.0 including Forms, Authentication, Storage, AI, and Identity management.">
+    <title>${title}</title>
+    <meta name="description" content="Complete API documentation for Formaloo's platform services ${version !== 'latest' ? version : 'v3.0'} including Forms, Authentication, Storage, AI, and Identity management.">
     
     <!-- Favicons and PWA -->
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
@@ -99,7 +124,7 @@
         margin: 0;
       }
 
-      .version-badge {
+      ${version !== 'latest' ? `.version-badge {
         background-color: rgba(255, 255, 255, 0.2);
         color: white;
         padding: 0.25rem 0.5rem;
@@ -109,7 +134,7 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-left: 0.5rem;
-      }
+      }` : ''}
 
       /* Search Container */
       .search-container {
@@ -350,8 +375,8 @@
           <img src="assets/logo.svg" alt="Formaloo Logo" class="logo" />
           <div>
             <h1 class="header-title">
-              Formaloo API Documentation
-              <span class="version-badge">v3.0</span>
+              ${title.replace(version !== 'latest' ? ` ${version}` : '', '')}
+              ${version !== 'latest' ? `<span class="version-badge">${version}</span>` : ''}
             </h1>
             <p class="header-subtitle">Complete API reference for all Formaloo services</p>
           </div>
@@ -402,7 +427,7 @@
     <div class="api-container" id="api-container" style="display: none;">
       <elements-api
         id="elements-api"
-        apiDescriptionUrl="openapi-v3.0.yaml"
+        apiDescriptionUrl="${specFile}"
         logo="assets/logo.svg"
         router="hash"
         layout="sidebar"
@@ -476,10 +501,10 @@
             this.showLoading();
             
             // Check if API spec exists - use relative path to avoid CORS issues
-            const specUrl = 'openapi-v3.0.yaml';
+            const specUrl = '${specFile}';
             const response = await fetch(specUrl);
             if (!response.ok) {
-              throw new Error(`API specification not found: ${response.status} ${response.statusText}`);
+              throw new Error(\`API specification not found: \${response.status} \${response.statusText}\`);
             }
 
             // Wait for elements-api to load
@@ -530,16 +555,16 @@
           // This is a simplified search - in a real implementation,
           // you'd want to search through the actual API spec data
           const commonEndpoints = [
-            { path: '/v3.0/forms', method: 'GET', description: 'List all forms' },
-            { path: '/v3.0/forms/{slug}', method: 'GET', description: 'Get form details' },
-            { path: '/v3.0/forms', method: 'POST', description: 'Create new form' },
-            { path: '/v3.0/forms/{slug}', method: 'PUT', description: 'Update form' },
-            { path: '/v3.0/forms/{slug}', method: 'DELETE', description: 'Delete form' },
-            { path: '/v3.0/auth/login', method: 'POST', description: 'User authentication' },
-            { path: '/v3.0/auth/register', method: 'POST', description: 'User registration' },
-            { path: '/v3.0/storage/files', method: 'GET', description: 'List files' },
-            { path: '/v3.0/storage/files', method: 'POST', description: 'Upload file' },
-            { path: '/v3.0/ai/chat', method: 'POST', description: 'AI chat completion' }
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/forms', method: 'GET', description: 'List all forms' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/forms/{slug}', method: 'GET', description: 'Get form details' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/forms', method: 'POST', description: 'Create new form' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/forms/{slug}', method: 'PUT', description: 'Update form' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/forms/{slug}', method: 'DELETE', description: 'Delete form' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/auth/login', method: 'POST', description: 'User authentication' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/auth/register', method: 'POST', description: 'User registration' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/storage/files', method: 'GET', description: 'List files' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/storage/files', method: 'POST', description: 'Upload file' },
+            { path: '/${version !== 'latest' ? version : 'v3.0'}/ai/chat', method: 'POST', description: 'AI chat completion' }
           ];
 
           commonEndpoints.forEach(endpoint => {
@@ -559,17 +584,17 @@
           if (results.length === 0) {
             this.searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
           } else {
-            this.searchResults.innerHTML = results.map(result => `
-              <div class="search-result-item" data-path="${result.path}">
+            this.searchResults.innerHTML = results.map(result => \`
+              <div class="search-result-item" data-path="\${result.path}">
                 <div style="font-weight: 500; color: var(--text-primary);">
-                  <span style="color: var(--primary-color); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">${result.method}</span>
-                  ${result.path}
+                  <span style="color: var(--primary-color); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">\${result.method}</span>
+                  \${result.path}
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                  ${result.description}
+                  \${result.description}
                 </div>
               </div>
-            `).join('');
+            \`).join('');
           }
           
           this.showSearchResults();
@@ -631,4 +656,36 @@
       });
     </script>
   </body>
-</html>
+</html>`;
+
+// Main function
+function generateHTMLFiles() {
+  console.log('🚀 Generating HTML files for Formaloo API Documentation...\n');
+
+  config.versions.forEach(({ version, title, specFile }) => {
+    const fileName = version === 'latest' ? 'latest.html' : `${version}.html`;
+    const filePath = path.join(config.outputDir, fileName);
+    
+    try {
+      const htmlContent = generateHTML(version, title, specFile);
+      fs.writeFileSync(filePath, htmlContent, 'utf8');
+      console.log(`✅ Generated: ${fileName}`);
+    } catch (error) {
+      console.error(`❌ Error generating ${fileName}:`, error.message);
+    }
+  });
+
+  console.log('\n🎉 HTML generation complete!');
+  console.log('\nGenerated files:');
+  config.versions.forEach(({ version }) => {
+    const fileName = version === 'latest' ? 'latest.html' : `${version}.html`;
+    console.log(`  - ${fileName}`);
+  });
+}
+
+// Run if called directly
+if (require.main === module) {
+  generateHTMLFiles();
+}
+
+module.exports = { generateHTML, generateHTMLFiles, config };

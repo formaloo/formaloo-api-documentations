@@ -6,8 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
-    <title>Formaloo API Documentation v3.0</title>
-    <meta name="description" content="Complete API documentation for Formaloo's platform services v3.0 including Forms, Authentication, Storage, AI, and Identity management.">
+    <title>Formaloo API Documentation v2.0</title>
+    <meta name="description" content="Complete API documentation for Formaloo's platform services v2.0 including Forms, Authentication, Storage, AI, and Identity management.">
     
     <!-- Favicons and PWA -->
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
@@ -351,7 +351,7 @@
           <div>
             <h1 class="header-title">
               Formaloo API Documentation
-              <span class="version-badge">v3.0</span>
+              <span class="version-badge">v2.0</span>
             </h1>
             <p class="header-subtitle">Complete API reference for all Formaloo services</p>
           </div>
@@ -402,7 +402,7 @@
     <div class="api-container" id="api-container" style="display: none;">
       <elements-api
         id="elements-api"
-        apiDescriptionUrl="openapi-v3.0.yaml"
+        apiDescriptionUrl="openapi-v2.0.yaml"
         logo="assets/logo.svg"
         router="hash"
         layout="sidebar"
@@ -476,7 +476,7 @@
             this.showLoading();
             
             // Check if API spec exists - use relative path to avoid CORS issues
-            const specUrl = 'openapi-v3.0.yaml';
+            const specUrl = 'openapi-v2.0.yaml';
             const response = await fetch(specUrl);
             if (!response.ok) {
               throw new Error(`API specification not found: ${response.status} ${response.statusText}`);
@@ -530,16 +530,16 @@
           // This is a simplified search - in a real implementation,
           // you'd want to search through the actual API spec data
           const commonEndpoints = [
-            { path: '/v3.0/forms', method: 'GET', description: 'List all forms' },
-            { path: '/v3.0/forms/{slug}', method: 'GET', description: 'Get form details' },
-            { path: '/v3.0/forms', method: 'POST', description: 'Create new form' },
-            { path: '/v3.0/forms/{slug}', method: 'PUT', description: 'Update form' },
-            { path: '/v3.0/forms/{slug}', method: 'DELETE', description: 'Delete form' },
-            { path: '/v3.0/auth/login', method: 'POST', description: 'User authentication' },
-            { path: '/v3.0/auth/register', method: 'POST', description: 'User registration' },
-            { path: '/v3.0/storage/files', method: 'GET', description: 'List files' },
-            { path: '/v3.0/storage/files', method: 'POST', description: 'Upload file' },
-            { path: '/v3.0/ai/chat', method: 'POST', description: 'AI chat completion' }
+            { path: '/v2.0/forms', method: 'GET', description: 'List all forms' },
+            { path: '/v2.0/forms/{slug}', method: 'GET', description: 'Get form details' },
+            { path: '/v2.0/forms', method: 'POST', description: 'Create new form' },
+            { path: '/v2.0/forms/{slug}', method: 'PUT', description: 'Update form' },
+            { path: '/v2.0/forms/{slug}', method: 'DELETE', description: 'Delete form' },
+            { path: '/v2.0/auth/login', method: 'POST', description: 'User authentication' },
+            { path: '/v2.0/auth/register', method: 'POST', description: 'User registration' },
+            { path: '/v2.0/storage/files', method: 'GET', description: 'List files' },
+            { path: '/v2.0/storage/files', method: 'POST', description: 'Upload file' },
+            { path: '/v2.0/ai/chat', method: 'POST', description: 'AI chat completion' }
           ];
 
           commonEndpoints.forEach(endpoint => {
