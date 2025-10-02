@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   app:
@@ -8,4 +8,4 @@ services:
       context: .
     command: bash -c "bash ./files/generate.sh"
     volumes:
-      - ./:/files/
+      - .:/files

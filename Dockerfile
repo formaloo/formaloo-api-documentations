@@ -1,5 +1,5 @@
-FROM node:14
+FROM node:20
 
-RUN npm install -g npm@8.15.0 && \ 
+RUN npm install -g npm@latest && \ 
     npm install -g openapi-merge-cli && \ 
-    npm install -g @redocly/cli
+    npm install -g @redocly/cli@1.0.0-beta.129
