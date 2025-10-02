@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Debug - Formaloo API Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Formaloo API Documentation - Debug Page</h1>
+    
+    <div class="debug-section">
+        <h2>1. Basic Page Load</h2>
+        <div id="basic-load">Checking...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>2. Stoplight Elements Script</h2>
+        <div id="stoplight-script">Checking...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>3. API Specification File</h2>
+        <div id="api-spec">Checking...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>4. Elements API Component</h2>
+        <div id="elements-component">Checking...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>5. Console Logs</h2>
+        <div id="console-logs">Check browser console for detailed logs</div>
+    </div>
+
+    <!-- Stoplight Elements -->
+    <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css" />
+
+    <script>
+        // Debug information
+        const debugInfo = {
+            pageLoaded: false,
+            stoplightScript: false,
+            apiSpec: false,
+            elementsComponent: false,
+            errors: []
+        };
+
+        // Basic page load check
+        document.addEventListener('DOMContentLoaded', () => {
+            debugInfo.pageLoaded = true;
+            updateDebugDisplay();
+        });
+
+        // Check Stoplight Elements script
+        function checkStoplightScript() {
+            const hasCustomElements = typeof window.customElements !== 'undefined';
+            const hasElementsAPI = typeof window.customElements?.get('elements-api') !== 'undefined';
+            
+            debugInfo.stoplightScript = hasCustomElements && hasElementsAPI;
+            
+            if (!hasCustomElements) {
+                debugInfo.errors.push('Custom Elements not available');
+            }
+            if (!hasElementsAPI) {
+                debugInfo.errors.push('Elements API not registered');
+            }
+            
+            updateDebugDisplay();
+        }
+
+        // Check API specification
+        async function checkAPISpec() {
+            try {
+                const response = await fetch('openapi-v3.0.yaml');
+                debugInfo.apiSpec = response.ok;
+                if (!response.ok) {
+                    debugInfo.errors.push(`API spec fetch failed: ${response.status} ${response.statusText}`);
+                }
+            } catch (error) {
+                debugInfo.errors.push(`API spec fetch error: ${error.message}`);
+            }
+            updateDebugDisplay();
+        }
+
+        // Check Elements API component
+        function checkElementsComponent() {
+            const elementsApi = document.querySelector('elements-api');
+            debugInfo.elementsComponent = !!elementsApi;
+            
+            if (elementsApi) {
+                console.log('Elements API element found:', elementsApi);
+                console.log('Element attributes:', Array.from(elementsApi.attributes).map(attr => `${attr.name}="${attr.value}"`));
+            } else {
+                debugInfo.errors.push('Elements API component not found in DOM');
+            }
+            
+            updateDebugDisplay();
+        }
+
+        // Update debug display
+        function updateDebugDisplay() {
+            // Basic load
+            document.getElementById('basic-load').innerHTML = debugInfo.pageLoaded 
+                ? '<span style="color: green;">✓ Page loaded successfully</span>'
+                : '<span style="color: red;">✗ Page not loaded</span>';
+
+            // Stoplight script
+            document.getElementById('stoplight-script').innerHTML = debugInfo.stoplightScript
+                ? '<span style="color: green;">✓ Stoplight Elements script loaded</span>'
+                : '<span style="color: red;">✗ Stoplight Elements script not loaded</span>';
+
+            // API spec
+            document.getElementById('api-spec').innerHTML = debugInfo.apiSpec
+                ? '<span style="color: green;">✓ API specification accessible</span>'
+                : '<span style="color: red;">✗ API specification not accessible</span>';
+
+            // Elements component
+            document.getElementById('elements-component').innerHTML = debugInfo.elementsComponent
+                ? '<span style="color: green;">✓ Elements API component found</span>'
+                : '<span style="color: red;">✗ Elements API component not found</span>';
+
+            // Console logs
+            const logsDiv = document.getElementById('console-logs');
+            if (debugInfo.errors.length > 0) {
+                logsDiv.innerHTML = '<h3>Errors:</h3><ul>' + 
+                    debugInfo.errors.map(error => `<li style="color: red;">${error}</li>`).join('') + 
+                    '</ul>';
+            } else {
+                logsDiv.innerHTML = '<span style="color: green;">✓ No errors detected</span>';
+            }
+        }
+
+        // Run checks
+        setTimeout(() => {
+            checkStoplightScript();
+            checkAPISpec();
+            checkElementsComponent();
+        }, 1000);
+
+        // Add Elements API component for testing
+        setTimeout(() => {
+            const container = document.createElement('div');
+            container.innerHTML = `
+                <elements-api
+                    apiDescriptionUrl="openapi-v3.0.yaml"
+                    logo="assets/logo.svg"
+                    router="hash"
+                    layout="sidebar"
+                />
+            `;
+            document.body.appendChild(container);
+            
+            // Check again after adding the component
+            setTimeout(checkElementsComponent, 1000);
+        }, 2000);
+    </script>
+</body>
+</html>
