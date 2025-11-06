@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - dev
+  repository_dispatch:
+    types: [api-spec-updated]
 
 jobs:
   build-and-deploy:
@@ -12,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name }}
 
       - name: Build documentation
         run: docker compose up
