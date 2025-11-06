@@ -179,3 +179,4 @@ Based on the current plan, and current user's access level on the business, the 
     }
 }
 ```
+https://formaloo_api_server/v1.0/businesses/{business_slug}/ (GET)

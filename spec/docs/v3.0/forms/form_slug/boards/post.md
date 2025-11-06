@@ -1,1 +1,1 @@
-creates board for the form.
+creates board for the form.Get a new board for the form.

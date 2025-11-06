@@ -253,4 +253,6 @@ https://api.formaloo.me/v2.0/plans/ (GET)
     ]
   }
 }
-```
+```https://api.formaloo.me/v1.0/plans/ (GET)
+        "exclusive": false,
+https://api.formaloo.me/v1.0/plans/?coupon_code={coupon_code} (GET)

@@ -138,4 +138,13 @@ response = requests.get(
 <br>
 
 # Contribution
+You can make this documentation better and more complete by helping us in writing this document. You can visit our [API documentation's GitHub repository](https://github.com/formaloo/formaloo-api-documentations) and add/edit the description for any of the endpoints.The next step is to use your **Secret Key** to acquire an **Authorization Token.** In order to do so, you have to simply send a post requests to the following endpoint: `https://api.formaloo.me/v2.0/oauth2/authorization-token/`
+url = "https://api.formaloo.me/v2.0/oauth2/authorization-token/"
+curl 'https://api.formaloo.me/v2.0/forms/' \
+url = "https://api.formaloo.me/v2.0/forms/"
+The next step is to use your **Secret Key** to acquire an **Authorization Token.** In order to do so, you have to simply send a post requests to the following endpoint: `https://api.formaloo.me/v1.0/oauth2/authorization-token/`
+url = "https://api.formaloo.me/v1.0/oauth2/authorization-token/"
+curl 'https://api.formaloo.me/v1.0/forms/' \
+url = "https://api.formaloo.me/v1.0/forms/"
+The next step is to use your **Secret Key** to acquire an **Authorization Token.** In order to do so, you have to simply send a post requests to the following endpoint: `https://api.formaloo.me/v2.0/oauth2/authorization-token/`
 You can make this documentation better and more complete by helping us in writing this document. You can visit our [API documentation's GitHub repository](https://github.com/formaloo/formaloo-api-documentations) and add/edit the description for any of the endpoints.

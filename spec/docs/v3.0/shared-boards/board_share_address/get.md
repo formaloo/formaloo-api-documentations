@@ -1,0 +1,1 @@
+Use to retrieve a board shared by its share address.

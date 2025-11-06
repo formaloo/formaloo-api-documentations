@@ -1,0 +1,1 @@
+Get a list of the email servers owned by the user.
