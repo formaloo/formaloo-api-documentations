@@ -1,8 +1,0 @@
-spec/
-html/
-node_modules/
-.git/
-.github/
-*.md
-.gitignore
-
