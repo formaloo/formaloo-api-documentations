@@ -31,7 +31,9 @@ done
 npx openapi-merge-cli --config openapi-merge-v3.0.json
 rm -f formz* icas* authentication* ai* storage-bundeled.yaml v3.0-bundeled.yaml 
 
-mkdir -p /files/html/ && rm -r /files/html/*
-cp /files/*.html /files/html/
+cd /files
+
+mkdir -p /files/html/ && rm -rf /files/html/*
+redocly build-docs openapi-v3.0.yaml -o html/index.html
 cp /files/openapi*.yaml /files/html/
 cp -r /files/assets /files/html/
