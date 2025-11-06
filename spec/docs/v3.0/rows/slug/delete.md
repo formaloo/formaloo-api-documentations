@@ -1,1 +1,1 @@
-Delete a submitted row.
+Deletes the specified row.

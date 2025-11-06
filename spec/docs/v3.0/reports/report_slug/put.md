@@ -1,1 +1,1 @@
-Update a report.
+Updates an existing report action.

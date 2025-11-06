@@ -1,1 +1,1 @@
-Use this endpoint to create a hidden field.
+Creates a new hidden field.

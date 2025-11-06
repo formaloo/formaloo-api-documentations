@@ -1,1 +1,1 @@
-Use to get the email template object.
+Retrieves the specified email template object.

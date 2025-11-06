@@ -1,1 +1,1 @@
-Use this endpoint to create a matrix input field.
+Creates a new matrix field.

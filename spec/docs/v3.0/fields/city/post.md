@@ -1,1 +1,1 @@
-Use this endpoint to create a city field.
+Creates a new city field.

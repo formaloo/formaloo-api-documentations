@@ -1,1 +1,1 @@
-Use this endpoint to create a radio choice input field.
+Creates a new choice field.

@@ -1,1 +1,1 @@
-Use to get a list of email template examples.
+Retrieves a list of email template example.

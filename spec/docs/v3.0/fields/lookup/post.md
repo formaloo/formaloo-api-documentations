@@ -1,1 +1,1 @@
-Use this endpoint to create a lopkup field.
+Creates a new lookup field.

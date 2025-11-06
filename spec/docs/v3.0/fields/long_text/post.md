@@ -1,1 +1,1 @@
-Use this endpoint to create a long text input field.
+Creates a new text field.

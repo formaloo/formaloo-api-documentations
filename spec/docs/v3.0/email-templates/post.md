@@ -1,1 +1,1 @@
-Use to create an email template.
+Creates a new email template.

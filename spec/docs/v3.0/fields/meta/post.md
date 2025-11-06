@@ -1,1 +1,1 @@
-Use this endpoint to create a meta field.
+Creates a new meta field.

@@ -1,1 +1,1 @@
-Use this endpoint to create a form charts block.
+Creates a new admin board copy.

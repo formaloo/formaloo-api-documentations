@@ -1,1 +1,1 @@
-Update an email server.
+Updates an existing edit email server.

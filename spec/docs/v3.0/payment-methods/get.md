@@ -1,1 +1,1 @@
-TBD
+Retrieves a list of payment method.

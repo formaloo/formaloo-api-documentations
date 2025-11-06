@@ -1,1 +1,1 @@
-Use this endpoint to see a list of force update items.
+Retrieves the specified show form.

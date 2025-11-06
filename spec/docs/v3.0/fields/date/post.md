@@ -1,1 +1,1 @@
-Use this endpoint to create a date input field.
+Creates a new date field.

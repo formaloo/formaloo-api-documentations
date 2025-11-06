@@ -1,1 +1,1 @@
-Read a field's data
+Retrieves the specified field.

@@ -1,1 +1,1 @@
-Updates the profile information.
+Updates an existing profile retrieve edit.

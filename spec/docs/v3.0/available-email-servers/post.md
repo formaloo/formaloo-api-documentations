@@ -1,1 +1,1 @@
-Create an email server for the user.
+Creates a list of email server available.

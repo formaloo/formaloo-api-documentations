@@ -1,1 +1,1 @@
-Use this endpoint to create a combined fields chart.
+Creates a new combined fields chart.

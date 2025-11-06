@@ -1,1 +1,1 @@
-Use this endpoint to create a stats block.
+Creates a new admin board copy.

@@ -1,1 +1,1 @@
-Gives full profile information.
+Retrieves the specified profile edit.

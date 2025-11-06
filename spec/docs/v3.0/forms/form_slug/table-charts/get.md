@@ -1,1 +1,1 @@
-Get a list of table charts belonging to a specific form.
+Retrieves a list of form webhook.

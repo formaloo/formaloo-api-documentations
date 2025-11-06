@@ -1,1 +1,1 @@
-Use this endpoint to create a multiple select input field.
+Creates a new multiple select field.

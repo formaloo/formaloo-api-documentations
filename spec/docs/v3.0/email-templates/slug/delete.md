@@ -1,1 +1,1 @@
-Use to delete the email template object.
+Deletes the specified email template object.

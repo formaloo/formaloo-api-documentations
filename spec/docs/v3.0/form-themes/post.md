@@ -1,1 +1,1 @@
-Create a category for user's forms.
+Creates a new theme.

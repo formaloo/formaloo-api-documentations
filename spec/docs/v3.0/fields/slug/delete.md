@@ -1,1 +1,1 @@
-delete a field.
+Deletes the specified field.

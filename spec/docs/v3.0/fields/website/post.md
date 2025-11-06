@@ -1,1 +1,1 @@
-Use this endpoint to create a web input field.
+Creates a new website field.

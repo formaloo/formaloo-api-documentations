@@ -1,1 +1,1 @@
-Use this endpoint to create a rating input field.
+Creates a new rating field.

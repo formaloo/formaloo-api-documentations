@@ -1,1 +1,1 @@
-Use this endpoint to create a report block.
+Creates a new admin board copy.

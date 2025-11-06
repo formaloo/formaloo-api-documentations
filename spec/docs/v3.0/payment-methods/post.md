@@ -1,1 +1,1 @@
-TBD
+Creates a new payment method.

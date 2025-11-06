@@ -1,1 +1,1 @@
-delete a block.
+Deletes the specified block action.

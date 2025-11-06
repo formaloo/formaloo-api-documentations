@@ -1,1 +1,1 @@
-Update a submitted row.
+Updates an existing edit row.

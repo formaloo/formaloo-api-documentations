@@ -1,1 +1,1 @@
-Use this endpoint to create a yes/no input field.
+Creates a new yes no field.

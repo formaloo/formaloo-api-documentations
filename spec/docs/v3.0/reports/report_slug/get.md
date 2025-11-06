@@ -1,1 +1,1 @@
-Get a report with it's main data.
+Retrieves the specified report action.

@@ -1,1 +1,1 @@
-Get a block with it's main data.
+Retrieves the specified block action.

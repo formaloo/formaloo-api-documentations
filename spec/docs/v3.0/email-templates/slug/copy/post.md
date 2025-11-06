@@ -1,1 +1,1 @@
-Use to copy an email template.
+Creates a new email template copy.

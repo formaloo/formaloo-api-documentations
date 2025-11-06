@@ -1,1 +1,1 @@
-Update a report.
+Partially updates an existing report action.

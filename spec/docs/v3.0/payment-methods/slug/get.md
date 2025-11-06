@@ -1,1 +1,1 @@
-TBD
+Retrieves the specified payment method.

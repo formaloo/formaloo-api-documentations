@@ -1,1 +1,1 @@
-Use the submit code of a row to show it's submit results.
+Retrieves the specified row result.

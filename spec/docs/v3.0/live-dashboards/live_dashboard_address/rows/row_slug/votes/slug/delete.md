@@ -1,1 +1,1 @@
-TBD
+Deletes the specified vote.

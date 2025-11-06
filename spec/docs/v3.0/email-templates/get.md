@@ -1,1 +1,1 @@
-Use to get a list of User's email templates.
+Retrieves a list of email template.

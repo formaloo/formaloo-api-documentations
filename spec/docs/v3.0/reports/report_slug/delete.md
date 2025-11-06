@@ -1,1 +1,1 @@
-Delete a report.
+Deletes the specified report action.

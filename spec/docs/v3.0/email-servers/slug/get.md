@@ -1,1 +1,1 @@
-Get an email server object.
+Retrieves the specified email server.

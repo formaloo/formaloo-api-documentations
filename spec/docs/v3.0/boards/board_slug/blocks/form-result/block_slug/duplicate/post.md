@@ -1,1 +1,1 @@
-Use this endpoint to duplicate a form result block.
+Creates a new admin board copy.

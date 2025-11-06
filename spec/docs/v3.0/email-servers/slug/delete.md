@@ -1,1 +1,1 @@
-Delete an email server.
+Deletes the specified email server.

@@ -1,1 +1,1 @@
-Use this endpoint to create a oembed field.
+Creates a new oembed field.

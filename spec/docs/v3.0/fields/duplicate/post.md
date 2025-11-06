@@ -1,1 +1,1 @@
-Copy a form, which is owned by user or a template
+Creates a new duplicate field.

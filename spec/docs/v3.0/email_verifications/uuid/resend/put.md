@@ -1,1 +1,1 @@
-Update an Email OTP. (give the UUID and token.)
+Updates an existing resend email verification.

@@ -1,1 +1,1 @@
-Use this endpoint to create a signature input field.
+Creates a new signature field.

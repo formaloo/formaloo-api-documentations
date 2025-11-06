@@ -1,1 +1,1 @@
-Use to retrieve a board shared by its share address.
+Retrieves the specified shared board block row.

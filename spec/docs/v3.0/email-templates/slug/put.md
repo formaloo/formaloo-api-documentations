@@ -1,1 +1,1 @@
-Use to update the email template object.
+Updates an existing edit email template object.

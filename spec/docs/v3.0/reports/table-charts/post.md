@@ -1,1 +1,1 @@
-Use this endpoint to create a table chart.
+Creates a new table chart.

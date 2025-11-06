@@ -1,1 +1,1 @@
-Get a list of form
+Retrieves a list of theme.
