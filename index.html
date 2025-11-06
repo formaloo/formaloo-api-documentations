@@ -14,6 +14,13 @@
     <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements@8/styles.min.css" />
   </head>
   <body>
+    <input
+      type="text"
+      placeholder="Search in endpoints"
+      name="search"
+      id="search"
+      style="background-color: white; padding: 5px; border-radius: 5px"
+    />
     <elements-api
       apiDescriptionUrl="./openapi-v3.0.yaml"
       logo="./assets/logo.svg"
@@ -21,5 +28,70 @@
       layout="sidebar"
       hideTryIt="false"
     />
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search');
+        let debounceTimer;
+        
+        searchInput.addEventListener('keyup', function() {
+          clearTimeout(debounceTimer);
+          const term = this.value.toLowerCase().trim();
+          
+          debounceTimer = setTimeout(function() {
+            // Search in sidebar navigation items
+            const sidebarItems = document.querySelectorAll('.sl-my-3 > *, [role="menuitem"], .sl-flex.sl-flex-col > *');
+            sidebarItems.forEach(function(item) {
+              const text = item.textContent.toLowerCase();
+              if (!term || text.includes(term)) {
+                item.style.display = '';
+              } else {
+                item.style.display = 'none';
+              }
+            });
+            
+            // Search in endpoint sections
+            const endpointSections = document.querySelectorAll('[data-testid^="operation-"], .HttpOperation, article');
+            endpointSections.forEach(function(section) {
+              const text = section.textContent.toLowerCase();
+              const path = section.querySelector('[data-testid="http-operation-path"]');
+              const method = section.querySelector('[data-testid="http-operation-method"]');
+              const pathText = path ? path.textContent.toLowerCase() : '';
+              const methodText = method ? method.textContent.toLowerCase() : '';
+              
+              if (!term || text.includes(term) || pathText.includes(term) || methodText.includes(term)) {
+                section.style.display = '';
+                section.style.opacity = '1';
+              } else {
+                section.style.display = 'none';
+                section.style.opacity = '0.3';
+              }
+            });
+            
+            // Expand/show parent sections that contain matching items
+            if (term) {
+              const visibleItems = document.querySelectorAll('.sl-my-3 > *[style*="display: block"], .sl-my-3 > *:not([style*="display: none"])');
+              visibleItems.forEach(function(item) {
+                let parent = item.parentElement;
+                while (parent && parent !== document.body) {
+                  if (parent.style.display === 'none') {
+                    parent.style.display = '';
+                  }
+                  parent = parent.parentElement;
+                }
+              });
+            }
+          }, 300);
+        });
+        
+        // Clear search on ESC
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            this.value = '';
+            this.dispatchEvent(new Event('keyup'));
+          }
+        });
+      });
+    </script>
   </body>
 </html>
