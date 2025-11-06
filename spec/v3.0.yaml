@@ -16,7 +16,7 @@ info:
 
 servers:
   - url: https://api.formaloo.me
-    description: Production Server
+    description: Formaloo Server
 
 components:
   securitySchemes:
