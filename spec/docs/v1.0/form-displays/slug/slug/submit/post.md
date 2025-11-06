@@ -2,6 +2,10 @@
 
 You can use this endpoint to submit a form. In order to do so, you should send a `post` request, containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For the choice fields, you should send the desired choice's slug, and so on.
 
+## Submitting with Field Slugs
+
+Currently, forms can be submitted using field slugs, which are auto-generated and cannot be controlled by users. This approach requires retrieving the form, mapping your fields with respective field slugs, and then submitting the data, which reduces reusability of integrations.
+
 The mapping should look something like this:
 
 ``` json
@@ -57,12 +61,43 @@ Which with real values, looks like the following:
 }
 ```
 
+## Submitting with Field Aliases
+
+To simplify integrations and improve reusability, you can submit forms using field aliases instead of slugs. This makes the request body more readable and easier to maintain across different integrations.
+
+Example submission using aliases:
+
+``` json
+{
+    "country_of_destination": "Canada",
+    "case_type": "Immigration",
+    "full_name": "Sarah Johnson",
+    "job_title": "Software Engineer",
+    "email": "sarah.johnson@techcorp.com",
+    "nationality": "United States",
+    "accepted_terms": "yes",
+    "submit_by_alias": true
+}
+```
+
+### Requirements for Submitting with Aliases
+
+To submit a form using field aliases, you must:
+
+1. **Assign an alias to each field**: All fields in your form must have an alias configured. Fields without aliases cannot be submitted using this method and will be left empty.
+
+2. **Set the `submit_by_alias` flag**: Include `"submit_by_alias": true` in your request body.
+
+3. **Use aliases instead of slugs**: Send field aliases as keys in your request body instead of field slugs.
+
+4. **Do not mix aliases and slugs**: You cannot use both aliases and slugs in the same request. Choose one method per submission.
+
 ## Authorization and Authentication
 
 In order to submit a form using this endpoint, you don't have to send an `Authorization` header, but you should send the `x-api-key` header to identify your application.
 
 ## Notes
 
-Please make sure to use the fields' slug, not their title.
+When submitting with slugs, use the field's slug, not its title. When submitting with aliases, use the field's alias with `submit_by_alias` set to `true`.
 
 Although our service accepts most content types, like `form-data`, it's highly recommended to use `application/json` since it guarantees the correct format of values for the more complex fields (e.g. Matrix fields).
