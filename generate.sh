@@ -10,7 +10,7 @@ if [ "$STAGING_DOCS" = "true" ]; then
     BASE_DOMAIN="staging.formaloo.com"
     wget -O icas.yaml https://id.staging.formaloo.com/docs/openapi/yaml/?version=3.0
     wget -O formz.yaml https://api.staging.formaloo.com/docs/openapi/yaml/?version=3.0
-    wget -O authentication.yaml https://auth.staging.formaloo.com/docs/openapi/yaml?version=3.0 || echo "Warning: Failed to download authentication.yaml"
+    wget -O authentication.yaml https://auth.staging.formaloo.com/docs/openapi/yaml?version=3.0
     wget -O storage.yaml https://storage.staging.formaloo.com/docs/openapi/yaml/?version=3.0
     wget -O ai.yaml https://ai.staging.formaloo.com/docs/openapi/yaml/?version=3.0
 else
@@ -18,7 +18,7 @@ else
     BASE_DOMAIN="formaloo.me"
     wget -O icas.yaml https://id.formaloo.com/docs/openapi/yaml/?version=3.0
     wget -O formz.yaml https://api.formaloo.me/docs/openapi/yaml/?version=3.0
-    wget -O authentication.yaml https://auth.formaloo.me/docs/openapi/yaml?version=3.0 || echo "Warning: Failed to download authentication.yaml"
+    wget -O authentication.yaml https://auth.formaloo.me/docs/openapi/yaml?version=3.0
     wget -O storage.yaml https://storage.formaloo.me/docs/openapi/yaml/?version=3.0
     wget -O ai.yaml https://ai-api.formaloo.co/docs/openapi/yaml/?version=3.0
 fi
@@ -52,11 +52,10 @@ cd /files
 if [ "$STAGING_DOCS" = "true" ]; then
     echo "Setting server URL to STAGING..."
     sed -i "s|url: 'https://api\.[^']*'|url: 'https://api.staging.formaloo.com'|g" openapi-v3.0.yaml
-    sed -i 's|description: Production Server|description: Staging Server|g' openapi-v3.0.yaml
+    sed -i 's|description: Formaloo Server|description: Formaloo Staging Server|g' openapi-v3.0.yaml
 else
     echo "Setting server URL to PRODUCTION..."
     sed -i "s|url: 'https://api\.[^']*'|url: 'https://api.formaloo.me'|g" openapi-v3.0.yaml
-    sed -i 's|description: Staging Server|description: Production Server|g' openapi-v3.0.yaml
 fi
 
 mkdir -p /files/html/ && rm -rf /files/html/*
