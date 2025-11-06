@@ -17,8 +17,28 @@ jobs:
         with:
           ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name }}
 
+      - name: Validate branch
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          ALLOWED_BRANCHES="master dev"
+          if [[ ! " $ALLOWED_BRANCHES " =~ " ${{ github.event.client_payload.branch }} " ]]; then
+            echo "Invalid branch: ${{ github.event.client_payload.branch }}"
+            exit 1
+          fi
+
       - name: Build documentation
-        run: docker compose up
+        run: |
+          docker compose up --exit-code-from app --abort-on-container-exit
+          if [ $? -ne 0 ]; then
+            echo "Build failed"
+            exit 1
+          fi
+
+      - name: Verify build artifacts
+        run: |
+          [ -f "html/openapi-v3.0.yaml" ] || (echo "Missing openapi-v3.0.yaml" && exit 1)
+          [ -f "html/index.html" ] || (echo "Missing index.html" && exit 1)
+          [ -d "html/assets" ] || (echo "Missing assets" && exit 1)
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

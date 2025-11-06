@@ -6,6 +6,10 @@ services:
     build:
       dockerfile: Dockerfile
       context: .
-    command: bash -c "bash ./files/generate.sh"
+      cache_from:
+        - node:20-alpine
+    command: sh -c "sh ./generate.sh"
     volumes:
       - .:/files
+    environment:
+      - GITHUB_REF_NAME=${GITHUB_REF_NAME:-dev}
