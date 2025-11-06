@@ -1,1 +1,0 @@
-Gives full profile information.

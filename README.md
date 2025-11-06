@@ -1,11 +1,37 @@
 # Formaloo API Documentations
 
 This is a repository for Formaloo's API documentations. This repository contains the code, the meta data, and the descriptions needed to create the Formaloo API documentations.
-All you need to do is to run the `docker-compose up` command to run the scripts. The output is a directory that contains the html files needed to show the API documentations. All you need to do after running the container is to server the html files inside the `html` directory (which will be automatically created).
+All you need to do is to run the `docker-compose up` command to run the scripts. The output is a directory that contains the html files needed to show the API documentations. All you need to do after running the container is to serve the html files inside the `html` directory (which will be automatically created).
 
 ## How does it work?
 
-The scripts in this docker file will get the main API documentations from the different Formaloo services, load the with the extra descriptions for each endpoint, merge them all together and create an html file to server the documentation for each version of the API.
+The scripts in this docker file will get the main API documentations from the different Formaloo services, load them with the extra descriptions for each endpoint, merge them all together, and use Redocly to build a static documentation site. Redocly processes the merged OpenAPI specification and generates a complete documentation website.
+
+### Environment Configuration
+
+The build process supports both production and staging environments via the `STAGING_DOCS` environment variable:
+
+- **Production (default)**: `STAGING_DOCS=false` or unset
+  - Downloads specs from production endpoints (id.formaloo.com, api.formaloo.me, etc.)
+  - Sets server URL to `https://api.formaloo.me`
+  
+- **Staging**: `STAGING_DOCS=true`
+  - Downloads specs from staging endpoints (*.staging.formaloo.com)
+  - Sets server URL to `https://api.staging.formaloo.com`
+
+#### Usage
+
+**Local development (production):**
+```bash
+docker compose up
+```
+
+**Local development (staging):**
+```bash
+STAGING_DOCS=true docker compose up
+```
+
+**CI/CD**: The GitHub Actions workflow automatically sets `STAGING_DOCS=true` for the `dev` branch and `STAGING_DOCS=false` for the `master` branch.
 
 ## How do I Contribute?
 
@@ -25,4 +51,25 @@ All documentation files should be written in Markdown format. The files for each
 ### Contributing to the `intro.md`
 
 Each version of the API contains an intro page (e.g. `spec/docs/v2.0/intro.md`). This file contains the introduction to the API, the current version, general considerations, and a guide on how to get started with the API.
+
+## Documentation Tool: Redocly
+
+This project uses Redocly CLI to build static HTML documentation from OpenAPI specifications. Redocly provides:
+
+- Automatic rendering of OpenAPI 3.0 specifications
+- Clean, modern three-panel layout
+- Built-in search functionality
+- Interactive try-it console
+- Mobile responsive design
+- Single HTML file output
+
+### Local Development
+
+To preview the documentation locally after building:
+
+```bash
+cd html && python3 -m http.server 8000
+```
+
+Then visit `http://localhost:8000` in your browser.
 

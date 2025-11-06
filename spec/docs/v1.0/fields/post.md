@@ -1,1 +1,0 @@
-This endpoint is used to create a field with any type. Although it only shows the general fields options on the schema, it accepts and excepts all the options needed for the given type.

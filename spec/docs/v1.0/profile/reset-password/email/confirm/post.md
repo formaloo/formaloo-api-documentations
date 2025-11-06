@@ -1,1 +1,0 @@
-Use this endpoint to finish email reset password process.

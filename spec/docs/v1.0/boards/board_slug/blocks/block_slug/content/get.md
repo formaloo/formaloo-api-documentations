@@ -1,1 +1,0 @@
-Get content of a block.

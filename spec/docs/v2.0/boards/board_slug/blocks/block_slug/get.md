@@ -1,1 +1,0 @@
-Get a block with it's main data.

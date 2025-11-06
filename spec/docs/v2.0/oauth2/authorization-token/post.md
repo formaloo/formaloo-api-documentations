@@ -1,1 +1,0 @@
-send the credentials in header ('Authorization' = 'Basic {credentials}') to obtain a authorization token.

@@ -9,3 +9,5 @@ services:
     command: bash -c "bash ./files/generate.sh"
     volumes:
       - .:/files
+    environment:
+      - STAGING_DOCS=${STAGING_DOCS:-false}

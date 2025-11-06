@@ -1,1 +1,0 @@
-Returns a json Web Token that can be used for authenticated requests.

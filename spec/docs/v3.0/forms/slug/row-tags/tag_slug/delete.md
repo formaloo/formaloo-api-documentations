@@ -1,1 +1,1 @@
-TBD
+Deletes the specified row tag.

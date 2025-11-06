@@ -5,3 +5,4 @@
 **progress** is between 0% and 100%
 
 in the response of API, you see **primary_form** data**.**
+copy a board

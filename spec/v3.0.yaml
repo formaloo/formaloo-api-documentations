@@ -5,7 +5,7 @@ info:
   version: 3.0.0
   description:
     $ref: ./docs/v3.0/intro.md
-  termsOfService: http://example.com/terms/
+  termsOfService: https://www.formaloo.com/terms
   contact:
     name: Support
     email: dev@formaloo.com

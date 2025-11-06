@@ -1,1 +1,0 @@
-Get a list of access types and their descriptions.
