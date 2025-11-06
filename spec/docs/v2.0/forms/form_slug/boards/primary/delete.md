@@ -1,1 +1,0 @@
-Delete the form's primary board.

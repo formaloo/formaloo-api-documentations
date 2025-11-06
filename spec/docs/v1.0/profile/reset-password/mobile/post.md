@@ -1,1 +1,0 @@
-Use this endpoint to send sms to user with password reset code.

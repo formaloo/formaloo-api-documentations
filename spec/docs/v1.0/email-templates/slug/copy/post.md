@@ -1,1 +1,0 @@
-Use to copy an email template.

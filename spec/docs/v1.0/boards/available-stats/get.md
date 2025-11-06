@@ -1,1 +1,0 @@
-Get a list of available stats with their description.

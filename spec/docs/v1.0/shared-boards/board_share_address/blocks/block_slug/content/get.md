@@ -1,1 +1,0 @@
-Use to retrieve contents of a block from a board shared by its share address.

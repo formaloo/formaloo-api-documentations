@@ -1,1 +1,0 @@
-Use to retrieve the list of blocks on a board shared by its share address.

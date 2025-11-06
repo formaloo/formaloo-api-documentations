@@ -1,1 +1,0 @@
-Get a list of form tags created by current user.

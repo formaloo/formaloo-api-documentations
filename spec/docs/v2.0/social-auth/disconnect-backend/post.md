@@ -1,1 +1,0 @@
-An endpoint for disconnect social auth backend providers such as Facebook.

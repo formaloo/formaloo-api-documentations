@@ -1,1 +1,0 @@
-Get a list of templates' tags.

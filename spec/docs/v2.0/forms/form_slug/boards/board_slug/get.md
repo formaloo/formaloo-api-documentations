@@ -1,1 +1,0 @@
-Get a board with it's main data.

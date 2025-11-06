@@ -1,1 +1,0 @@
-Get a list of the email servers available for the user.
