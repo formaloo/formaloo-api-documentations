@@ -15,8 +15,8 @@ info:
     url: https://help.formaloo.com/en/
 
 servers:
-  - url: https://api.staging.formaloo.com
-    description: Staging Server
+  - url: https://api.formaloo.me
+    description: Production Server
 
 components:
   securitySchemes:

@@ -19,6 +19,8 @@ jobs:
 
       - name: Build documentation
         run: docker compose up
+        env:
+          STAGING_DOCS: ${{ github.ref_name == 'dev' && 'true' || 'false' }}
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

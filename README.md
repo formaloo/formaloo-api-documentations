@@ -5,7 +5,33 @@ All you need to do is to run the `docker-compose up` command to run the scripts.
 
 ## How does it work?
 
-The scripts in this docker file will get the main API documentations from the different Formaloo services, load them with the extra descriptions for each endpoint, merge them all together, and use Doctave to build a static documentation site. Doctave processes the merged OpenAPI specification and generates a complete documentation website.
+The scripts in this docker file will get the main API documentations from the different Formaloo services, load them with the extra descriptions for each endpoint, merge them all together, and use Redocly to build a static documentation site. Redocly processes the merged OpenAPI specification and generates a complete documentation website.
+
+### Environment Configuration
+
+The build process supports both production and staging environments via the `STAGING_DOCS` environment variable:
+
+- **Production (default)**: `STAGING_DOCS=false` or unset
+  - Downloads specs from production endpoints (id.formaloo.com, api.formaloo.me, etc.)
+  - Sets server URL to `https://api.formaloo.me`
+  
+- **Staging**: `STAGING_DOCS=true`
+  - Downloads specs from staging endpoints (*.staging.formaloo.com)
+  - Sets server URL to `https://api.staging.formaloo.com`
+
+#### Usage
+
+**Local development (production):**
+```bash
+docker compose up
+```
+
+**Local development (staging):**
+```bash
+STAGING_DOCS=true docker compose up
+```
+
+**CI/CD**: The GitHub Actions workflow automatically sets `STAGING_DOCS=true` for the `dev` branch and `STAGING_DOCS=false` for the `master` branch.
 
 ## How do I Contribute?
 
