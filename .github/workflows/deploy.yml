@@ -18,36 +18,21 @@ jobs:
           ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name }}
 
       - name: Build documentation
-        run: |
-          docker compose build
-          docker compose run --rm app
+        run: docker compose up --build --abort-on-container-exit
         env:
           STAGING_DOCS: ${{ github.ref_name == 'dev' && 'true' || 'false' }}
       
       - name: Verify build output
         run: |
           echo "Contents of html directory:"
-          ls -lah html/ || echo "html directory does not exist"
+          ls -lah html/
           echo ""
           echo "Contents of html/assets directory:"
-          ls -lah html/assets/ 2>/dev/null || echo "html/assets directory does not exist"
+          ls -lah html/assets/ || true
           echo ""
           echo "Checking for required files:"
-          if [ -f html/index.html ]; then
-            echo "✓ index.html found"
-            ls -lh html/index.html
-          else
-            echo "✗ ERROR: index.html not found!"
-            echo "Current directory: $(pwd)"
-            echo "Files in current directory:"
-            ls -la
-            exit 1
-          fi
-          if [ -f html/openapi-v3.0.yaml ]; then
-            echo "✓ openapi-v3.0.yaml found"
-          else
-            echo "⚠ WARNING: openapi-v3.0.yaml not found"
-          fi
+          test -f html/index.html && echo "✓ index.html found" || (echo "✗ ERROR: index.html not found!" && exit 1)
+          test -f html/openapi-v3.0.yaml && echo "✓ openapi-v3.0.yaml found" || echo "⚠ WARNING: openapi-v3.0.yaml not found"
           echo ""
           echo "File sizes:"
           du -h html/index.html html/openapi-v3.0.yaml 2>/dev/null || true
