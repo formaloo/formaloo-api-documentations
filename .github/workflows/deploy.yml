@@ -18,44 +18,14 @@ jobs:
           ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name }}
 
       - name: Build documentation
-        run: docker compose up --build --abort-on-container-exit
+        run: docker compose up
         env:
           STAGING_DOCS: ${{ github.ref_name == 'dev' && 'true' || 'false' }}
-      
-      - name: Verify build output
-        run: |
-          echo "Contents of html directory:"
-          ls -lah html/
-          echo ""
-          echo "Contents of html/assets directory:"
-          ls -lah html/assets/ || true
-          echo ""
-          echo "Checking for required files:"
-          test -f html/index.html && echo "✓ index.html found" || (echo "✗ ERROR: index.html not found!" && exit 1)
-          test -f html/openapi-v3.0.yaml && echo "✓ openapi-v3.0.yaml found" || echo "⚠ WARNING: openapi-v3.0.yaml not found"
-          echo ""
-          echo "File sizes:"
-          du -h html/index.html html/openapi-v3.0.yaml 2>/dev/null || true
-      
-      - name: Prepare deployment directory
-        run: |
-          mkdir -p dist
-          cp -r html/* dist/
-          echo "Deployment directory contents:"
-          ls -lah dist/
-          echo ""
-          echo "Total files to deploy:"
-          find dist -type f | wc -l
-          echo ""
-          echo "Verifying critical files:"
-          test -f dist/index.html && echo "✓ dist/index.html exists" || (echo "✗ ERROR: dist/index.html missing!" && exit 1)
-          test -f dist/openapi-v3.0.yaml && echo "✓ dist/openapi-v3.0.yaml exists" || echo "⚠ WARNING: dist/openapi-v3.0.yaml missing"
-          test -d dist/assets && echo "✓ dist/assets directory exists" || (echo "✗ ERROR: dist/assets missing!" && exit 1)
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ github.ref_name == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ github.ref_name }}
+          command: pages deploy html --project-name=${{ github.ref_name == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ github.ref_name }}
 
