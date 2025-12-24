@@ -7,6 +7,16 @@ on:
       - dev
   repository_dispatch:
     types: [api-spec-updated]
+    
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        type: choice
+        options:
+          - master
+          - dev
 
 jobs:
   build-and-deploy:
@@ -15,17 +25,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || (github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name) }}
 
       - name: Build documentation
         run: docker compose up
         env:
-          STAGING_DOCS: ${{ github.ref_name == 'dev' && 'true' || 'false' }}
+          STAGING_DOCS: ${{ ((github.event_name == 'workflow_dispatch' && inputs.branch == 'dev') || (github.event_name != 'workflow_dispatch' && github.ref_name == 'dev')) && 'true' || 'false' }}
       
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy html --project-name=${{ github.ref_name == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ github.ref_name }}
+          command: pages deploy html --project-name=${{ (github.event_name == 'workflow_dispatch' && inputs.branch == 'master' || (github.event_name != 'workflow_dispatch' && github.ref_name == 'master')) && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref_name }}
 
