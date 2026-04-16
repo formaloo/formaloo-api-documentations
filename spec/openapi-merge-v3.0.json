@@ -1,23 +1,23 @@
 {
   "inputs": [
     {
-      "inputFile": "./v3.0-bundeled.yaml"
+      "inputFile": "./v3.0-bundled.json"
     },
     {
-      "inputFile": "./icas-bundeled.yaml"
+      "inputFile": "./icas-bundled.json"
     },
     {
-      "inputFile": "./formz-bundeled.yaml"
+      "inputFile": "./formz-bundled.json"
     },
     {
-      "inputFile": "./authentication-bundeled.yaml"
+      "inputFile": "./authentication-bundled.json"
     },
     {
-      "inputFile": "./storage-bundeled.yaml"
+      "inputFile": "./storage-bundled.json"
     },
     {
-      "inputFile": "./ai-bundeled.yaml"
+      "inputFile": "./ai-bundled.json"
     }
   ], 
-  "output": "../openapi-v3.0.yaml"
+  "output": "../artifacts/intermediate/openapi-merged.raw.json"
 }
