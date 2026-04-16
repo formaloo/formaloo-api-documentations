@@ -32,6 +32,7 @@ Generated outputs:
 Optional generation metadata:
 
 - `spec/operation-metadata.json`: optional sidecar manifest for public-safe operation metadata. The pipeline succeeds when this file is absent.
+- `spec/tag-metadata.json`: public-facing tag naming and description overrides for generated docs navigation.
 
 Serve the generated docs locally:
 

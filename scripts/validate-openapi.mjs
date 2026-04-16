@@ -53,6 +53,12 @@ if (!Array.isArray(spec.tags) || spec.tags.length === 0) {
   errors.push("Final normalized spec must define at least one top-level tag.");
 }
 
+for (const tag of spec.tags ?? []) {
+  if (typeof tag.description !== "string" || tag.description.trim() === "") {
+    errors.push(`Top-level tag ${tag.name} must define a non-empty description.`);
+  }
+}
+
 for (const pathKey of Object.keys(spec.paths)) {
   if (!pathKey.startsWith(defaultPrefix) && !legacyPaths.has(pathKey)) {
     errors.push(`Path ${pathKey} is outside the public default version and is not allowlisted as a legacy exception.`);
@@ -70,6 +76,11 @@ for (const pathKey of Object.keys(spec.paths)) {
           errors.push(`Operation ${method.toUpperCase()} ${pathKey} references undefined security scheme ${schemeName}.`);
         }
       }
+    }
+
+    const has4xxResponse = Object.keys(operation.responses ?? {}).some((statusCode) => /^4\d\d$/.test(statusCode));
+    if (!has4xxResponse) {
+      errors.push(`Operation ${method.toUpperCase()} ${pathKey} must define at least one 4XX response.`);
     }
 
     if (legacyPaths.has(pathKey)) {
