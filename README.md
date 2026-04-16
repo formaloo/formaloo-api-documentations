@@ -1,16 +1,39 @@
 # Formaloo API Documentation
 
-Repository for generating Formaloo API documentation from OpenAPI specifications across multiple services.
+Repository for generating the public Formaloo API reference from OpenAPI specifications across multiple services.
 
 ## Running the Service
 
-Build and generate documentation:
+Install the pinned tooling:
 
 ```bash
-docker compose up
+npm ci
 ```
 
-The generated HTML files are available in the `html` directory. Serve them locally:
+Generate the public spec, validation reports, and HTML docs:
+
+```bash
+./generate.sh
+```
+
+You can still run the full build in Docker:
+
+```bash
+docker compose up --build
+```
+
+Generated outputs:
+
+- `openapi-v3.0.yaml`: canonical public OpenAPI artifact
+- `html/`: generated static docs bundle
+- `artifacts/validation/`: validation and lint reports
+- `artifacts/release/`: packaged release assets
+
+Optional generation metadata:
+
+- `spec/operation-metadata.json`: optional sidecar manifest for public-safe operation metadata. The pipeline succeeds when this file is absent.
+
+Serve the generated docs locally:
 
 ```bash
 cd html && python3 -m http.server 8000
@@ -21,7 +44,7 @@ cd html && python3 -m http.server 8000
 Use `STAGING_DOCS=true` to generate documentation from staging endpoints:
 
 ```bash
-STAGING_DOCS=true docker compose up
+STAGING_DOCS=true ./generate.sh
 ```
 
 - **Production** (default): Uses `api.formaloo.me` and related production endpoints
@@ -29,17 +52,17 @@ STAGING_DOCS=true docker compose up
 
 ## Contributing
 
-Documentation consists of automated OpenAPI specs from services and manual descriptions added in this repository.
+Documentation consists of automated OpenAPI specs from services, a public normalization step, and manual descriptions added in this repository.
 
 ### Adding Manual Descriptions
 
-Manual descriptions are stored as Markdown files matching the endpoint path and HTTP method. For example, the endpoint `PATCH /v2.0/forms/{slug}/` uses:
+Manual descriptions are stored as Markdown files matching the endpoint path and HTTP method. For example, the endpoint `PATCH /v3.0/forms/{slug}/` uses:
 
-- `spec/docs/v2.0/forms/{slug}/patch.md`
-- `spec/docs/v2.0/forms/{slug}/put.md` (if PUT is also supported)
+- `spec/docs/v3.0/forms/{slug}/patch.md`
+- `spec/docs/v3.0/forms/{slug}/put.md` (if PUT is also supported)
 
-Run `docker compose up` to automatically create missing documentation file structure, then edit the generated files.
+Run `./generate.sh` to prepare missing documentation file structure during generation, then add or update the relevant markdown files in `spec/docs/`.
 
 ### Version Introductions
 
-Each API version has an introduction file (e.g., `spec/docs/v2.0/intro.md`) containing version overview, getting started guide, and general considerations.
+The public reference uses `spec/docs/v3.0/intro.md` for onboarding and version guidance.
