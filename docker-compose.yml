@@ -1,12 +1,10 @@
-version: "3.8"
-
 services:
   app:
     container_name: spec
     build:
       dockerfile: Dockerfile
       context: .
-    command: bash -c "bash ./files/generate.sh"
+    command: bash -lc "cd /files && ./generate.sh"
     volumes:
       - .:/files
     environment:
