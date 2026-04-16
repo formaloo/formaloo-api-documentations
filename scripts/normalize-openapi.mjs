@@ -8,6 +8,7 @@ const rawSpecPath = path.join(intermediateDir, "openapi-merged.raw.json");
 const normalizedSpecPath = path.join(intermediateDir, "openapi-public.normalized.json");
 const publicContractPath = path.join(rootDir, "spec", "public-contract.json");
 const metadataPath = path.join(rootDir, "spec", "operation-metadata.json");
+const tagMetadataPath = path.join(rootDir, "spec", "tag-metadata.json");
 
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
@@ -17,6 +18,13 @@ try {
   metadata = JSON.parse(await fs.readFile(metadataPath, "utf8"));
 } catch {
   metadata = null;
+}
+
+let tagMetadata = {};
+try {
+  tagMetadata = JSON.parse(await fs.readFile(tagMetadataPath, "utf8"));
+} catch {
+  tagMetadata = {};
 }
 
 const defaultServerUrl =
@@ -41,6 +49,7 @@ spec.servers = [
 
 spec.components = spec.components ?? {};
 spec.components.securitySchemes = spec.components.securitySchemes ?? {};
+spec.components.responses = spec.components.responses ?? {};
 if (!spec.components.securitySchemes.ApiKeyAuthentication) {
   spec.components.securitySchemes.ApiKeyAuthentication = {
     type: "apiKey",
@@ -57,6 +66,15 @@ if (!spec.components.securitySchemes.JwtAuthentication) {
     description: 'Token-based authentication with required prefix "JWT"'
   };
 }
+spec.components.responses.BadRequest = spec.components.responses.BadRequest ?? {
+  description: "The request could not be processed. Review request parameters, headers, and payload values."
+};
+spec.components.responses.Unauthorized = spec.components.responses.Unauthorized ?? {
+  description: "Authentication credentials are missing, invalid, or expired."
+};
+spec.components.responses.NotFound = spec.components.responses.NotFound ?? {
+  description: "The requested resource could not be found."
+};
 
 const operationMetadata = metadata?.operations ?? {};
 const allowedMetadataKeys = new Set([
@@ -67,9 +85,83 @@ const allowedMetadataKeys = new Set([
   "statefulness"
 ]);
 const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
-const tagNames = new Set();
+const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
+
+function titleizeTag(slug) {
+  const overrides = {
+    oauth2: "OAuth 2.0",
+    oembed: "oEmbed"
+  };
+
+  if (overrides[slug]) {
+    return overrides[slug];
+  }
+
+  return slug
+    .replace(/[_-]+/g, " ")
+    .replace(/\bapi\b/gi, "API")
+    .replace(/\bai\b/gi, "AI")
+    .replace(/\bnps\b/gi, "NPS")
+    .replace(/\bgsheet\b/gi, "GSheet")
+    .replace(/\bpdf\b/gi, "PDF")
+    .replace(/\boauth\b/gi, "OAuth")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function getTagDefinition(slug) {
+  const tagInfo = tagMetadata[slug] ?? {};
+  const displayName = tagInfo.displayName ?? titleizeTag(slug);
+
+  return {
+    name: displayName,
+    description: tagInfo.description ?? `Operations for ${displayName.toLowerCase()}.`,
+    "x-formaloo-tag-slug": slug
+  };
+}
+
+function hasHeaderParameter(operation, headerName) {
+  return (operation.parameters ?? []).some(
+    (parameter) =>
+      parameter?.in === "header" &&
+      typeof parameter?.name === "string" &&
+      parameter.name.toLowerCase() === headerName.toLowerCase()
+  );
+}
+
+function ensureResponse(operation, statusCode, refName) {
+  operation.responses = operation.responses ?? {};
+  if (!operation.responses[statusCode]) {
+    operation.responses[statusCode] = {
+      $ref: `#/components/responses/${refName}`
+    };
+  }
+}
+
+function ensureResponseDescriptions(operation, method) {
+  const defaults = {
+    "200": "Successful response.",
+    "201": "Resource created successfully.",
+    "202": "Request accepted successfully.",
+    "204": "No response body."
+  };
+
+  for (const [statusCode, response] of Object.entries(operation.responses ?? {})) {
+    if (!response || "$ref" in response) {
+      continue;
+    }
+
+    const description = typeof response.description === "string" ? response.description.trim() : "";
+    if (description) {
+      continue;
+    }
+
+    response.description =
+      defaults[statusCode] ??
+      (method === "delete" ? "Request completed successfully." : "Successful response.");
+  }
+}
 
 function getRefTarget(ref) {
   if (typeof ref !== "string" || !ref.startsWith("#/")) {
@@ -182,6 +274,27 @@ function normalizeSecurity(operation) {
   return operation;
 }
 
+function normalizeResponses(pathKey, method, operation) {
+  const responseCodes = Object.keys(operation.responses ?? {});
+  const has4xxResponse = responseCodes.some((statusCode) => /^4\d\d$/.test(statusCode));
+  const requiresAuth = Array.isArray(operation.security) && operation.security.length > 0;
+  const hasApiKeyHeader = hasHeaderParameter(operation, "x-api-key");
+
+  if (!has4xxResponse) {
+    ensureResponse(operation, "400", "BadRequest");
+  }
+
+  if ((requiresAuth || hasApiKeyHeader) && !operation.responses?.["401"]) {
+    ensureResponse(operation, "401", "Unauthorized");
+  }
+
+  if (pathKey.includes("{") && ["get", "put", "patch", "delete"].includes(method) && !operation.responses?.["404"]) {
+    ensureResponse(operation, "404", "NotFound");
+  }
+
+  ensureResponseDescriptions(operation, method);
+}
+
 function normalizeSchemaTree(node) {
   if (!node || typeof node !== "object") {
     return;
@@ -218,15 +331,21 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
 
     const normalizedOperation = { ...operation };
     normalizeSecurity(normalizedOperation);
+    normalizeResponses(pathKey, method, normalizedOperation);
 
-    if (!Array.isArray(normalizedOperation.tags) || normalizedOperation.tags.length === 0) {
-      const firstSegment = pathKey.split("/").filter(Boolean)[1] ?? "general";
-      normalizedOperation.tags = [firstSegment];
-    }
-
-    for (const tag of normalizedOperation.tags) {
-      tagNames.add(tag);
-    }
+    const rawTags =
+      Array.isArray(normalizedOperation.tags) && normalizedOperation.tags.length > 0
+        ? normalizedOperation.tags
+        : [pathKey.split("/").filter(Boolean)[1] ?? "general"];
+    normalizedOperation.tags = Array.from(
+      new Set(
+        rawTags.map((tagSlug) => {
+          const tagDefinition = getTagDefinition(tagSlug);
+          tagDefinitions.set(tagDefinition.name, tagDefinition);
+          return tagDefinition.name;
+        })
+      )
+    );
 
     if (isLegacyPath) {
       const notice = publicContract.legacyPathNotice;
@@ -259,9 +378,7 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
 }
 
 spec.paths = sortedPaths;
-spec.tags = Array.from(tagNames)
-  .sort((left, right) => left.localeCompare(right))
-  .map((name) => ({ name }));
+spec.tags = Array.from(tagDefinitions.values()).sort((left, right) => left.name.localeCompare(right.name));
 normalizeSchemaTree(spec.components?.schemas);
 
 await fs.mkdir(intermediateDir, { recursive: true });
