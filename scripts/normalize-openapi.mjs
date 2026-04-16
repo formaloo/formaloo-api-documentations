@@ -318,6 +318,82 @@ function normalizeSchemaTree(node) {
   }
 }
 
+function collectComponentUsage(rootNode) {
+  const usedComponents = new Map();
+  const visitedRefs = new Set();
+
+  function mark(section, name) {
+    if (!usedComponents.has(section)) {
+      usedComponents.set(section, new Set());
+    }
+    usedComponents.get(section).add(name);
+  }
+
+  function walk(node) {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        walk(item);
+      }
+      return;
+    }
+
+    if (typeof node.$ref === "string") {
+      const ref = node.$ref;
+      const match = ref.match(/^#\/components\/([^/]+)\/(.+)$/);
+      if (match) {
+        const [, section, name] = match;
+        mark(section, name);
+
+        if (!visitedRefs.has(ref)) {
+          visitedRefs.add(ref);
+          const target = spec.components?.[section]?.[name];
+          if (target) {
+            walk(target);
+          }
+        }
+      }
+    }
+
+    for (const value of Object.values(node)) {
+      walk(value);
+    }
+  }
+
+  walk(rootNode);
+  return usedComponents;
+}
+
+function pruneUnusedSchemas() {
+  if (!spec.components?.schemas) {
+    return;
+  }
+
+  const usedComponents = collectComponentUsage({
+    paths: spec.paths,
+    webhooks: spec.webhooks,
+    components: {
+      responses: spec.components.responses,
+      parameters: spec.components.parameters,
+      requestBodies: spec.components.requestBodies,
+      headers: spec.components.headers,
+      examples: spec.components.examples,
+      links: spec.components.links,
+      callbacks: spec.components.callbacks
+    }
+  });
+  const usedSchemas = usedComponents.get("schemas") ?? new Set();
+
+  for (const schemaName of Object.keys(spec.components.schemas)) {
+    if (!usedSchemas.has(schemaName)) {
+      delete spec.components.schemas[schemaName];
+    }
+  }
+}
+
 for (const pathKey of Object.keys(spec.paths).sort()) {
   const pathItem = spec.paths[pathKey];
   const sortedPathItem = {};
@@ -380,6 +456,7 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
 spec.paths = sortedPaths;
 spec.tags = Array.from(tagDefinitions.values()).sort((left, right) => left.name.localeCompare(right.name));
 normalizeSchemaTree(spec.components?.schemas);
+pruneUnusedSchemas();
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(normalizedSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");

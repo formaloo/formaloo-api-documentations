@@ -24,32 +24,40 @@ const sources = staging
 
 await fs.mkdir(specDir, { recursive: true });
 
+function fetchSpec(outputPath, url) {
+  const commonArgs = [
+    "--fail",
+    "--location",
+    "--silent",
+    "--show-error",
+    "--retry",
+    "4",
+    "--retry-delay",
+    "2",
+    "--connect-timeout",
+    "15",
+    "--max-time",
+    "90",
+    "--output",
+    outputPath,
+    url
+  ];
+
+  try {
+    execFileSync("curl", commonArgs, { stdio: "inherit" });
+    return;
+  } catch (error) {
+    if (error.status !== 16) {
+      throw error;
+    }
+  }
+
+  execFileSync("curl", ["--http1.1", ...commonArgs], { stdio: "inherit" });
+}
+
 for (const [name, url] of Object.entries(sources)) {
   const outputPath = path.join(specDir, `${name}.yaml`);
-
-  execFileSync(
-    "curl",
-    [
-      "--fail",
-      "--location",
-      "--silent",
-      "--show-error",
-      "--retry",
-      "4",
-      "--retry-delay",
-      "2",
-      "--connect-timeout",
-      "15",
-      "--max-time",
-      "90",
-      "--output",
-      outputPath,
-      url
-    ],
-    {
-      stdio: "inherit"
-    }
-  );
+  fetchSpec(outputPath, url);
 
   console.log(`Fetched ${name} spec -> ${path.relative(rootDir, outputPath)}`);
 }
