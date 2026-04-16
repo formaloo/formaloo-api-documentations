@@ -1,0 +1,8 @@
+extends:
+  - recommended
+
+rules:
+  info-license: off
+  no-path-trailing-slash: off
+  security-defined: off
+  tag-description: off
