@@ -62,7 +62,13 @@ Manual descriptions are stored as Markdown files matching the endpoint path and 
 - `spec/docs/v3.0/forms/{slug}/patch.md`
 - `spec/docs/v3.0/forms/{slug}/put.md` (if PUT is also supported)
 
-Run `./generate.sh` to prepare missing documentation file structure during generation, then add or update the relevant markdown files in `spec/docs/`.
+To create local placeholder markdown files for missing endpoint docs, run:
+
+```bash
+npm run prepare-doc-stubs
+```
+
+`./generate.sh` also prepares these paths during the build, but it removes temporary stubs before exiting so the worktree stays clean.
 
 ### Version Introductions
 
