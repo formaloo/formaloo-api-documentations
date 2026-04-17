@@ -14,8 +14,11 @@ on:
         required: true
         type: choice
         options:
-          - master
-          - dev
+      - master
+      - dev
+
+permissions:
+  contents: read
 
 jobs:
   build-and-deploy:
