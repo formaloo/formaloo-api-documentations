@@ -32,6 +32,7 @@ function fetchSpec(outputPath, url) {
     "--show-error",
     "--retry",
     "4",
+    "--retry-all-errors",
     "--retry-delay",
     "2",
     "--connect-timeout",
@@ -43,11 +44,18 @@ function fetchSpec(outputPath, url) {
     url
   ];
 
+  const http1FallbackExitCodes = new Set([
+    16, // HTTP/2 framing layer error
+    52, // empty reply from server
+    56, // failure receiving network data
+    92 // HTTP/2 stream error
+  ]);
+
   try {
     execFileSync("curl", commonArgs, { stdio: "inherit" });
     return;
   } catch (error) {
-    if (error.status !== 16) {
+    if (!http1FallbackExitCodes.has(error.status)) {
       throw error;
     }
   }
