@@ -1,0 +1,15 @@
+{
+  "name": "formaloo-api-documentations",
+  "private": true,
+  "scripts": {
+    "build:docs": "./generate.sh",
+    "fetch-specs": "node ./scripts/fetch-specs.mjs",
+    "prepare-doc-stubs": "node ./scripts/prepare-doc-stubs.mjs",
+    "normalize-spec": "node ./scripts/normalize-openapi.mjs",
+    "validate-spec": "node ./scripts/validate-openapi.mjs"
+  },
+  "dependencies": {
+    "@redocly/cli": "1.34.5",
+    "openapi-merge-cli": "1.3.2"
+  }
+}

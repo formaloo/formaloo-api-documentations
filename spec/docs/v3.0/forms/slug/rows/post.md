@@ -94,7 +94,15 @@ To submit a form using field aliases, you must:
 
 ## Authorization and Authentication
 
-In order to add a form to a row using this endpoint, you have to send both the `Authorization` and `x-api-key` headers to identify your use and application. You can only add rows to the forms that you have access to. If you don't want to send the `Authorization` header for any reason, you can use the form submission endpoint.
+In order to add a row using this endpoint, you have to send both the `Authorization` and `x-api-key` headers to identify your user and application. You can only add rows to forms that your authenticated client has access to.
+
+Use this endpoint for authenticated private API access, such as dashboard or workspace-scoped integrations.
+
+If you are handling a public submission scenario instead, use the form submission endpoint. That flow is typically a better fit for:
+
+- anonymous form submissions
+- login-enabled forms that are submitted through the public form experience
+- forms shown inside a client portal or public app
 
 ## Notes
 

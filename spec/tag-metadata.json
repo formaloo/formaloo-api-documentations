@@ -1,0 +1,226 @@
+{
+  "forms": {
+    "displayName": "Forms",
+    "description": "Create, update, and manage forms and their primary configuration."
+  },
+  "fields": {
+    "displayName": "Fields",
+    "description": "Read and manage field definitions used by forms and boards."
+  },
+  "boards": {
+    "displayName": "Boards",
+    "description": "Create, browse, and manage boards and their related resources."
+  },
+  "boards-search": {
+    "displayName": "Board Search",
+    "description": "Search board resources and related results."
+  },
+  "blue-prints": {
+    "displayName": "Blueprints",
+    "description": "Browse and manage blueprint resources."
+  },
+  "shared-boards": {
+    "displayName": "Shared Boards",
+    "description": "Access public and shared board views, profile data, and shared content."
+  },
+  "conversations": {
+    "displayName": "Conversations",
+    "description": "Read conversation resources and related history."
+  },
+  "custom-prompt-analyzes": {
+    "displayName": "Custom Prompt Analyses",
+    "description": "Run analyses for custom prompts."
+  },
+  "custom-prompt-results": {
+    "displayName": "Custom Prompt Results",
+    "description": "Read stored results for custom prompt runs."
+  },
+  "dashboard-search": {
+    "displayName": "Dashboard Search",
+    "description": "Search dashboard resources exposed by the public API."
+  },
+  "draft-rows": {
+    "displayName": "Draft Rows",
+    "description": "Manage draft row submissions before they are finalized."
+  },
+  "rows": {
+    "displayName": "Rows",
+    "description": "Read, update, reorder, and manage submitted row data."
+  },
+  "form-displays": {
+    "displayName": "Form Displays",
+    "description": "Access form display endpoints, including public submission flows."
+  },
+  "private-files": {
+    "displayName": "Private Files",
+    "description": "Create and retrieve private file resources and access URLs."
+  },
+  "files": {
+    "displayName": "Files",
+    "description": "Upload and manage file resources."
+  },
+  "force-updates": {
+    "displayName": "Force Updates",
+    "description": "Trigger or inspect force-update resources."
+  },
+  "end-users": {
+    "displayName": "End Users",
+    "description": "Authenticate end users and manage end-user account flows."
+  },
+  "email-templates": {
+    "displayName": "Email Templates",
+    "description": "Create and manage reusable email templates."
+  },
+  "email-template-examples": {
+    "displayName": "Email Template Examples",
+    "description": "Inspect example payloads and samples for email templates."
+  },
+  "email-servers": {
+    "displayName": "Email Servers",
+    "description": "Manage email server configuration resources."
+  },
+  "available-email-servers": {
+    "displayName": "Available Email Servers",
+    "description": "List available email server options."
+  },
+  "emails": {
+    "displayName": "Emails",
+    "description": "Access email delivery and webhook-related resources."
+  },
+  "profiles": {
+    "displayName": "Profiles",
+    "description": "Read and update user profile information."
+  },
+  "profile": {
+    "displayName": "Profile",
+    "description": "Manage the authenticated profile and related settings."
+  },
+  "businesses": {
+    "displayName": "Businesses",
+    "description": "Manage workspace-level business resources, usage, and related entities."
+  },
+  "folders": {
+    "displayName": "Folders",
+    "description": "Create and organize folders used to group content."
+  },
+  "folder-users": {
+    "displayName": "Folder Users",
+    "description": "Manage folder user access and related membership resources."
+  },
+  "plans": {
+    "displayName": "Plans",
+    "description": "List and inspect available plans and plan-related visibility rules."
+  },
+  "oauth2": {
+    "displayName": "OAuth 2.0",
+    "description": "Request and refresh authorization tokens for authenticated API access."
+  },
+  "integration-apps": {
+    "displayName": "Integration Apps",
+    "description": "Browse and manage integration app definitions."
+  },
+  "integrations": {
+    "displayName": "Integrations",
+    "description": "Manage integration endpoints and connected integrations."
+  },
+  "integration-tags": {
+    "displayName": "Integration Tags",
+    "description": "List and manage tags used for integrations."
+  },
+  "hubspot-integrations": {
+    "displayName": "HubSpot Integrations",
+    "description": "Manage HubSpot integration resources."
+  },
+  "mailchimp-integrations": {
+    "displayName": "Mailchimp Integrations",
+    "description": "Manage Mailchimp integration resources."
+  },
+  "sendinblue-integrations": {
+    "displayName": "Sendinblue Integrations",
+    "description": "Manage Sendinblue integration resources."
+  },
+  "notion-workspaces": {
+    "displayName": "Notion Workspaces",
+    "description": "Access Notion workspace connections and related resources."
+  },
+  "social-auth": {
+    "displayName": "Social Auth",
+    "description": "Authenticate or connect users through supported social sign-in flows."
+  },
+  "oembed": {
+    "displayName": "oEmbed",
+    "description": "Resolve oEmbed-compatible representations for supported resources."
+  },
+  "email_verifications": {
+    "displayName": "Email Verifications",
+    "description": "Create and verify email verification flows."
+  },
+  "payment-methods": {
+    "displayName": "Payment Methods",
+    "description": "Manage payment methods used by payment and subscription flows."
+  },
+  "payment-records": {
+    "displayName": "Payment Records",
+    "description": "List and inspect payment records."
+  },
+  "plan-subscriptions": {
+    "displayName": "Plan Subscriptions",
+    "description": "Manage plan subscriptions and subscription state."
+  },
+  "lead-enrichments": {
+    "displayName": "Lead Enrichments",
+    "description": "Access lead enrichment runs and their results."
+  },
+  "reports": {
+    "displayName": "Reports",
+    "description": "Access report generation and report-related resources."
+  },
+  "prompt-categories": {
+    "displayName": "Prompt Categories",
+    "description": "Browse categories used to organize prompts."
+  },
+  "recent-forms": {
+    "displayName": "Recent Forms",
+    "description": "List recently accessed or updated forms."
+  },
+  "recurring-submissions": {
+    "displayName": "Recurring Submissions",
+    "description": "Manage recurring submission resources and schedules."
+  },
+  "row-results": {
+    "displayName": "Row Results",
+    "description": "Access row result resources and related output."
+  },
+  "sync-with-gsheet": {
+    "displayName": "Sync with GSheet",
+    "description": "Manage synchronization flows with Google Sheets."
+  },
+  "two-way-sync": {
+    "displayName": "Two-Way Sync",
+    "description": "Manage bidirectional synchronization resources."
+  },
+  "template-boards": {
+    "displayName": "Template Boards",
+    "description": "Browse and manage reusable template boards."
+  },
+  "user-form-rows": {
+    "displayName": "User Form Rows",
+    "description": "Access rows associated with user form resources."
+  },
+  "user-forms": {
+    "displayName": "User Forms",
+    "description": "Access forms associated with end-user flows."
+  },
+  "themes": {
+    "displayName": "Themes",
+    "description": "Create, copy, and manage reusable theme resources."
+  },
+  "prompts": {
+    "displayName": "Prompts",
+    "description": "Read prompts and prompt-related AI request resources."
+  },
+  "business-engines": {
+    "displayName": "Business Engines",
+    "description": "Manage business engine resources and their configuration."
+  }
+}
