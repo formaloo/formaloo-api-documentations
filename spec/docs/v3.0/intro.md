@@ -102,6 +102,15 @@ Some endpoints are scoped to a workspace. When an endpoint documents the `x-work
 
 In many integrations, a workspace-bound API key already identifies the workspace. If the endpoint description says the header is optional for your API key, you can omit it in that case.
 
+## Client portal headers
+
+Some public app or client portal endpoints may also document optional headers such as `x-scope` or `x-app-id`.
+
+- `x-scope` is used on some login-enabled public app flows to identify the scope of the current portal experience.
+- `x-app-id` is used on some public app form submission flows when the app provides a specific app identifier.
+
+Only send these headers when the endpoint documentation for your scenario calls for them.
+
 ## Contributing
 
 This repository combines generated public API specifications with manual endpoint descriptions. Contributions should improve the public contract and the consumer-facing documentation without adding internal implementation details.
