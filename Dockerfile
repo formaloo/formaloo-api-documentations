@@ -1,5 +1,7 @@
-FROM node:20
+FROM node:20.19.0
 
-RUN npm install -g npm@latest && \ 
-    npm install -g openapi-merge-cli && \ 
-    npm install -g @redocly/cli@1.0.0-beta.129
+WORKDIR /tooling
+
+COPY package.json package-lock.json ./
+
+RUN npm ci --omit=dev

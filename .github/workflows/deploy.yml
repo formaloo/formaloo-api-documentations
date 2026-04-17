@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Pages
+name: Deploy Public Docs
 
 on:
   push:
@@ -7,35 +7,65 @@ on:
       - dev
   repository_dispatch:
     types: [api-spec-updated]
-    
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to deploy'
+        description: Branch to deploy
         required: true
         type: choice
         options:
           - master
           - dev
 
+permissions:
+  contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || (github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || (github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name) }}
+          ref: ${{ env.DEPLOY_BRANCH }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install toolchain
+        run: npm ci
 
       - name: Build documentation
-        run: docker compose up
+        run: ./generate.sh
         env:
-          STAGING_DOCS: ${{ ((github.event_name == 'workflow_dispatch' && inputs.branch == 'dev') || (github.event_name != 'workflow_dispatch' && github.ref_name == 'dev')) && 'true' || 'false' }}
-      
+          STAGING_DOCS: ${{ env.DEPLOY_BRANCH == 'dev' && 'true' || 'false' }}
+
+      - name: Upload generated spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-openapi-${{ github.sha }}
+          path: openapi-v3.0.yaml
+
+      - name: Upload validation reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-reports-${{ github.sha }}
+          path: artifacts/validation
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: artifacts/release
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy html --project-name=${{ (github.event_name == 'workflow_dispatch' && inputs.branch == 'master' || (github.event_name != 'workflow_dispatch' && github.ref_name == 'master')) && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref_name }}
-
+          command: pages deploy html --project-name=${{ env.DEPLOY_BRANCH == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ env.DEPLOY_BRANCH }}

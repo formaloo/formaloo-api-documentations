@@ -10,9 +10,10 @@ info:
     name: Support
     email: dev@formaloo.com
     url: https://help.formaloo.com/en/
-  externalDocs:
-    description: Find out more
-    url: https://help.formaloo.com/en/
+
+externalDocs:
+  description: Find out more
+  url: https://help.formaloo.com/en/
 
 servers:
   - url: https://api.formaloo.me
@@ -20,8 +21,13 @@ servers:
 
 components:
   securitySchemes:
-    JWT Authentication:
+    ApiKeyAuthentication:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Your API Key from the Formaloo dashboard.
+    JwtAuthentication:
       type: apiKey
       in: header
       name: Authorization
-      description: Token-based authentication with required prefix "JWT"
+      description: Use `JWT {Authorization Token}` for protected Formaloo API requests.

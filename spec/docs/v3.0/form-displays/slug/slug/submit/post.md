@@ -94,7 +94,17 @@ To submit a form using field aliases, you must:
 
 ## Authorization and Authentication
 
-In order to submit a form using this endpoint, you don't have to send an `Authorization` header, but you should send the `x-api-key` header to identify your application.
+In order to submit a form using this endpoint, you do not usually need to send an `Authorization` header. You should send the `x-api-key` header to identify your application.
+
+This endpoint is designed for public submission scenarios, including:
+
+- normal public forms with no login requirement
+- forms embedded inside a client portal or public app
+- login-enabled forms where the user is submitting through the public form flow
+
+If your app or portal provides an app identifier, you may also send `x-app-id`. This header is optional and is only relevant in client portal or public app contexts.
+
+If you need to create rows through an authenticated private API flow instead of the public submission flow, use the authenticated row-creation endpoint.
 
 ## Notes
 

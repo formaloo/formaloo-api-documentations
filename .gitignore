@@ -4,8 +4,10 @@ spec/storage*
 spec/icas*
 spec/ai*
 spec/authentication*
-spec/*bundeled.yaml
+spec/*bundled.*
 openapi-v*
 html/*
+artifacts/*
+node_modules/
 .idea
 .vscode
