@@ -12,6 +12,10 @@ const tagMetadataPath = path.join(rootDir, "spec", "tag-metadata.json");
 const apiKeyHeaderDescription = "Your API Key from the Formaloo dashboard.";
 const workspaceHeaderDescription =
   "Current workspace identifier for workspace-scoped requests. Send this header when the endpoint requires a workspace context and your API key does not already identify the workspace.";
+const appIdHeaderDescription =
+  "Optional client portal or public app identifier. Use this header when the app explicitly provides an app identifier for portal-specific form submission.";
+const scopeHeaderDescription =
+  "Optional client portal scope identifier. Use this header on client portal authentication requests when your app relies on a specific scope.";
 const clientCredentialsAuthorizationDescription =
   "Use `Basic {API Secret}`. The API Secret shown in the Formaloo dashboard can be used directly here.";
 const endUserSessionAuthorizationDescription =
@@ -223,6 +227,36 @@ function normalizeHeaderParameters(pathKey, method, operation) {
       required: true,
       schema: { type: "string" },
       description: endUserSessionAuthorizationDescription
+    });
+  }
+
+  if (pathKey === "/v3.0/form-displays/slug/{slug}/submit/" && method === "post") {
+    upsertHeaderParameter(operation, {
+      in: "header",
+      name: "x-app-id",
+      required: false,
+      schema: { type: "string" },
+      description: appIdHeaderDescription
+    });
+  }
+
+  if (pathKey === "/v3.0/end-users/request-redirect/" && method === "post") {
+    upsertHeaderParameter(operation, {
+      in: "header",
+      name: "x-scope",
+      required: false,
+      schema: { type: "string" },
+      description: scopeHeaderDescription
+    });
+  }
+
+  if (pathKey === "/v3.0/end-users/profile/" && method === "get") {
+    upsertHeaderParameter(operation, {
+      in: "header",
+      name: "x-scope",
+      required: false,
+      schema: { type: "string" },
+      description: scopeHeaderDescription
     });
   }
 }
