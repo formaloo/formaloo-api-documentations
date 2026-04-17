@@ -25,9 +25,9 @@ components:
       type: apiKey
       in: header
       name: x-api-key
-      description: Application API key required for Formaloo public API requests.
+      description: Your API Key from the Formaloo dashboard.
     JwtAuthentication:
       type: apiKey
       in: header
       name: Authorization
-      description: Token-based authentication with required prefix "JWT"
+      description: Use `JWT {Authorization Token}` for protected Formaloo API requests.

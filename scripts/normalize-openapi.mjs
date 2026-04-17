@@ -9,6 +9,13 @@ const normalizedSpecPath = path.join(intermediateDir, "openapi-public.normalized
 const publicContractPath = path.join(rootDir, "spec", "public-contract.json");
 const metadataPath = path.join(rootDir, "spec", "operation-metadata.json");
 const tagMetadataPath = path.join(rootDir, "spec", "tag-metadata.json");
+const apiKeyHeaderDescription = "Your API Key from the Formaloo dashboard.";
+const workspaceHeaderDescription =
+  "Current workspace identifier for workspace-scoped requests. Send this header when the endpoint requires a workspace context and your API key does not already identify the workspace.";
+const clientCredentialsAuthorizationDescription =
+  "Use `Basic {API Secret}`. The API Secret shown in the Formaloo dashboard can be used directly here.";
+const endUserSessionAuthorizationDescription =
+  "Use the end-user session token returned by the sign-in flow.";
 
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
@@ -55,7 +62,7 @@ if (!spec.components.securitySchemes.ApiKeyAuthentication) {
     type: "apiKey",
     in: "header",
     name: "x-api-key",
-    description: "Application API key required for Formaloo public API requests."
+    description: apiKeyHeaderDescription
   };
 }
 if (!spec.components.securitySchemes.JwtAuthentication) {
@@ -63,7 +70,7 @@ if (!spec.components.securitySchemes.JwtAuthentication) {
     type: "apiKey",
     in: "header",
     name: "Authorization",
-    description: 'Token-based authentication with required prefix "JWT"'
+    description: 'Use `JWT {Authorization Token}` for protected Formaloo API requests.'
   };
 }
 spec.components.responses.BadRequest = spec.components.responses.BadRequest ?? {
@@ -130,6 +137,25 @@ function hasHeaderParameter(operation, headerName) {
   );
 }
 
+function upsertHeaderParameter(operation, parameter) {
+  operation.parameters = operation.parameters ?? [];
+  const existingParameter = operation.parameters.find(
+    (currentParameter) =>
+      currentParameter?.in === "header" &&
+      typeof currentParameter?.name === "string" &&
+      currentParameter.name.toLowerCase() === parameter.name.toLowerCase()
+  );
+
+  if (existingParameter) {
+    existingParameter.description = parameter.description;
+    existingParameter.required = parameter.required;
+    existingParameter.schema = parameter.schema;
+    return;
+  }
+
+  operation.parameters.push(parameter);
+}
+
 function ensureResponse(operation, statusCode, refName) {
   operation.responses = operation.responses ?? {};
   if (!operation.responses[statusCode]) {
@@ -160,6 +186,44 @@ function ensureResponseDescriptions(operation, method) {
     response.description =
       defaults[statusCode] ??
       (method === "delete" ? "Request completed successfully." : "Successful response.");
+  }
+}
+
+function normalizeHeaderParameters(pathKey, method, operation) {
+  for (const parameter of operation.parameters ?? []) {
+    if (parameter?.in !== "header" || typeof parameter?.name !== "string") {
+      continue;
+    }
+
+    const normalizedName = parameter.name.toLowerCase();
+
+    if (normalizedName === "x-api-key") {
+      parameter.description = apiKeyHeaderDescription;
+    }
+
+    if (normalizedName === "x-workspace") {
+      parameter.description = workspaceHeaderDescription;
+    }
+  }
+
+  if (pathKey === "/v3.0/oauth2/authorization-token/" && method === "post") {
+    upsertHeaderParameter(operation, {
+      in: "header",
+      name: "Authorization",
+      required: true,
+      schema: { type: "string" },
+      description: clientCredentialsAuthorizationDescription
+    });
+  }
+
+  if (pathKey === "/v1.0/end-users/authorize/" && method === "post") {
+    upsertHeaderParameter(operation, {
+      in: "header",
+      name: "Authorization",
+      required: true,
+      schema: { type: "string" },
+      description: endUserSessionAuthorizationDescription
+    });
   }
 }
 
@@ -406,6 +470,7 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
     }
 
     const normalizedOperation = { ...operation };
+    normalizeHeaderParameters(pathKey, method, normalizedOperation);
     normalizeSecurity(normalizedOperation);
     normalizeResponses(pathKey, method, normalizedOperation);
 
