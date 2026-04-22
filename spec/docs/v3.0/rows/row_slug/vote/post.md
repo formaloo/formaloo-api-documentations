@@ -20,14 +20,14 @@ None. The action is derived from the current vote state.
 {
   "data": {
     "row": {
-      "voted": true,
+      "user_voted": true,
       "vote_count": 1
     }
   }
 }
 ```
 
-- `voted` — `true` if a vote now exists for the caller on this row after the toggle, `false` if it was removed.
+- `user_voted` — `true` if a vote now exists for the caller on this row after the toggle, `false` if it was removed.
 - `vote_count` — total vote count on the row after the toggle (denormalized on `Row`, consistent with `RowVote` rows).
 
 ### Access control
