@@ -9,7 +9,6 @@ ARTIFACTS_DIR="$ROOT_DIR/artifacts"
 INTERMEDIATE_DIR="$ARTIFACTS_DIR/intermediate"
 VALIDATION_DIR="$ARTIFACTS_DIR/validation"
 RELEASE_DIR="$ARTIFACTS_DIR/release"
-DOC_STUB_MANIFEST="$INTERMEDIATE_DIR/generated-doc-stubs.txt"
 
 STAGING_DOCS=${STAGING_DOCS:-false}
 PUBLIC_API_URL=${PUBLIC_API_URL:-}
@@ -32,28 +31,6 @@ fi
 
 mkdir -p "$HTML_DIR" "$INTERMEDIATE_DIR" "$VALIDATION_DIR" "$RELEASE_DIR"
 rm -rf "$HTML_DIR"/* "$INTERMEDIATE_DIR"/* "$VALIDATION_DIR"/* "$RELEASE_DIR"/*
-
-cleanup_generated_doc_stubs() {
-  if [[ ! -f "$DOC_STUB_MANIFEST" ]]; then
-    return
-  fi
-
-  while IFS= read -r file_path; do
-    [[ -n "$file_path" ]] || continue
-
-    if [[ -f "$file_path" ]]; then
-      rm -f "$file_path"
-    fi
-
-    dir_path=$(dirname "$file_path")
-    while [[ "$dir_path" == "$SPEC_DIR"* && "$dir_path" != "$SPEC_DIR" ]]; do
-      rmdir "$dir_path" 2>/dev/null || break
-      dir_path=$(dirname "$dir_path")
-    done
-  done < "$DOC_STUB_MANIFEST"
-}
-
-trap cleanup_generated_doc_stubs EXIT
 
 echo "Fetching upstream specifications..."
 node "$ROOT_DIR/scripts/fetch-specs.mjs"
