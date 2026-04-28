@@ -1,0 +1,1 @@
+Use this endpoint to see if current business can upgrade to a given plan deal or not, and if how much roration will they get for the reminder of their current plan (if applicable).
