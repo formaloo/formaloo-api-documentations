@@ -8,7 +8,7 @@ You can use this endpoint to get suggestions for a new form theme. How it works 
 }
 ```
 
-In response, the form maker service returns an slug for your ai request, and a delivery_id for connecting to the websocket.
+In response, the form maker service returns an slug for your ai request.
 
 ``` json
 {
@@ -20,16 +20,16 @@ In response, the form maker service returns an slug for your ai request, and a d
     "data": {
         "magic_submit": {
             "slug": "fd2ksfx6",
-            "delivery_id": "1e285a0d-c56f-4a23-8ba4-4eff5a5049d7"
+            "delivery_id": null
         }
     }
 }
 ```
 
-After this, you should use the delivery id to connect to the websocket service by sending a request, like this:
+After this, you should connect to the websocket service by sending a request, like this, with standard auth headers.
 
 ```
-{{ws_server}}/ws/delivery/?delivery_id={{delivery_id}}
+{{ws_server}}/ws/workspace/
 ```
 
 Meanwhile, the AI service will use the user input along with the form data to try and extract the theme design data for the form. When the response is ready, it will be sent back on the websocket connection:
