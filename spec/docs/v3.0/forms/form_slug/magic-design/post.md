@@ -8,7 +8,35 @@ You can use this endpoint to get suggestions for a new form theme. How it works 
 }
 ```
 
-In response, the form maker service returns an slug for your ai request.
+Optionally, you can send an exiting theme's slug as well, so the AI has its data and works by updating that theme's data instead of creating a new set of settings from scratch. This helps for having minor changes on a theme you already have.
+
+``` json
+{
+    "input_text": "I want my form to have a professional look and use the McDonald branding.",
+    "theme": "{THEME_SLUG}"
+}
+```
+
+Also, if you already have sent a request and this one is a follow up request to have additional updated on the AI suggested theme, you can send the `conversation_id` so the AI has the context of the previous conversations and suggestions:
+
+``` json
+{
+    "input_text": "I want my form to have a professional look and use the McDonald branding.",
+    "conversation": "{CONVERSATION_ID}"
+}
+```
+
+or
+
+``` json
+{
+    "input_text": "I want my form to have a professional look and use the McDonald branding.",
+    "conversation": "{CONVERSATION_ID}",
+    "theme": "{THEME_SLUG}"
+}
+```
+
+In response, the form maker service returns an slug for your ai request and the conversation id you can use for follow up requests.
 
 ``` json
 {
@@ -19,7 +47,8 @@ In response, the form maker service returns an slug for your ai request.
     },
     "data": {
         "magic_submit": {
-            "slug": "fd2ksfx6",
+            "slug": "request_id",
+            "conversation": "conversation_id",
             "delivery_id": null
         }
     }
@@ -36,8 +65,7 @@ Meanwhile, the AI service will use the user input along with the form data to tr
 
 ```
 {
-    "ai_request": "2pk3y1r2",
-    "prompt_template": "mkf4rgy4",
+    "ai_request": "request_id",
     "status": "completed",
     "ai_response": {
         "title": "McDonald's Customer Satisfaction Survey",
