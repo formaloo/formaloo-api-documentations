@@ -1,0 +1,15 @@
+{
+  "exclude": {
+    "services": [
+      "authentication",
+      "ai"
+  ],
+    "pathPrefixes": [
+      "/social-auth/"
+  ],
+    "pathPatterns": [
+      "/*-intagrations/"
+  ],
+    "endpoints": []
+  }
+}
