@@ -1,1 +1,0 @@
-Create SMSOTP and return UUID for further verification with token.

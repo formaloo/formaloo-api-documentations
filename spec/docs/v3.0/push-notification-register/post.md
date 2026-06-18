@@ -1,1 +1,0 @@
-Register a user to receive notifications on a device.
