@@ -3,13 +3,13 @@
     "services": [
       "authentication",
       "ai"
-  ],
+    ],
     "pathPrefixes": [
       "/social-auth/"
-  ],
+    ],
     "pathPatterns": [
       "/*-integrations/"
-  ],
+    ],
     "endpoints": []
   }
 }

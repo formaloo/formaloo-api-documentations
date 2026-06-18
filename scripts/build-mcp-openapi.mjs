@@ -95,7 +95,6 @@ function prepareWildcardRule(rawPattern) {
 async function loadServiceExclusionIndex(serviceNames) {
   const operationIds = new Set();
   const endpointKeys = new Set();
-  const tagTokens = new Set();
   const missingServices = [];
 
   for (const serviceName of serviceNames) {
@@ -124,10 +123,6 @@ async function loadServiceExclusionIndex(serviceNames) {
           operationIds.add(operation.operationId);
         }
 
-        for (const tagName of operation.tags ?? []) {
-          tagTokens.add(normalizeServiceToken(tagName));
-        }
-
         const normalizedPath = normalizePathForCompare(pathKey);
         const versionlessPath = stripVersionPrefix(normalizedPath);
         endpointKeys.add(`${methodToken} ${normalizedPath}`);
@@ -139,7 +134,6 @@ async function loadServiceExclusionIndex(serviceNames) {
   return {
     operationIds,
     endpointKeys,
-    tagTokens,
     missingServices
   };
 }
@@ -159,33 +153,11 @@ try {
 const excludeSettings = settings.exclude ?? settings;
 const excludedServices = asStringArray(excludeSettings.services);
 const excludedServiceTokens = new Set(excludedServices.map(normalizeServiceToken));
+const excludedTagTokens = new Set(asStringArray(excludeSettings.tags).map(normalizeServiceToken));
 const excludedPathPrefixes = asStringArray(excludeSettings.pathPrefixes).map(preparePathRule);
 const excludedPathPatterns = asStringArray(excludeSettings.pathPatterns).map(prepareWildcardRule);
 const excludedEndpoints = new Set(asStringArray(excludeSettings.endpoints).map((endpoint) => normalizePathForCompare(endpoint)));
 const excludedServiceIndex = await loadServiceExclusionIndex(excludedServices);
-const serviceTokenAliases = {
-  authentication: ["oauth2", "oauth", "social-auth", "end-users", "email-verifications", "profile", "profiles"],
-  ai: [
-    "prompts",
-    "prompt-categories",
-    "custom-prompt-analyzes",
-    "custom-prompt-results",
-    "lead-enrichments",
-    "row-results",
-    "business-engines",
-    "reports"
-  ]
-};
-const expandedExcludedServiceTokens = new Set(excludedServiceTokens);
-for (const serviceName of excludedServices) {
-  const normalizedServiceName = normalizeServiceName(serviceName);
-  for (const alias of serviceTokenAliases[normalizedServiceName] ?? []) {
-    expandedExcludedServiceTokens.add(normalizeServiceToken(alias));
-  }
-}
-for (const token of excludedServiceIndex.tagTokens) {
-  expandedExcludedServiceTokens.add(token);
-}
 
 const spec = JSON.parse(await fs.readFile(normalizedSpecPath, "utf8"));
 
@@ -201,19 +173,19 @@ for (const tag of spec.tags ?? []) {
   }
 }
 
-function operationHasExcludedService(operation) {
-  if (expandedExcludedServiceTokens.size === 0) {
+function operationHasExcludedTag(operation) {
+  if (excludedTagTokens.size === 0) {
     return false;
   }
 
   for (const tagName of operation.tags ?? []) {
     const displayToken = normalizeServiceToken(tagName);
-    if (expandedExcludedServiceTokens.has(displayToken)) {
+    if (excludedTagTokens.has(displayToken)) {
       return true;
     }
 
     const slug = displayNameToSlug.get(tagName);
-    if (slug && expandedExcludedServiceTokens.has(normalizeServiceToken(slug))) {
+    if (slug && excludedTagTokens.has(normalizeServiceToken(slug))) {
       return true;
     }
   }
@@ -240,8 +212,7 @@ function shouldExcludeByService(pathKey, method, operation) {
     return true;
   }
 
-  // Fallback for service names that are given as tag slugs/display names.
-  return operationHasExcludedService(operation);
+  return false;
 }
 
 function pathMatchesRule(pathKey, includesVersion, value, matcher) {
@@ -305,7 +276,7 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
       continue;
     }
 
-    if (pathExcluded || shouldExcludeByService(pathKey, method, operation)) {
+    if (pathExcluded || shouldExcludeByService(pathKey, method, operation) || operationHasExcludedTag(operation)) {
       removedOperations += 1;
       continue;
     }
