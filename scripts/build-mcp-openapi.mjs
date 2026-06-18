@@ -25,6 +25,13 @@ function normalizeServiceToken(value) {
     .replace(/[^a-z0-9]+/g, "");
 }
 
+function normalizeServiceName(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+}
+
 function stripServerPrefix(rawPath) {
   const withoutQuery = String(rawPath ?? "").split("?")[0].split("#")[0];
   return withoutQuery.replace(/^https?:\/\/[^/]+/i, "");
@@ -73,7 +80,7 @@ function escapeRegex(value) {
 
 function wildcardPatternToRegex(pattern) {
   const escapedPattern = escapeRegex(pattern).replace(/\*/g, ".*");
-  return new RegExp(`^${escapedPattern}$`);
+  return new RegExp(`^${escapedPattern}(?:/.*)?$`);
 }
 
 function prepareWildcardRule(rawPattern) {
@@ -82,6 +89,58 @@ function prepareWildcardRule(rawPattern) {
     pattern: pathValue,
     includesVersion: hasVersionPrefix(pathValue),
     regex: wildcardPatternToRegex(pathValue)
+  };
+}
+
+async function loadServiceExclusionIndex(serviceNames) {
+  const operationIds = new Set();
+  const endpointKeys = new Set();
+  const tagTokens = new Set();
+  const missingServices = [];
+
+  for (const serviceName of serviceNames) {
+    const normalizedServiceName = normalizeServiceName(serviceName);
+    const bundledPath = path.join(rootDir, "spec", `${normalizedServiceName}-bundled.json`);
+
+    let serviceSpec = null;
+    try {
+      serviceSpec = JSON.parse(await fs.readFile(bundledPath, "utf8"));
+    } catch (error) {
+      if (error?.code === "ENOENT") {
+        missingServices.push(serviceName);
+        continue;
+      }
+      throw error;
+    }
+
+    for (const [pathKey, pathItem] of Object.entries(serviceSpec.paths ?? {})) {
+      for (const [method, operation] of Object.entries(pathItem ?? {})) {
+        const methodToken = method.toLowerCase();
+        if (!httpMethods.has(methodToken) || !operation || typeof operation !== "object") {
+          continue;
+        }
+
+        if (typeof operation.operationId === "string" && operation.operationId.trim() !== "") {
+          operationIds.add(operation.operationId);
+        }
+
+        for (const tagName of operation.tags ?? []) {
+          tagTokens.add(normalizeServiceToken(tagName));
+        }
+
+        const normalizedPath = normalizePathForCompare(pathKey);
+        const versionlessPath = stripVersionPrefix(normalizedPath);
+        endpointKeys.add(`${methodToken} ${normalizedPath}`);
+        endpointKeys.add(`${methodToken} ${versionlessPath}`);
+      }
+    }
+  }
+
+  return {
+    operationIds,
+    endpointKeys,
+    tagTokens,
+    missingServices
   };
 }
 
@@ -98,10 +157,35 @@ try {
 }
 
 const excludeSettings = settings.exclude ?? settings;
-const excludedServices = new Set(asStringArray(excludeSettings.services).map(normalizeServiceToken));
+const excludedServices = asStringArray(excludeSettings.services);
+const excludedServiceTokens = new Set(excludedServices.map(normalizeServiceToken));
 const excludedPathPrefixes = asStringArray(excludeSettings.pathPrefixes).map(preparePathRule);
 const excludedPathPatterns = asStringArray(excludeSettings.pathPatterns).map(prepareWildcardRule);
 const excludedEndpoints = new Set(asStringArray(excludeSettings.endpoints).map((endpoint) => normalizePathForCompare(endpoint)));
+const excludedServiceIndex = await loadServiceExclusionIndex(excludedServices);
+const serviceTokenAliases = {
+  authentication: ["oauth2", "oauth", "social-auth", "end-users", "email-verifications", "profile", "profiles"],
+  ai: [
+    "prompts",
+    "prompt-categories",
+    "custom-prompt-analyzes",
+    "custom-prompt-results",
+    "lead-enrichments",
+    "row-results",
+    "business-engines",
+    "reports"
+  ]
+};
+const expandedExcludedServiceTokens = new Set(excludedServiceTokens);
+for (const serviceName of excludedServices) {
+  const normalizedServiceName = normalizeServiceName(serviceName);
+  for (const alias of serviceTokenAliases[normalizedServiceName] ?? []) {
+    expandedExcludedServiceTokens.add(normalizeServiceToken(alias));
+  }
+}
+for (const token of excludedServiceIndex.tagTokens) {
+  expandedExcludedServiceTokens.add(token);
+}
 
 const spec = JSON.parse(await fs.readFile(normalizedSpecPath, "utf8"));
 
@@ -118,23 +202,46 @@ for (const tag of spec.tags ?? []) {
 }
 
 function operationHasExcludedService(operation) {
-  if (excludedServices.size === 0) {
+  if (expandedExcludedServiceTokens.size === 0) {
     return false;
   }
 
   for (const tagName of operation.tags ?? []) {
     const displayToken = normalizeServiceToken(tagName);
-    if (excludedServices.has(displayToken)) {
+    if (expandedExcludedServiceTokens.has(displayToken)) {
       return true;
     }
 
     const slug = displayNameToSlug.get(tagName);
-    if (slug && excludedServices.has(normalizeServiceToken(slug))) {
+    if (slug && expandedExcludedServiceTokens.has(normalizeServiceToken(slug))) {
       return true;
     }
   }
 
   return false;
+}
+
+function shouldExcludeByService(pathKey, method, operation) {
+  if (excludedServices.length === 0) {
+    return false;
+  }
+
+  if (typeof operation?.operationId === "string" && excludedServiceIndex.operationIds.has(operation.operationId)) {
+    return true;
+  }
+
+  const methodToken = method.toLowerCase();
+  const normalizedPath = normalizePathForCompare(pathKey);
+  const versionlessPath = stripVersionPrefix(normalizedPath);
+  if (
+    excludedServiceIndex.endpointKeys.has(`${methodToken} ${normalizedPath}`) ||
+    excludedServiceIndex.endpointKeys.has(`${methodToken} ${versionlessPath}`)
+  ) {
+    return true;
+  }
+
+  // Fallback for service names that are given as tag slugs/display names.
+  return operationHasExcludedService(operation);
 }
 
 function pathMatchesRule(pathKey, includesVersion, value, matcher) {
@@ -198,7 +305,7 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
       continue;
     }
 
-    if (pathExcluded || operationHasExcludedService(operation)) {
+    if (pathExcluded || shouldExcludeByService(pathKey, method, operation)) {
       removedOperations += 1;
       continue;
     }
@@ -223,5 +330,8 @@ await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
 
 console.log(`MCP filtered spec -> ${path.relative(rootDir, mcpSpecPath)}`);
 console.log(`MCP settings file -> ${path.relative(rootDir, settingsPath)}`);
+if (excludedServiceIndex.missingServices.length > 0) {
+  console.log(`Unknown services in settings: ${excludedServiceIndex.missingServices.join(", ")}`);
+}
 console.log(`Removed operations: ${removedOperations}`);
 console.log(`Remaining paths: ${Object.keys(spec.paths ?? {}).length}`);

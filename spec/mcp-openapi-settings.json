@@ -8,7 +8,7 @@
       "/social-auth/"
   ],
     "pathPatterns": [
-      "/*-intagrations/"
+      "/*-integrations/"
   ],
     "endpoints": []
   }

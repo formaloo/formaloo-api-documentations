@@ -72,8 +72,9 @@ When `MCP_DOCS=true`, exclusions are loaded from `spec/mcp-openapi-settings.json
 ```
 
 - `services`: excludes operations by service tag (slug or display name, case-insensitive)
+- `services`: excludes operations by bundled service spec name (for example `authentication`, `ai`, `formz`, `storage`, `icas`)
 - `pathPrefixes`: excludes all methods for any path under matching prefixes
-- `pathPatterns`: wildcard excludes (`*` supported), for example `/*-integrations/`
+- `pathPatterns`: wildcard excludes (`*` supported), for example `/*-integrations/` (also excludes nested subpaths)
 - `endpoints`: excludes all methods for exact endpoint paths
 
 You can override the settings file location with:
