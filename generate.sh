@@ -11,6 +11,7 @@ VALIDATION_DIR="$ARTIFACTS_DIR/validation"
 RELEASE_DIR="$ARTIFACTS_DIR/release"
 
 STAGING_DOCS=${STAGING_DOCS:-false}
+MCP_DOCS=${MCP_DOCS:-false}
 PUBLIC_API_URL=${PUBLIC_API_URL:-}
 MCP_OPENAPI_SETTINGS_FILE=${MCP_OPENAPI_SETTINGS_FILE:-}
 
@@ -72,10 +73,12 @@ PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" node "$ROOT_DIR/sc
 echo "Rendering final YAML artifact..."
 "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-public.normalized.json" --output "$ROOT_DIR/openapi-v3.0.yaml"
 
-echo "Rendering MCP YAML artifact..."
-MCP_OPENAPI_SETTINGS_FILE="$MCP_OPENAPI_SETTINGS_FILE" \
-node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"
-"$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-mcp.filtered.json" --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  echo "Rendering MCP YAML artifact..."
+  MCP_OPENAPI_SETTINGS_FILE="$MCP_OPENAPI_SETTINGS_FILE" \
+  node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"
+  "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-mcp.filtered.json" --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
+fi
 
 echo "Validating generated public contract..."
 node "$ROOT_DIR/scripts/validate-openapi.mjs"
@@ -86,12 +89,16 @@ fi
 echo "Building HTML documentation..."
 "$REDOCLY_BIN" build-docs "$ROOT_DIR/openapi-v3.0.yaml" -o "$HTML_DIR/index.html"
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$HTML_DIR/openapi-v3.0.yaml"
-cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
+fi
 cp -r "$ROOT_DIR/assets" "$HTML_DIR/"
 
 echo "Packaging release artifacts..."
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$RELEASE_DIR/openapi-v3.0.yaml"
-cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$RELEASE_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$RELEASE_DIR/openapi-v3.0.mcp.yaml"
+fi
 tar -czf "$RELEASE_DIR/html-docs.tar.gz" -C "$ROOT_DIR" html
 
 echo "Build complete."

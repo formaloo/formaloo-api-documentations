@@ -25,7 +25,7 @@ docker compose up --build
 Generated outputs:
 
 - `openapi-v3.0.yaml`: canonical public OpenAPI artifact
-- `openapi-v3.0.mcp.yaml`: MCP-focused OpenAPI artifact with optional exclusions
+- `openapi-v3.0.mcp.yaml`: MCP-focused OpenAPI artifact (generated only when `MCP_DOCS=true`)
 - `html/`: generated static docs bundle
 - `artifacts/validation/`: validation and lint reports
 - `artifacts/release/`: packaged release assets
@@ -52,7 +52,13 @@ STAGING_DOCS=true ./generate.sh
 - **Production** (default): Uses `api.formaloo.me` and related production endpoints
 - **Staging**: Uses `api.staging.formaloo.com` and related staging endpoints
 
-Use `spec/mcp-openapi-settings.json` when you need a reduced OpenAPI artifact for MCP:
+Use `MCP_DOCS=true` to generate the MCP OpenAPI artifact:
+
+```bash
+MCP_DOCS=true ./generate.sh
+```
+
+When `MCP_DOCS=true`, exclusions are loaded from `spec/mcp-openapi-settings.json`:
 
 ```json
 {
@@ -73,7 +79,7 @@ Use `spec/mcp-openapi-settings.json` when you need a reduced OpenAPI artifact fo
 You can override the settings file location with:
 
 ```bash
-MCP_OPENAPI_SETTINGS_FILE=spec/mcp-openapi-settings.json ./generate.sh
+MCP_DOCS=true MCP_OPENAPI_SETTINGS_FILE=spec/mcp-openapi-settings.json ./generate.sh
 ```
 
 ## Contributing

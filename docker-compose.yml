@@ -9,3 +9,4 @@ services:
       - .:/files
     environment:
       - STAGING_DOCS=${STAGING_DOCS:-false}
+      - MCP_DOCS=${MCP_DOCS:-false}
