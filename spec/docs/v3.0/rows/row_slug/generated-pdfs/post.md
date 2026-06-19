@@ -1,1 +1,1 @@
-Creates a new row generated pdf.
+Starts PDF generation for a specific submission row, optionally using a selected template. Use this when a response needs a downloadable document such as an invoice, certificate, receipt, or filled form.

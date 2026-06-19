@@ -1,2 +1,1 @@
-Retrieves the specified confirm redirection.
-
+Handles the browser redirect callback for an end-user authentication flow and forwards the code and state to the client redirect URI. This is mainly a browser relay endpoint, not a normal JSON API action.

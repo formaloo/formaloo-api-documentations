@@ -1,1 +1,1 @@
-Give a list of all forms created by or shared with the current user.
+Lists forms the authenticated user can access in the active workspace. Use this as the primary form catalog endpoint for dashboards, selectors, search, filtering by tags/folders/boards, and discovering forms owned by or shared with the user.

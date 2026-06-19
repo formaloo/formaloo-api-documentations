@@ -1,1 +1,1 @@
-Creates a new api key.
+Issues an API key for the authenticated workspace owner so external clients, integrations, or MCP agents can call the Formaloo API programmatically. Use this when a client needs to obtain or refresh its API credential for the current application and workspace; when refresh is requested, older active tokens are replaced by a new usable token.

@@ -1,1 +1,1 @@
-Retrieves the specified shared board block row.
+Returns public-facing runtime content for a shared board block. Use this to display rows, kanban cards, stats, charts, content, or summaries in a published app while respecting public and end-user access rules.

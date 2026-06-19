@@ -1,1 +1,1 @@
-Creates a new generic field.
+Creates a form field using the type supplied in the request body. Use this generic field creation endpoint when an agent is programmatically adding mixed field types and wants one URL for the form builder workflow.
