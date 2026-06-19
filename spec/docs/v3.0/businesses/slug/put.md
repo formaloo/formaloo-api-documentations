@@ -1,1 +1,1 @@
-Use to update a business' data.
+Replaces editable data for a specific workspace. Use this when the client needs to update workspace settings such as title, description, timezone, logo, custom domains, or related workspace profile fields.

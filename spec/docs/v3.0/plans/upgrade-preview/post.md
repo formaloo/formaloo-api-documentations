@@ -1,1 +1,1 @@
-Use this endpoint to see if current business can upgrade to a given plan deal or not, and if how much roration will they get for the reminder of their current plan (if applicable).
+Previews whether the active workspace can upgrade to a target plan deal and estimates the amount due. Use this before creating a purchase so the client can show the user whether the upgrade is allowed and what proration amount may be charged.

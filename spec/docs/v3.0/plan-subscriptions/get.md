@@ -1,2 +1,1 @@
-Retrieves the specified plan subscription.
-
+Lists subscriptions for the active workspace. Use this to show recurring plan subscriptions, their current status, subscription method, related plan deal, and creation date. The endpoint can be used to find active, cancelled, or other subscription states.

@@ -1,1 +1,1 @@
-Creates a new workspace invitation.
+Invites one or more users to a workspace. Use this when adding new members by email, optionally assigning them an access level and teams. Existing users may be added directly, while new users receive an invitation email.

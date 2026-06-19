@@ -1,2 +1,1 @@
-Creates a new purchase plan.
-
+Starts a plan or add-on purchase for a workspace and returns a payment link. Use this when the user chooses a plan deal or add-on packages and needs to proceed to checkout. The request can include coupon and company information when required for billing.
