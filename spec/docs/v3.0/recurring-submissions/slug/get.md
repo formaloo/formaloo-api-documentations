@@ -1,1 +1,1 @@
-Get a recurreing submission's full data. The data here is the same as the on in the list of recurring submissions.
+Retrieve the full data for a recurring submission. The returned data matches the recurring submission object shown in the recurring submissions list.
