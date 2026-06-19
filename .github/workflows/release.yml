@@ -1,0 +1,37 @@
+name: Release Public Spec
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install toolchain
+        run: npm ci
+
+      - name: Generate release artifacts
+        run: ./generate.sh
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/release/openapi-v3.0.yaml
+            artifacts/release/openapi-v3.0.mcp.yaml
+            artifacts/release/html-docs.tar.gz
+          generate_release_notes: true
