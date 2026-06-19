@@ -77,6 +77,7 @@ if [[ "$MCP_DOCS" == "true" ]]; then
   echo "Rendering MCP YAML artifact..."
   MCP_OPENAPI_SETTINGS_FILE="$MCP_OPENAPI_SETTINGS_FILE" \
   node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"
+  node "$ROOT_DIR/scripts/prune-unused-mcp-schemas.mjs" "$INTERMEDIATE_DIR/openapi-mcp.filtered.json"
   "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-mcp.filtered.json" --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 fi
 

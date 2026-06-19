@@ -5,11 +5,51 @@
       "ai"
     ],
     "pathPrefixes": [
-      "/social-auth/"
+      "/social-auth/",
+      "/blue-prints/",
+      "/email_verifications/",
+      "/end-users/",
+      "/lead-enrichments/",
+      "/oauth/",
+      "/oauth2/",
+      "/plan-subscriptions/",
+      "/reports/",
+      "/two-way-sync/",
+      "/form-fields/"
     ],
     "pathPatterns": [
-      "/*-integrations/"
+      "*integration*",
+      "*invitations*",
+      "*magic-*",
+      "*row-tags*"
     ],
-    "endpoints": []
+    "endpoints": [
+      "/applications/",
+      "/addons/",
+      "/boards/{boardSlug}/transfer/",
+      "/businesses/{slug}/netsuite-credentials/",
+      "/businesses/{slug}/upgrade/",
+      "/emails/webhooks/ses/bounces/",
+      "/forms-profile/",
+      "/forms/{formSlug}/combined-fields-charts/",
+      "/forms/{formSlug}/reports/",
+      "/forms/{formSlug}/table-charts/",
+      "/forms/{slug}/get-utm-query/",
+      "/forms/{slug}/references/",
+      "/forms/{slug}/submit-user-form/",
+      "/forms/{slug}/test-ai-input/",
+      "/keys/",
+      "/notion-workspaces/{workspaceId}/notion-databases/",
+      "/profile/change-password/",
+      "/profile/referral-link/",
+      "/profile/reset-password/email/",
+      "/profile/reset-password/email/confirm/",
+      "/profiles/email/request-verification/",
+      "/profiles/email/verify/",
+      "/profiles/{type}/login/",
+      "/profiles/{type}/request-login/",
+      "/prompt-categories/{tagSlug}/examples/",
+      "/usage/"
+    ]
   }
 }
