@@ -32,5 +32,6 @@ jobs:
         with:
           files: |
             artifacts/release/openapi-v3.0.yaml
+            artifacts/release/openapi-v3.0.mcp.yaml
             artifacts/release/html-docs.tar.gz
           generate_release_notes: true
