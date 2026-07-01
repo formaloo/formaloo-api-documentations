@@ -25,7 +25,6 @@ docker compose up --build
 Generated outputs:
 
 - `openapi-v3.0.yaml`: canonical public OpenAPI artifact
-- `openapi-v3.0.mcp.yaml`: MCP/CLI-oriented artifact mirrored from the backend-published MCP contract
 - `html/`: generated static docs bundle
 - `artifacts/validation/`: validation and lint reports
 - `artifacts/release/`: packaged release assets
