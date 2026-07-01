@@ -13,11 +13,7 @@ RELEASE_DIR="$ARTIFACTS_DIR/release"
 STAGING_DOCS=${STAGING_DOCS:-false}
 MCP_DOCS=${MCP_DOCS:-false}
 PUBLIC_API_URL=${PUBLIC_API_URL:-}
-<<<<<<< HEAD
-MCP_OPENAPI_SETTINGS_FILE=${MCP_OPENAPI_SETTINGS_FILE:-}
-=======
 MCP_OPENAPI_SOURCE=${MCP_OPENAPI_SOURCE:-https://docs.staging.formaloo.com/openapi-v3.0.mcp.yaml}
->>>>>>> 2d171e3 (feat(openapi): publish MCP spec artifact)
 
 if [[ -n "${TOOLS_DIR:-}" ]]; then
   TOOL_BIN="$TOOLS_DIR"
