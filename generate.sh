@@ -13,11 +13,7 @@ RELEASE_DIR="$ARTIFACTS_DIR/release"
 STAGING_DOCS=${STAGING_DOCS:-false}
 MCP_DOCS=${MCP_DOCS:-false}
 PUBLIC_API_URL=${PUBLIC_API_URL:-}
-<<<<<<< HEAD
 MCP_OPENAPI_SETTINGS_FILE=${MCP_OPENAPI_SETTINGS_FILE:-}
-=======
-MCP_OPENAPI_SOURCE=${MCP_OPENAPI_SOURCE:-https://docs.staging.formaloo.com/openapi-v3.0.mcp.yaml}
->>>>>>> 2d171e3 (feat(openapi): publish MCP spec artifact)
 
 if [[ -n "${TOOLS_DIR:-}" ]]; then
   TOOL_BIN="$TOOLS_DIR"
@@ -77,29 +73,33 @@ PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" node "$ROOT_DIR/sc
 echo "Rendering final YAML artifact..."
 "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-public.normalized.json" --output "$ROOT_DIR/openapi-v3.0.yaml"
 
-echo "Fetching MCP OpenAPI artifact..."
-curl --fail --location --retry 3 --retry-all-errors --silent --show-error \
-  "$MCP_OPENAPI_SOURCE" \
-  --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  echo "Rendering MCP YAML artifact..."
+  MCP_OPENAPI_SETTINGS_FILE="$MCP_OPENAPI_SETTINGS_FILE" \
+  node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"
+  node "$ROOT_DIR/scripts/prune-unused-mcp-schemas.mjs" "$INTERMEDIATE_DIR/openapi-mcp.filtered.json"
+  "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-mcp.filtered.json" --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
+fi
 
 echo "Validating generated public contract..."
 node "$ROOT_DIR/scripts/validate-openapi.mjs"
 if ! "$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.yaml" > "$VALIDATION_DIR/redocly-lint.txt" 2>&1; then
   echo "Redocly lint reported issues. Report saved to artifacts/validation/redocly-lint.txt"
 fi
-if ! "$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.mcp.yaml" > "$VALIDATION_DIR/redocly-mcp-lint.txt" 2>&1; then
-  echo "Redocly lint reported MCP issues. Report saved to artifacts/validation/redocly-mcp-lint.txt"
-fi
 
 echo "Building HTML documentation..."
 "$REDOCLY_BIN" build-docs "$ROOT_DIR/openapi-v3.0.yaml" -o "$HTML_DIR/index.html"
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$HTML_DIR/openapi-v3.0.yaml"
-cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
+fi
 cp -r "$ROOT_DIR/assets" "$HTML_DIR/"
 
 echo "Packaging release artifacts..."
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$RELEASE_DIR/openapi-v3.0.yaml"
-cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$RELEASE_DIR/openapi-v3.0.mcp.yaml"
+if [[ "$MCP_DOCS" == "true" ]]; then
+  cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$RELEASE_DIR/openapi-v3.0.mcp.yaml"
+fi
 tar -czf "$RELEASE_DIR/html-docs.tar.gz" -C "$ROOT_DIR" html
 
 echo "Build complete."
