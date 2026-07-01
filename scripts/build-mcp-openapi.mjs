@@ -258,6 +258,69 @@ function shouldExcludePath(pathKey) {
   return shouldExcludeByPathPrefix(pathKey) || shouldExcludeByWildcard(pathKey) || shouldExcludeEndpoint(pathKey);
 }
 
+function getRefTarget(openapiSpec, ref) {
+  if (typeof ref !== "string" || !ref.startsWith("#/")) {
+    return null;
+  }
+
+  const parts = ref.slice(2).split("/");
+  let current = openapiSpec;
+  for (const part of parts) {
+    current = current?.[part];
+    if (!current) {
+      return null;
+    }
+  }
+
+  return current;
+}
+
+function relaxWorkspaceHeaderParameter(openapiSpec, parameter) {
+  if (!parameter || typeof parameter !== "object") {
+    return;
+  }
+
+  let target = parameter;
+  if (typeof parameter.$ref === "string") {
+    target = getRefTarget(openapiSpec, parameter.$ref);
+  }
+
+  if (
+    target?.in === "header" &&
+    typeof target.name === "string" &&
+    target.name.toLowerCase() === "x-workspace"
+  ) {
+    target.required = false;
+  }
+}
+
+function relaxWorkspaceHeaderRequirements(openapiSpec) {
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const parameter of pathItem.parameters ?? []) {
+      relaxWorkspaceHeaderParameter(openapiSpec, parameter);
+    }
+
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+
+      for (const parameter of operation.parameters ?? []) {
+        relaxWorkspaceHeaderParameter(openapiSpec, parameter);
+      }
+    }
+  }
+
+  for (const parameter of Object.values(openapiSpec.components?.parameters ?? {})) {
+    relaxWorkspaceHeaderParameter(openapiSpec, parameter);
+  }
+}
+
 const filteredPaths = {};
 const usedTagNames = new Set();
 let removedOperations = 0;
@@ -295,6 +358,7 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
 
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
+relaxWorkspaceHeaderRequirements(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
