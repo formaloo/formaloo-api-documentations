@@ -321,6 +321,542 @@ function relaxWorkspaceHeaderRequirements(openapiSpec) {
   }
 }
 
+const coreMcpOperations = {
+  profileRetrieve: {
+    summary: "Get current authenticated user profile",
+    description:
+      "Returns the authenticated user's profile. Use this for who-am-I checks, account display, and verifying that the current API key and authorization token identify the expected user.",
+    mcp: {
+      tool_name: "get_profile",
+      aliases: ["who_am_i", "get_current_user", "get_my_profile"],
+      intent: "Get the current authenticated user's Formaloo profile.",
+      requires_workspace: false,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        current_user_profile: {
+          summary: "Current authenticated profile",
+          value: {
+            username: "jane@example.com",
+            first_name: "Jane",
+            last_name: "Doe",
+            email: "jane@example.com",
+            phone_number: "+15551234567",
+            team: "Formaloo Team",
+            verified_email: true,
+            used_trial: false
+          }
+        }
+      }
+    }
+  },
+  businessesList: {
+    summary: "List workspaces available to the authenticated user",
+    description:
+      "Returns the workspaces available to the authenticated user. The API object is named business for legacy compatibility; present it to users as a workspace.",
+    mcp: {
+      tool_name: "list_workspaces",
+      aliases: ["show_workspaces", "list_businesses", "get_workspaces"],
+      intent: "List Formaloo workspaces the authenticated user can access.",
+      requires_workspace: false,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        workspace_list: {
+          summary: "Workspace list",
+          value: [
+            {
+              title: "Marketing Team",
+              slug: "marketing-team",
+              business_identifier: "marketing-team",
+              access_level: "owner"
+            }
+          ]
+        }
+      }
+    }
+  },
+  businessesRetrieve: {
+    summary: "Get one workspace by slug",
+    description:
+      "Retrieves one workspace by slug. The API object is named business for legacy compatibility; present it to users as a workspace.",
+    parameterDescriptions: {
+      slug: "Workspace slug or business identifier."
+    },
+    mcp: {
+      tool_name: "get_workspace",
+      aliases: ["get_business", "show_workspace", "workspace_details"],
+      intent: "Get details for one Formaloo workspace.",
+      requires_workspace: false,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        workspace: {
+          summary: "Workspace details",
+          value: {
+            title: "Marketing Team",
+            slug: "marketing-team",
+            business_identifier: "marketing-team",
+            access_level: "owner",
+            timezone: "UTC"
+          }
+        }
+      }
+    }
+  },
+  formsList: {
+    summary: "List forms in the active workspace",
+    description:
+      "Lists forms the authenticated user can access in the active workspace. Send `x-workspace` when the API key does not already identify the workspace.",
+    parameterDescriptions: {
+      board: "Board or app slug used to filter forms.",
+      categories: "Comma-separated category slugs used to filter forms.",
+      category: "Category slug used to filter forms.",
+      copied_from: "Source form slug used to filter copied forms.",
+      slug: "Form slug used to filter the list.",
+      tag: "Single tag slug used to filter forms.",
+      tags: "Comma-separated tag slugs used to filter forms.",
+      version: "Form version filter."
+    },
+    mcp: {
+      tool_name: "list_forms",
+      aliases: ["show_forms", "find_forms", "get_forms"],
+      intent: "List forms available in the selected Formaloo workspace.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.forms",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        form_list: {
+          summary: "Paginated form list",
+          value: {
+            count: 1,
+            next: null,
+            previous: null,
+            page_size: 20,
+            page_count: 1,
+            current_page: 1,
+            forms: [
+              {
+                title: "Customer Feedback",
+                slug: "customer-feedback",
+                address: "customer-feedback",
+                submit_count: 42
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  formsRetrieve: {
+    summary: "Get one form by slug",
+    description:
+      "Retrieves a form's full admin configuration by slug in the active workspace. Use this before editing a form or inspecting fields, settings, theme, and behavior.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "get_form",
+      aliases: ["show_form", "form_details", "get_form_by_slug"],
+      intent: "Get the full configuration for one Formaloo form.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        form: {
+          summary: "Form details",
+          value: {
+            title: "Customer Feedback",
+            slug: "customer-feedback",
+            address: "customer-feedback",
+            show_title: true,
+            fields_list: [],
+            submit_count: 42
+          }
+        }
+      }
+    }
+  },
+  formsRowsList: {
+    summary: "List submissions or rows for a form",
+    description:
+      "Lists submissions, also called rows or records, for a specific form in the active workspace. This may expose customer-submitted data.",
+    parameterDescriptions: {
+      slug: "Form slug.",
+      submit_number: "Submission number filter.",
+      tracking_code: "Submission tracking code filter."
+    },
+    mcp: {
+      tool_name: "list_form_rows",
+      aliases: ["list_submissions", "show_submissions", "list_form_records"],
+      intent: "List submitted rows for a Formaloo form.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.rows",
+      user_data: true,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        row_list: {
+          summary: "Paginated submission list",
+          value: {
+            count: 1,
+            next: null,
+            previous: null,
+            page_size: 20,
+            page_count: 1,
+            current_page: 1,
+            rows: [
+              {
+                slug: "row-123",
+                submit_number: 1,
+                tracking_code: "TRK-123",
+                data: {
+                  email: "customer@example.com"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  boardsList: {
+    summary: "List apps or boards in the active workspace",
+    description:
+      "Lists boards in the active workspace. Boards are commonly shown as apps in the product UI; use app language for users and board language when referring to API fields.",
+    parameterDescriptions: {
+      copied_from: "Source board slug used to filter copied boards.",
+      folders: "Folder slug or comma-separated folder slugs used to filter boards.",
+      form: "Form slug used to return boards or apps using that form.",
+      slug: "Board or app slug used to filter the list.",
+      tag: "Single tag slug used to filter boards.",
+      tags: "Comma-separated tag slugs used to filter boards.",
+      user_form: "User form slug used to filter boards."
+    },
+    mcp: {
+      tool_name: "list_apps",
+      aliases: ["list_boards", "show_apps", "show_boards"],
+      intent: "List Formaloo apps or boards in the selected workspace.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.boards",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        board_list: {
+          summary: "Paginated app or board list",
+          value: {
+            count: 1,
+            next: null,
+            previous: null,
+            page_size: 20,
+            page_count: 1,
+            current_page: 1,
+            boards: [
+              {
+                title: "CRM App",
+                slug: "crm-app",
+                address: "crm-app"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  formsCreate: {
+    summary: "Create a simple form",
+    description:
+      "Creates a form in the active workspace. Start with a title and simple settings, then add or update fields as needed.",
+    mcp: {
+      tool_name: "create_form",
+      aliases: ["new_form", "make_form", "create_form_in_workspace"],
+      intent: "Create a new Formaloo form in the selected workspace.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      simple_form: {
+        summary: "Create a simple form",
+        value: {
+          title: "Customer Feedback",
+          show_title: true,
+          description: "Collect customer feedback."
+        }
+      }
+    },
+    responseExamples: {
+      "201": {
+        created_form: {
+          summary: "Created form",
+          value: {
+            title: "Customer Feedback",
+            slug: "customer-feedback",
+            address: "customer-feedback",
+            show_title: true
+          }
+        }
+      }
+    }
+  },
+  formsUpdate: {
+    summary: "Update a form",
+    description:
+      "Replaces a form's editable configuration in the active workspace. Use only when the caller intends to update the full form resource.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "update_form",
+      aliases: ["edit_form", "replace_form", "update_form_title"],
+      intent: "Update a Formaloo form's configuration.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      update_form_title: {
+        summary: "Update a form title",
+        value: {
+          title: "Updated Customer Feedback",
+          fixed_payment_amount: "",
+          payment_method: "",
+          redirection_address: "",
+          user_spreadsheet_id: "",
+          user_spreadsheet_range: ""
+        }
+      }
+    }
+  },
+  formsPartialUpdate: {
+    summary: "Partially update a form",
+    description:
+      "Updates selected editable fields on a form in the active workspace. Prefer this operation for small changes such as renaming a form.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "patch_form",
+      aliases: ["update_form_title", "rename_form", "partially_update_form"],
+      intent: "Partially update a Formaloo form.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      update_form_title: {
+        summary: "Update a form title",
+        value: {
+          title: "Updated Customer Feedback"
+        }
+      }
+    },
+    responseExamples: {
+      "200": {
+        updated_form: {
+          summary: "Updated form",
+          value: {
+            title: "Updated Customer Feedback",
+            slug: "customer-feedback",
+            address: "customer-feedback",
+            show_title: true
+          }
+        }
+      }
+    }
+  },
+  formsRowsCreate: {
+    summary: "Create a form row or submission",
+    description:
+      "Creates a submission, also called a row or record, for a specific form in the active workspace. The request body maps field slugs to submitted values.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "create_form_row",
+      aliases: ["create_submission", "submit_form_row", "add_form_record"],
+      intent: "Create a new submitted row for a Formaloo form.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: true,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      create_submission: {
+        summary: "Create a form submission",
+        value: {
+          email: "customer@example.com",
+          message: "I need more information."
+        }
+      }
+    },
+    responseExamples: {
+      "201": {
+        created_submission: {
+          summary: "Created submission",
+          value: {
+            slug: "row-123",
+            submit_number: 1,
+            tracking_code: "TRK-123"
+          }
+        }
+      }
+    }
+  }
+};
+
+const localDescriptionFixes = {
+  currenciesList: {
+    summary: "List currencies",
+    description: "Lists currencies available for payment, pricing, and localization workflows."
+  },
+  fieldsAiBoxCreate: {
+    summary: "Create an AI box field",
+    description: "Creates an AI box field definition for a form or board."
+  },
+  filesUnsplashCreate: {
+    summary: "Create a file from Unsplash",
+    description: "Creates a Formaloo file resource from an Unsplash image selection."
+  },
+  filesUnsplashSearchList: {
+    summary: "Search Unsplash files",
+    description: "Searches Unsplash images that can be selected for Formaloo file or media workflows."
+  }
+};
+
+function setResponseExamples(operation, examplesByStatus) {
+  for (const [statusCode, examples] of Object.entries(examplesByStatus ?? {})) {
+    const response = operation.responses?.[statusCode];
+    if (!response || typeof response !== "object") {
+      continue;
+    }
+
+    for (const mediaType of Object.keys(response.content ?? {})) {
+      const media = response.content[mediaType];
+      if (media && typeof media === "object") {
+        media.examples = {
+          ...(media.examples ?? {}),
+          ...examples
+        };
+      }
+    }
+  }
+}
+
+function setRequestExamples(operation, examples) {
+  if (!operation.requestBody || typeof operation.requestBody !== "object") {
+    return;
+  }
+
+  for (const media of Object.values(operation.requestBody.content ?? {})) {
+    if (media && typeof media === "object") {
+      media.examples = {
+        ...(media.examples ?? {}),
+        ...examples
+      };
+    }
+  }
+}
+
+function applyParameterDescriptions(operation, descriptions = {}) {
+  for (const parameter of operation.parameters ?? []) {
+    if (!parameter || typeof parameter !== "object" || typeof parameter.$ref === "string") {
+      continue;
+    }
+
+    const description = descriptions[parameter.name];
+    if (description && String(parameter.description ?? "").trim() === "") {
+      parameter.description = description;
+    }
+  }
+}
+
+function enrichMcpOperations(openapiSpec) {
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+
+      const coreDefinition = coreMcpOperations[operation.operationId];
+      if (coreDefinition) {
+        operation.summary = coreDefinition.summary;
+        operation.description = coreDefinition.description;
+        operation["x-formaloo-mcp"] = coreDefinition.mcp;
+        applyParameterDescriptions(operation, coreDefinition.parameterDescriptions);
+        setRequestExamples(operation, coreDefinition.requestExamples);
+        setResponseExamples(operation, coreDefinition.responseExamples);
+        continue;
+      }
+
+      const descriptionFix = localDescriptionFixes[operation.operationId];
+      if (descriptionFix) {
+        operation.summary = descriptionFix.summary;
+        operation.description = descriptionFix.description;
+      }
+    }
+  }
+}
+
 const filteredPaths = {};
 const usedTagNames = new Set();
 let removedOperations = 0;
@@ -359,6 +895,7 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
 relaxWorkspaceHeaderRequirements(spec);
+enrichMcpOperations(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
