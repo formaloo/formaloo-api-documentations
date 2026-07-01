@@ -1,1 +1,1 @@
-Partially updates an existing row tag.
+Partially updates a row tag. Use this for focused changes such as renaming the tag.

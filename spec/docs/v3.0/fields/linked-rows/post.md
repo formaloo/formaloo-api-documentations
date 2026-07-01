@@ -1,1 +1,1 @@
-Creates a new linked rows field.
+Creates a linked-rows relationship field. Use this when submissions should link to rows from another form, enabling database-like relationships such as tasks linked to contacts or orders linked to customers.

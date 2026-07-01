@@ -1,1 +1,1 @@
-Creates a new email template copy.
+Copies an existing email template into the active business as a new editable template. Use this when an agent wants to start from a system example, previous design, or workspace template without modifying the source.

@@ -1,1 +1,1 @@
-Creates a new business.
+Creates a new workspace for the authenticated user. Use this when the client needs to initialize a separate business/workspace context for the user. The creator becomes the owner of the new workspace, and workspace limits may prevent creation when the user has reached the allowed number of free workspaces.

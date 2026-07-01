@@ -1,2 +1,1 @@
-Partially updates an existing edit plan subscription.
-
+Partially updates a subscription, mainly for cancellation flows. Use this when the client only needs to send the cancellation flag.

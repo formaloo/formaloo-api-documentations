@@ -1,121 +1,274 @@
-Update a form.
+# 📘 Formaloo Logic Documentation (for AI Agents)
 
-## Making the uploaded files private
+## 1. Purpose
 
-The `submitted_files_are_private` field on the form, defines wether the files uploaded on a form should be accessible to anyone who has the link to the file, or are only accessible to anyone who has access to the form. Meaning, anyone, even of not authenticated, can see an uploaded file using its link (which needs to be shared by a form admin). But if the `submitted_files_are_private` is set to `true`, the links will be private, and only those who have access to the form can see the file.
+This document explains how Formaloo’s logic system works so AI agents can reliably generate logic JSON for forms. It covers the structure, actions, conditions, field types, and best practices needed to turn natural language requirements into executable Formaloo logic.
 
+---
 
- **Note** If you change the `submitted_files_are_private` field from, it won't affect the existing links. For example, if you change it from `false` to `true`, the link to the previous files will still be publicly accessible, but the new uploads will be private.
+## 2. Logic Structure
 
+Each logic item is a JSON object:
 
- The value for `submitted_files_are_private` is `false` by default.
-
-## Form Logic
-
-### Matrix and Table fields logic
-
-When setting logic for a **Matrix Field** You can access the value selected for a given group, with the following syntax `matrix_field_slug.group_slug` and compare it with the desired choice. Type of these logic conditions are not `choice`, but `matrix`, since they're a specific case.
-
-When setting logic for a **Table Field** You can access the value selected for a given cell, with the following syntax `table_field_slug.group_slug.column_slug` and compare it with the desired value. Type of these logic conditions are not `choice`, but `table`, since they're a specific case.
-
-Example
-
-``` json
+```json
 {
-  "logic": [
+  "type": "field | submit | update",
+  "identifier": "field_slug",
+  "actions": [
     {
-      "type": "field",
-      "identifier": "{field_1}",
-      "actions": [
-        {
-          "action": "hide",
-          "args": [
-            {
-              "type": "field",
-              "identifier": "{field_3}"
-            }
-          ],
-          "when": {
-            "operation": "is",
-            "args": [
-              {
-                "type": "matrix",
-                "value": "{field_1}.{field_1_group_1}"
-              },
-              {
-                "type": "choice",
-                "value": "{field_1_choice_1}"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "type": "field",
-      "identifier": "{field_2}",
-      "actions": [
-        {
-          "action": "hide",
-          "args": [
-            {
-              "type": "field",
-              "identifier": "{field_4}"
-            }
-          ],
-          "when": {
-            "operation": "is",
-            "args": [
-              {
-                "type": "table",
-                "value": "{field_2}.{field_2_group_2}.{field_2_column_2}"
-              },
-              {
-                "type": "constant",
-                "value": "Tango"
-              }
-            ]
-          }
-        }
-      ]
+      "action": "action_type",
+      "args": [ ... ],
+      "when": {
+        "operation": "operation_type",
+        "args": [ ... ]
+      }
     }
   ]
 }
 ```
 
-## Assign Submit Number
+* **type**: scope of the logic (`field` = reacts to a field’s value, `submit` = on submission, `update` = variable manipulation).
+* **identifier**: the field slug this logic is tied to.
+* **actions**: what happens if conditions are met.
+* **when**: defines the condition(s).
 
-The `assign_submit_number` field on the form defines whether each submission on a form will be assigned an incremental number starting from 1. By default, this field is set to `false`, meaning that no incremental numbering will be applied. However, when set to `true`, each new submission on the form will be given a `submit_number` that starts from `1` and increments by 1 with each new submission. 
+---
 
-The `submit_number` can be useful for keeping track of the order of submissions or for internal referencing purposes.
+## 3. Action Types
 
-### Usage
+### Field Display / Flow
 
-- **Field Name**: `assign_submit_number`
-- **Default Value**: `false`
-- **Type**: `boolean`
-- **Purpose**: If `true`, assigns an incremental `submit_number` starting from 1 to each submission.
+| Action                 | Description                          | Notes                                        |
+| ---------------------- | ------------------------------------ | -------------------------------------------- |
+| `show`                 | Display a hidden field               | 
+| `hide`                 | Hide a visible field                 | Often used with `otherwise`                  |
+| `jump`                 | Go to a different field (multi-step) | For `form_type: multi_step`                  |
+| `jump_to_success_page` | Redirect to success page             | Works in all forms                           |
+| `submit`               | Immediately submit                   | Ends form early                              |
 
-### API Behavior
+### Value Manipulation
 
-When the `assign_submit_number` field is set to `true`, the following changes will be visible:
+| Action     | Description            | Example                      |
+| ---------- | ---------------------- | ---------------------------- |
+| `set`      | Assign a value         | Mark status as `"approved"`  |
+| `add`      | Add to variable        | Add 40 to `price`            |
+| `subtract` | Subtract from variable | Apply discount               |
+| `multiply` | Multiply variable      | Handle quantity × unit price |
+| `divide`   | Divide variable        | Compute averages             |
 
-- **In Submission Response**: 
-  - Every submission will have an additional field, `submit_number`, which reflects its incremental number.
-  
-  Example:
+### Workflow & Integrations
+
+| Action         | Description               |
+| -------------- | ------------------------- |
+| `send_email`   | Send custom email         |
+| `send_webhook` | Trigger API webhook       |
+| `send_slack`   | Slack notification        |
+| `generate_pdf` | Generate documents        |
+| `redirect`     | Send user to external URL |
+
+---
+
+## 4. Conditions
+
+Conditions are expressed in the `when` clause.
+
+### Comparisons
+
+```json
+{"operation": "gt", "args": [field_ref, const]}
+{"operation": "lte", "args": [field_ref, const]}
+```
+
+### Choice Checks
+
+```json
+{"operation": "is", "args": [field_ref, choice_ref]}
+{"operation": "is_not", "args": [field_ref, choice_ref]}
+```
+
+### State Checks
+
+```json
+{"operation": "is_answered", "args": [field_ref]}
+```
+
+### Logical Combinations
+
+```json
+{"operation": "and", "args": [cond1, cond2]}
+{"operation": "or", "args": [cond1, cond2]}
+{"operation": "always", "args": []}
+{"operation": "otherwise", "args": []}
+```
+
+### Update logic
+
+The `update` logic rules are ran on the field edit, and wil be ignored on the form submission.
+
+If the `run_field_logics_on_update` setting on the form is `true`, the `field` logic will be run on row update as well. But only for the fields that are being changed.
+
+* So if `run_field_logics_on_update` is `false`, none if the `field` logic will be checked and applied on row update.
+* If `run_field_logics_on_update` is `true`, the `field` logic will be checked and applied, but only for the fields that are being updated.
+
+---
+
+## 5. Argument Types
+
+* **Field Reference**:
+
   ```json
+  {"type": "field", "value": "field_slug"}
+  ```
+* **Choice Reference**:
+
+  ```json
+  {"type": "choice", "value": "choice_slug"}
+  ```
+* **Variable Reference**:
+
+  ```json
+  {"type": "variable", "identifier": "variable_slug"}
+  ```
+* **Constant Value**:
+
+  ```json
+  {"type": "constant", "value": 100}
+  ```
+* **Matrix Reference**:
+
+  ```json
+  {"type": "matrix", "value": "matrix_slug.group_slug"}
+  ```
+
+---
+
+## 6. Field Types and Logic Compatibility
+
+* **Text (`short_text`, `long_text`)** → Compare values, check presence.
+* **Number** → Supports all numeric comparisons & math.
+* **Choice Fields (`dropdown`, `choice`, `multiple_select`)** → Use `is` / `is_not`.
+* **Date/Time** → Compare values, schedule conditions.
+* **Yes/No** → Boolean conditions.
+* **Variable** → Store and calculate values.
+* **File/Signature** → Check completion status.
+* **Matrix/Repetition** → Use group references.
+* **Meta (`page_break`, `section`)** → Structural only (not logic triggers).
+
+---
+
+## 7. Patterns & Examples
+
+### Conditional Field Display
+
+```json
+{
+  "type": "field",
+  "identifier": "service_type",
+  "actions": [
     {
-        "submit_number": 5,
-        "tracking_code": "ABC123",
-        ...
+      "action": "show",
+      "args": [
+        {"type": "field", "identifier": "website_type"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "service_type"},
+          {"type": "choice", "value": "E6Ogr88h"} // "Web design"
+        ]
+      }
     }
+  ]
+}
+```
 
+Note that when we conditionally show a field, it will be hidden by default. So we don't need an `otherwise` rule to hide it.
 
+### Price Calculation
 
-**Notes**
-*   If a row is deleted, the submit_number for subsequent submissions will continue incrementing from the last assigned number (i.e., gaps may exist in the submit_number sequence if some submissions are deleted).
+```json
+{
+  "type": "field",
+  "identifier": "EtHFR2Ex", // product field
+  "actions": [
+    {
+      "action": "add",
+      "args": [
+        {"type": "constant", "value": 40},
+        {"type": "variable", "identifier": "price"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "EtHFR2Ex"},
+          {"type": "choice", "value": "p9olWZI2"} // "Added to cart"
+        ]
+      }
+    }
+  ]
+}
+```
 
-*   The `submit_number` is not editable once assigned and is automatically handled by the backend.
+### Multi-Condition Logic
 
-*   number is not editable once assigned and is automatically handled by the backend.
+```json
+{
+  "type": "field",
+  "identifier": "budget",
+  "actions": [
+    {
+      "action": "show",
+      "args": [
+        {"type": "field", "identifier": "discount_field"}
+      ],
+      "when": {
+        "operation": "and",
+        "args": [
+          {
+            "operation": "gt",
+            "args": [
+              {"type": "field", "value": "budget"},
+              {"type": "constant", "value": 10000}
+            ]
+          },
+          {
+            "operation": "is",
+            "args": [
+              {"type": "field", "value": "urgency"},
+              {"type": "choice", "value": "GtkSx1YW"} // "Start within 1–2 weeks"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Workflow on Submission
+
+```json
+{
+  "type": "submit",
+  "actions": [
+    {
+      "action": "send_email",
+      "args": [
+        {"type": "send_email_template", "identifier": "order_confirmation"},
+        {"type": "field", "identifier": "email"}
+      ],
+      "when": {"operation": "always", "args": []}
+    }
+  ]
+}
+```
+
+---
+
+## 8. Best Practices
+
+* Always reference exact **slugs** for fields and choices (from form JSON).
+* Match operations to field types (e.g., `gt` works only with numbers).
+* Use variables for all price, score, or computed values.
+* Avoid circular logic (a field showing/hiding itself).
+* Test with fallback conditions (`otherwise`) to ensure graceful behavior.

@@ -1,1 +1,1 @@
-Retrieves a list of email server available.
+Lists all email servers available to the business, including workspace-owned servers and usable system senders. Use this to populate sender pickers before assigning a sender to an email template or campaign.

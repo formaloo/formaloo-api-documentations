@@ -1,2 +1,1 @@
-Retrieves the specified profile.
-
+Returns the authenticated user's profile. Use this to display account information such as name, email, phone number, team, trial status, integration connection flags, and account-related profile fields.

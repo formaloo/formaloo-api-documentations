@@ -6,6 +6,7 @@
     "fetch-specs": "node ./scripts/fetch-specs.mjs",
     "prepare-doc-stubs": "node ./scripts/prepare-doc-stubs.mjs",
     "normalize-spec": "node ./scripts/normalize-openapi.mjs",
+    "build:mcp-spec": "node ./scripts/build-mcp-openapi.mjs",
     "validate-spec": "node ./scripts/validate-openapi.mjs"
   },
   "dependencies": {

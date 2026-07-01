@@ -1,1 +1,1 @@
-Retrieves a list of business.
+Returns the list of workspaces available to the authenticated user. Use this when an MCP client needs to discover which businesses/workspaces the user can operate on before making workspace-scoped requests. Each item represents a workspace with identifying information, basic profile data, the user's access level, and current plan-related summary data.

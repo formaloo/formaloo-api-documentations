@@ -1,0 +1,1 @@
+Previews whether the active workspace can upgrade to a target plan deal and estimates the amount due. Use this before creating a purchase so the client can show the user whether the upgrade is allowed and what proration amount may be charged.

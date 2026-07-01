@@ -1,1 +1,1 @@
-Get a list of combined_fields_charts belonging to a specific form.
+Lists combined-field chart reports for a form. Use this when rendering or discovering analytics that combine multiple form fields.

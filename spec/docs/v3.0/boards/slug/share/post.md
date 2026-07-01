@@ -1,1 +1,1 @@
-Creates a new share access on board.
+Grants or updates direct access to a board for registered collaborators. Use this when sharing a specific app with users by email and assigning their access level, instead of relying on folder-level inheritance.

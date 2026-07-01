@@ -25,6 +25,7 @@ docker compose up --build
 Generated outputs:
 
 - `openapi-v3.0.yaml`: canonical public OpenAPI artifact
+- `openapi-v3.0.mcp.yaml`: MCP-focused OpenAPI artifact (generated only when `MCP_DOCS=true`)
 - `html/`: generated static docs bundle
 - `artifacts/validation/`: validation and lint reports
 - `artifacts/release/`: packaged release assets
@@ -50,6 +51,37 @@ STAGING_DOCS=true ./generate.sh
 
 - **Production** (default): Uses `api.formaloo.me` and related production endpoints
 - **Staging**: Uses `api.staging.formaloo.com` and related staging endpoints
+
+Use `MCP_DOCS=true` to generate the MCP OpenAPI artifact:
+
+```bash
+MCP_DOCS=true ./generate.sh
+```
+
+When `MCP_DOCS=true`, exclusions are loaded from `spec/mcp-openapi-settings.json`:
+
+```json
+{
+  "exclude": {
+    "services": ["authentication"],
+    "pathPrefixes": ["/integrations/"],
+    "pathPatterns": ["/*-integrations/"],
+    "endpoints": ["/forms/{form_slug}/hubspot-integrations/"]
+  }
+}
+```
+
+- `services`: excludes operations by bundled service spec name (for example `authentication`, `ai`, `formz`, `storage`, `icas`)
+- `tags`: optionally excludes operations by OpenAPI tag slug or display name (case-insensitive)
+- `pathPrefixes`: excludes all methods for any path under matching prefixes
+- `pathPatterns`: wildcard excludes (`*` supported), for example `/*-integrations/` (also excludes nested subpaths)
+- `endpoints`: excludes all methods for exact endpoint paths
+
+You can override the settings file location with:
+
+```bash
+MCP_DOCS=true MCP_OPENAPI_SETTINGS_FILE=spec/mcp-openapi-settings.json ./generate.sh
+```
 
 ## Contributing
 

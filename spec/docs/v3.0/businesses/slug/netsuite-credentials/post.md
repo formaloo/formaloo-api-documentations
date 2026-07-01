@@ -1,0 +1,1 @@
+Creates or updates the NetSuite credential configuration for a workspace. Use this when connecting a workspace to NetSuite by submitting the account ID, client ID, client secret, scopes, and related configuration values.

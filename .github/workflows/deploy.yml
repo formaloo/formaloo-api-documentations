@@ -45,11 +45,28 @@ jobs:
         env:
           STAGING_DOCS: ${{ env.DEPLOY_BRANCH == 'dev' && 'true' || 'false' }}
 
-      - name: Upload generated spec
+      - name: Build MCP spec
+        run: |
+          node ./scripts/build-mcp-openapi.mjs
+          node ./scripts/prune-unused-mcp-schemas.mjs artifacts/intermediate/openapi-mcp.filtered.json
+          ./node_modules/.bin/redocly bundle artifacts/intermediate/openapi-mcp.filtered.json --output openapi-v3.0.mcp.yaml
+          cp openapi-v3.0.mcp.yaml html/openapi-v3.0.mcp.yaml
+          cp openapi-v3.0.mcp.yaml artifacts/release/openapi-v3.0.mcp.yaml
+          tar -czf artifacts/release/html-docs.tar.gz html
+
+      - name: Upload generated public spec
         uses: actions/upload-artifact@v4
         with:
           name: public-openapi-${{ github.sha }}
           path: openapi-v3.0.yaml
+          if-no-files-found: error
+
+      - name: Upload generated MCP spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-openapi-${{ github.sha }}
+          path: openapi-v3.0.mcp.yaml
+          if-no-files-found: error
 
       - name: Upload validation reports
         uses: actions/upload-artifact@v4

@@ -1,1 +1,1 @@
-Retrieves the specified block action.
+Lists blocks on a board. Use this when rendering an app layout, building a board editor, or letting an MCP agent inspect which widgets, menus, forms, tables, charts, and content areas exist on the board.

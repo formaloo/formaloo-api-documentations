@@ -2,21 +2,5 @@
   "defaultVersionPrefix": "/v3.0/",
   "legacyPathNotice": "**Legacy public path:** This endpoint remains available on the documented path for compatibility. Use the exact path shown here.",
   "legacyPaths": {
-    "/v1.0/business-engines/": "Legacy public path",
-    "/v1.0/business-engines/{id}/": "Legacy public path",
-    "/v1.0/businesses/top-usage/": "Legacy public path",
-    "/v1.0/businesses/{businessSlug}/usage/": "Legacy public path",
-    "/v1.0/conversations/{conversationId}/history/": "Legacy public path",
-    "/v1.0/custom-prompt-analyzes/": "Legacy public path",
-    "/v1.0/custom-prompt-results/": "Legacy public path",
-    "/v1.0/custom-prompt-results/{slug}/": "Legacy public path",
-    "/v1.0/end-users/authorize/": "Legacy public path",
-    "/v1.0/end-users/reset-password-confirms/": "Legacy public path",
-    "/v1.0/end-users/reset-password-requests/": "Legacy public path",
-    "/v1.0/engines/": "Legacy public path",
-    "/v1.0/files/": "Legacy public path",
-    "/v1.0/profiles/me/": "Legacy public path",
-    "/v1.0/prompts/{slug}/": "Legacy public path",
-    "/v1.0/prompts/{slug}/ai-requests/": "Legacy public path"
   }
 }

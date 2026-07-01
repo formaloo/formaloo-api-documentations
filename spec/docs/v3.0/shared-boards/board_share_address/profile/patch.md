@@ -1,1 +1,1 @@
-Partially updates an existing shared board user profile.
+Partially updates the end user's portal profile. Use this when changing selected fields such as name, email, or custom profile data.

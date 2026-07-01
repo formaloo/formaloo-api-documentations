@@ -1,2 +1,1 @@
-Retrieves the specified business company data serializer.
-
+Returns company billing or business identity information associated with the active workspace. Use this when a client needs the company details previously supplied during a plan or add-on purchase, such as company name, address, tax, or country fields.

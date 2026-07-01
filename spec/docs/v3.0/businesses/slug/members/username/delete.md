@@ -1,1 +1,1 @@
-Use to remove a member from your workspace.
+Removes a member from the workspace. Use this when an admin needs to revoke a user's workspace access. The endpoint does not allow a user to remove themselves or remove protected admin/owner access in restricted cases.

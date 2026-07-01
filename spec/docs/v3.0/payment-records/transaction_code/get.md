@@ -1,1 +1,1 @@
-Retrieves the specified payment record.
+Retrieves the status and summary of a payment by transaction code. Use this after a checkout or payment redirect to confirm whether the payment succeeded, how much was charged, which currency was used, and what payment reference was assigned.

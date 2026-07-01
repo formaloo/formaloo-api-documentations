@@ -1,1 +1,1 @@
-Retrieves a list of field choices.
+Lists selectable options for a field at runtime. Use this to populate dropdowns, choice lists, country/city pickers, linked-row selectors, lookup options, profile/user choices, or assignee autocomplete in form rendering and editing flows.

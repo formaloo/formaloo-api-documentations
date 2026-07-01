@@ -1,1 +1,1 @@
-Retrieves a list of row generated pdf.
+Lists generated PDFs for a specific submission row. Use this when showing documents already produced for a response.

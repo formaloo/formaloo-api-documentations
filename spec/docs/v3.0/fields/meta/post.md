@@ -1,1 +1,1 @@
-Creates a new meta field.
+Creates a non-answer content field such as headings, descriptions, media, or other layout content. Use this when adding instructional or visual content to a form rather than collecting respondent input.
