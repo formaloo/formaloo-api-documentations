@@ -30,7 +30,9 @@ if [[ ! -x "$REDOCLY_BIN" || ! -x "$OPENAPI_MERGE_BIN" ]]; then
 fi
 
 mkdir -p "$HTML_DIR" "$INTERMEDIATE_DIR" "$VALIDATION_DIR" "$RELEASE_DIR"
-rm -rf "$HTML_DIR"/* "$INTERMEDIATE_DIR"/* "$VALIDATION_DIR"/* "$RELEASE_DIR"/*
+find "$HTML_DIR" -mindepth 1 -maxdepth 1 ! -name assets -exec rm -rf {} +
+rm -rf "$INTERMEDIATE_DIR"/* "$VALIDATION_DIR"/* "$RELEASE_DIR"/*
+rm -f "$ROOT_DIR/openapi-v3.0.yaml" "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 
 echo "Fetching upstream specifications..."
 node "$ROOT_DIR/scripts/fetch-specs.mjs"
@@ -74,6 +76,7 @@ echo "Rendering final YAML artifact..."
 echo "Rendering MCP YAML artifact..."
 node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"
 node "$ROOT_DIR/scripts/prune-unused-mcp-schemas.mjs" "$INTERMEDIATE_DIR/openapi-mcp.filtered.json"
+node "$ROOT_DIR/scripts/validate-mcp-openapi.mjs" "$INTERMEDIATE_DIR/openapi-mcp.filtered.json"
 "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-mcp.filtered.json" --output "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 
 echo "Validating generated public contract..."
@@ -86,7 +89,7 @@ echo "Building HTML documentation..."
 "$REDOCLY_BIN" build-docs "$ROOT_DIR/openapi-v3.0.yaml" -o "$HTML_DIR/index.html"
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$HTML_DIR/openapi-v3.0.yaml"
 cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
-cp -r "$ROOT_DIR/assets" "$HTML_DIR/"
+cp -rn "$ROOT_DIR/assets" "$HTML_DIR/"
 
 echo "Packaging release artifacts..."
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$RELEASE_DIR/openapi-v3.0.yaml"
