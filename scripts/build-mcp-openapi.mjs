@@ -359,7 +359,7 @@ const coreMcpOperations = {
   businessesList: {
     summary: "List workspaces available to the authenticated user",
     description:
-      "Returns the workspaces available to the authenticated user. The API object is named business for legacy compatibility; present it to users as a workspace.",
+      "Returns the workspaces available to the authenticated user. In Formaloo API fields and endpoint paths, business and workspace refer to the same resource.",
     mcp: {
       tool_name: "list_workspaces",
       aliases: ["show_workspaces", "list_businesses", "get_workspaces"],
@@ -391,7 +391,7 @@ const coreMcpOperations = {
   businessesRetrieve: {
     summary: "Get one workspace by slug",
     description:
-      "Retrieves one workspace by slug. The API object is named business for legacy compatibility; present it to users as a workspace.",
+      "Retrieves one workspace by slug. In Formaloo API fields and endpoint paths, business and workspace refer to the same resource.",
     parameterDescriptions: {
       slug: "Workspace slug or business identifier."
     },
