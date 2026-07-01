@@ -1,5 +1,7 @@
 # Business (Workspace)
 
+Terminology: In Formaloo API documentation, business and workspace refer to the same resource. Endpoint paths, fields, and operation IDs keep the `business` name because that is the API contract.
+
 Use to get a business's data using it's identifier (`business_identifier`).
 
 ## Reading the current business plan

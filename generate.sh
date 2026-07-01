@@ -30,7 +30,7 @@ if [[ ! -x "$REDOCLY_BIN" || ! -x "$OPENAPI_MERGE_BIN" ]]; then
 fi
 
 mkdir -p "$HTML_DIR" "$INTERMEDIATE_DIR" "$VALIDATION_DIR" "$RELEASE_DIR"
-find "$HTML_DIR" -mindepth 1 -maxdepth 1 ! -name assets -exec rm -rf {} +
+find "$HTML_DIR" -mindepth 1 -maxdepth 1 ! -name assets ! -name source-openapi-issues-for-mcp.md -exec rm -rf {} +
 rm -rf "$INTERMEDIATE_DIR"/* "$VALIDATION_DIR"/* "$RELEASE_DIR"/*
 rm -f "$ROOT_DIR/openapi-v3.0.yaml" "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 
