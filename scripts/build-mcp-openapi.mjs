@@ -138,7 +138,7 @@ async function loadServiceExclusionIndex(serviceNames) {
   };
 }
 
-const settingsPathInput = process.env.MCP_OPENAPI_SETTINGS_FILE || defaultSettingsPath;
+const settingsPathInput = defaultSettingsPath;
 const settingsPath = path.isAbsolute(settingsPathInput) ? settingsPathInput : path.join(rootDir, settingsPathInput);
 
 let settings = {};
