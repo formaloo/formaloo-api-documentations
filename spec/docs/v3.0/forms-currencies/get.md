@@ -1,1 +1,0 @@
-Lists currencies supported by Formaloo payment and commerce features. Use this before creating payment-related fields, order flows, or price displays so the client uses valid currency codes, symbols, and labels.
