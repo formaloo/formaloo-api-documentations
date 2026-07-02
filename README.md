@@ -56,6 +56,25 @@ STAGING_DOCS=true ./generate.sh
 
 Documentation consists of automated OpenAPI specs from services, a public normalization step, and manual descriptions added in this repository.
 
+### Branch and Deployment Flow
+
+This repository uses both `dev` and `master` in the documentation release flow:
+
+- `dev` is the staging documentation branch.
+- `master` is the production documentation branch.
+- Changes may be merged between `dev` and `master` as part of promotion or backfill work.
+
+Target `dev` first for new documentation or generated-spec improvements unless the change is explicitly production-only. Check both branches before repeating work, because staging may contain changes that are not yet in production.
+
+### MCP-Focused OpenAPI Guidance
+
+The MCP artifact (`openapi-v3.0.mcp.yaml`) should stay accurate for direct API users and easy to use for MCP/CLI clients:
+
+- Keep required API headers documented when the underlying API requires them. For example, `x-api-key` is required for direct Formaloo API calls and should remain visible in the spec.
+- When a hosted MCP server or CLI has a configured Formaloo API key, the client should inject that configured value instead of asking the user or agent to provide `x-api-key` for each tool call.
+- Describe product terminology in user-facing language first, then mention legacy API terms where needed. For example, use “workspace” first and explain that API paths may still use “business”.
+- For high-value MCP operations, include clear summaries, examples, result paths, pagination notes, and `x-formaloo-mcp` metadata so agents can choose the right operation without guessing from raw operation IDs.
+
 ### Adding Manual Descriptions
 
 Manual descriptions are stored as Markdown files matching the endpoint path and HTTP method. For example, the endpoint `PATCH /v3.0/forms/{slug}/` uses:
