@@ -778,6 +778,30 @@ const localDescriptionFixes = {
   }
 };
 
+const mcpApiKeyHeaderDescription = [
+  "Formaloo API key.",
+  "Required for direct Formaloo API calls.",
+  "Hosted MCP servers and CLI clients should supply this from their configured credentials instead of asking the user or agent to pass it on each request."
+].join(" ");
+
+function buildMcpAuthMetadata(mcpMetadata) {
+  return {
+    api_key: {
+      required: true,
+      header: "x-api-key",
+      direct_api_usage: "Callers must send a valid Formaloo API key.",
+      mcp_cli_usage:
+        "Hosted MCP servers and CLI clients should inject a configured API key; do not model it as a natural-language task argument."
+    },
+    workspace: {
+      required: Boolean(mcpMetadata?.requires_workspace),
+      header: "x-workspace",
+      usage:
+        "Workspace selector for workspace-scoped requests. Use list_workspaces or the businesses endpoints to discover the correct workspace slug."
+    }
+  };
+}
+
 function setResponseExamples(operation, examplesByStatus) {
   for (const [statusCode, examples] of Object.entries(examplesByStatus ?? {})) {
     const response = operation.responses?.[statusCode];
@@ -825,6 +849,53 @@ function applyParameterDescriptions(operation, descriptions = {}) {
   }
 }
 
+function updateApiKeyHeaderParameter(openapiSpec, parameter) {
+  if (!parameter || typeof parameter !== "object") {
+    return;
+  }
+
+  let target = parameter;
+  if (typeof parameter.$ref === "string") {
+    target = getRefTarget(openapiSpec, parameter.$ref);
+  }
+
+  if (
+    target?.in === "header" &&
+    typeof target.name === "string" &&
+    target.name.toLowerCase() === "x-api-key"
+  ) {
+    target.description = mcpApiKeyHeaderDescription;
+    target.required = true;
+  }
+}
+
+function updateApiKeyHeaderDescriptions(openapiSpec) {
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const parameter of pathItem.parameters ?? []) {
+      updateApiKeyHeaderParameter(openapiSpec, parameter);
+    }
+
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+
+      for (const parameter of operation.parameters ?? []) {
+        updateApiKeyHeaderParameter(openapiSpec, parameter);
+      }
+    }
+  }
+
+  for (const parameter of Object.values(openapiSpec.components?.parameters ?? {})) {
+    updateApiKeyHeaderParameter(openapiSpec, parameter);
+  }
+}
+
 function enrichMcpOperations(openapiSpec) {
   for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== "object") {
@@ -841,7 +912,10 @@ function enrichMcpOperations(openapiSpec) {
       if (coreDefinition) {
         operation.summary = coreDefinition.summary;
         operation.description = coreDefinition.description;
-        operation["x-formaloo-mcp"] = coreDefinition.mcp;
+        operation["x-formaloo-mcp"] = {
+          ...coreDefinition.mcp,
+          auth: buildMcpAuthMetadata(coreDefinition.mcp)
+        };
         applyParameterDescriptions(operation, coreDefinition.parameterDescriptions);
         setRequestExamples(operation, coreDefinition.requestExamples);
         setResponseExamples(operation, coreDefinition.responseExamples);
@@ -895,6 +969,7 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
 relaxWorkspaceHeaderRequirements(spec);
+updateApiKeyHeaderDescriptions(spec);
 enrichMcpOperations(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
