@@ -61,38 +61,6 @@ Provide either explicit slugs **or** select-all. Do not send both.
 | `accepted_count` | integer | Number of forms queued for deletion |
 | `message` | string | Human-readable status |
 
-Example (forms queued):
-
-```json
-{
-  "status": "OK",
-  "code": 201,
-  "data": {
-    "deletion": {
-      "batch_id": "a7f3c8e1-9b2d-4f5a-8c3e-1a2b3c4d5e6f",
-      "accepted_count": 45,
-      "message": "45 forms queued for deletion."
-    }
-  }
-}
-```
-
-Example (nothing to delete):
-
-```json
-{
-  "status": "OK",
-  "code": 201,
-  "data": {
-    "deletion": {
-      "batch_id": null,
-      "accepted_count": 0,
-      "message": "No forms to delete."
-    }
-  }
-}
-```
-
 ## Background processing
 
 1. API returns immediately after queuing

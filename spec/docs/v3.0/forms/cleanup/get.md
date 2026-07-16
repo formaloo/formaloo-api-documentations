@@ -23,8 +23,8 @@ Forms are classified into three mutually exclusive categories (priority order):
 | `category` | string | Yes | Category key: `old_no_responses`, `inactive`, or `unused` |
 | `search` | string | No | Search by form title or slug |
 | `sort` | string | No | Sort field: `created_at`, `updated_at`, `last_submit_time`, or `title`. Prefix with `-` for descending |
-| `limit` | integer | No | Items per page (default: 20) |
-| `offset` | integer | No | Pagination offset |
+| `page_size` | integer | No | Items per page (default: 10) |
+| `page` | integer | No | Pagination offset |
 
 ## Response (`data`)
 
@@ -35,51 +35,10 @@ Forms are classified into three mutually exclusive categories (priority order):
 | `count` | Total forms in the requested category (after pending exclusion) |
 | `next` / `previous` | Pagination links |
 
-Each form item includes `slug`, `title`, `created_at`, `updated_at`, `last_submit_time`, `total_submits_count`, `category` (folder), and `owner`.
-
-Example:
-
-```json
-{
-  "status": "OK",
-  "code": 200,
-  "data": {
-    "forms": [
-      {
-        "slug": "old-form-1",
-        "title": "Old Survey Form",
-        "created_at": "2023-01-15T10:30:00Z",
-        "updated_at": "2023-01-20T14:45:00Z",
-        "last_submit_time": null,
-        "total_submits_count": 0,
-        "category": {
-          "slug": "surveys",
-          "title": "Surveys"
-        },
-        "owner": {
-          "username": "user@example.com",
-          "first_name": "John",
-          "last_name": "Doe"
-        }
-      }
-    ],
-    "category_counts": {
-      "old_no_responses": 45,
-      "inactive": 23,
-      "unused": 12
-    },
-    "count": 45,
-    "next": "/v3.0/forms/cleanup/?category=old_no_responses&offset=20",
-    "previous": null
-  }
-}
-```
-
 ## Behavior
 
 - Pending deletions are excluded from the list and from `category_counts`.
 - Category membership is mutually exclusive; a form appears in at most one category.
-- Scoped to the authenticated workspace (`x-workspace` / API key workspace context).
 
 ## Errors
 
