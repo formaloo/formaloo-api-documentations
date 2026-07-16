@@ -33,6 +33,12 @@ const coreOperationIds = [
   "formsPartialUpdate",
   "formsRowsCreate"
 ];
+const requiredMcpReadyOperationIds = [
+  "themesList",
+  "themesCreate",
+  "themesRetrieve",
+  "themesPartialUpdate"
+];
 
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
@@ -154,10 +160,18 @@ function validateMcpMetadata(operationId, operation) {
 collectOperations();
 
 for (const operationId of coreOperationIds) {
+  validateRequiredOperation(operationId, "Required MCP core operation");
+}
+
+for (const operationId of requiredMcpReadyOperationIds) {
+  validateRequiredOperation(operationId, "Required MCP-ready operation");
+}
+
+function validateRequiredOperation(operationId, label) {
   const record = operations.get(operationId);
   if (!record) {
-    errors.push(`Required MCP core operation ${operationId} is not present.`);
-    continue;
+    errors.push(`${label} ${operationId} is not present.`);
+    return;
   }
 
   const { operation, method, pathKey } = record;
@@ -200,6 +214,7 @@ const summary = {
   generatedAt: new Date().toISOString(),
   operationCount: operations.size,
   coreOperationCount: coreOperationIds.length,
+  mcpReadyOperationCount: requiredMcpReadyOperationIds.length,
   errors,
   warnings
 };
@@ -210,6 +225,7 @@ const markdownLines = [
   `- Generated at: ${summary.generatedAt}`,
   `- Operation count: ${summary.operationCount}`,
   `- Required MCP core operation count: ${summary.coreOperationCount}`,
+  `- Required MCP-ready operation count: ${summary.mcpReadyOperationCount}`,
   "",
   "## Errors",
   ...(errors.length > 0 ? errors.map((error) => `- ${error}`) : ["- None"]),

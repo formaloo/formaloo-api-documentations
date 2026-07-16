@@ -109,3 +109,13 @@ If you are handling a public submission scenario instead, use the form submissio
 When submitting with slugs, use the field's slug, not its title. When submitting with aliases, use the field's alias with `submit_by_alias` set to `true`.
 
 Although our service accepts most content types, like `form-data`, it's highly recommended to use `application/json` since it guarantees the correct format of values for the more complex fields (e.g. Matrix fields).
+
+## Response data fields
+
+Row responses can include several representations of the submitted data:
+
+- `data`: raw stored values keyed by field slug.
+- `readable_data`: backend-generated human-readable values when available.
+- `rendered_data`: field-aware display objects, useful when showing submissions to users.
+
+For integrations and agents, use `data` when making follow-up API updates, and use `rendered_data` or `readable_data` when summarizing answers for a human.

@@ -14,8 +14,7 @@
       "/oauth2/",
       "/plan-subscriptions/",
       "/reports/",
-      "/two-way-sync/",
-      "/form-fields/"
+      "/two-way-sync/"
     ],
     "pathPatterns": [
       "*integration*",

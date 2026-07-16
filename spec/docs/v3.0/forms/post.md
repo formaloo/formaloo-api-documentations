@@ -6,7 +6,42 @@ This document explains how Formaloo’s logic system works so AI agents can reli
 
 ---
 
+## Form create payload
+
+Use this endpoint to create the form resource itself. Start with stable form-level fields, then add or update fields through field-specific endpoints when needed.
+
+Common create fields include:
+
+- `title`: form display name.
+- `description`: form description.
+- `address`: optional public address/slug-like identifier. If omitted, the API can generate one.
+- `show_title`: whether the title is visible on the form.
+- `button_text`, `success_message`, `error_message`: user-facing submit/result text.
+- `category`, `tags`, `board`: organization fields by slug.
+- `logic`: array of form logic rules. See the logic structure below.
+- `run_field_logics_on_update`: whether field logic should also run on row update for changed fields.
+- notification/template fields such as `admin_email_notif_template`, `user_email_notif_template`, `rows_pdf_template`, `admin_pdf_template`, and `user_pdf_template`.
+
+Create the form first, then retrieve it before applying complex logic, field ordering, theme changes, or workspace-specific references so you can use exact returned slugs. Creating fields is usually more reliable through field-specific endpoints after the form exists, because create-form payload support can vary by field type.
+
+---
+
 ## 2. Logic Structure
+
+In form create/update payloads, the form's `logic` property is an array of logic items:
+
+```json
+{
+  "logic": [
+    {
+      "type": "field",
+      "identifier": "field_slug",
+      "actions": []
+    }
+  ],
+  "run_field_logics_on_update": true
+}
+```
 
 Each logic item is a JSON object:
 
@@ -65,6 +100,7 @@ Each logic item is a JSON object:
 | `send_slack`   | Slack notification        |
 | `generate_pdf` | Generate documents        |
 | `redirect`     | Send user to external URL |
+| `set_related`  | Set related record data   |
 
 ---
 
@@ -72,11 +108,19 @@ Each logic item is a JSON object:
 
 Conditions are expressed in the `when` clause.
 
+Allowed operation keys:
+
+`equal`, `not_equal`, `gte`, `lte`, `gt`, `lt`, `is`, `is_not`, `on`, `not_on`, `before`, `after`, `before_or_on`, `after_or_on`, `is_answered`, `contains`, `not_contains`, `starts_with`, `ends_with`, `always`, `otherwise`, `smallest`, `greatest`, `has_changed_to`.
+
+Compound grouping uses `and` or `or` with nested condition objects in `args`.
+
 ### Comparisons
 
 ```json
 {"operation": "gt", "args": [field_ref, const]}
 {"operation": "lte", "args": [field_ref, const]}
+{"operation": "equal", "args": [field_ref, const]}
+{"operation": "not_equal", "args": [field_ref, const]}
 ```
 
 ### Choice Checks
@@ -90,6 +134,7 @@ Conditions are expressed in the `when` clause.
 
 ```json
 {"operation": "is_answered", "args": [field_ref]}
+{"operation": "has_changed_to", "args": [field_ref, value_ref]}
 ```
 
 ### Logical Combinations
@@ -103,7 +148,7 @@ Conditions are expressed in the `when` clause.
 
 ### Update logic
 
-The `update` logic rules are ran on the field edit, and wil be ignored on the form submission.
+The `update` logic rules run on field edit/update flows and are ignored on form submission.
 
 If the `run_field_logics_on_update` setting on the form is `true`, the `field` logic will be run on row update as well. But only for the fields that are being changed.
 
@@ -138,6 +183,17 @@ If the `run_field_logics_on_update` setting on the form is `true`, the `field` l
 
   ```json
   {"type": "matrix", "value": "matrix_slug.group_slug"}
+  ```
+* **Table Reference**:
+
+  ```json
+  {"type": "table", "value": "table_slug.row_slug.column_slug"}
+  ```
+* **Formula or Link Literal**:
+
+  ```json
+  {"type": "formula", "value": "CONCAT({first_name}, ' ', {last_name})"}
+  {"type": "link", "value": "https://example.com/thanks"}
   ```
 
 ---
