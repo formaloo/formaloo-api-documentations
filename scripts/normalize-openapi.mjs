@@ -1089,6 +1089,484 @@ function enrichFormBuilderSchemasAndOperations() {
   }
 }
 
+function createTypedFieldSchema({ schemaName, type, description, subType, notes }) {
+  const properties = {
+    type: {
+      type: "string",
+      enum: [type],
+      description: `Field type discriminator. Must be \`${type}\` for this payload shape.`
+    }
+  };
+  const required = ["type"];
+
+  if (subType) {
+    properties.sub_type = {
+      type: "string",
+      enum: subType.values,
+      ...(subType.default ? { default: subType.default } : {}),
+      description: subType.description
+    };
+  }
+
+  return {
+    allOf: [
+      { $ref: `#/components/schemas/${schemaName}` },
+      {
+        type: "object",
+        additionalProperties: true,
+        description: notes ? `${description} ${notes}` : description,
+        required,
+        properties
+      }
+    ]
+  };
+}
+
+function setOperationDescription(operation, description) {
+  if (!operation) {
+    return;
+  }
+
+  const existing = typeof operation.description === "string" ? operation.description.trim() : "";
+  operation.description = existing ? `${existing}\n\n${description}` : description;
+}
+
+function setJsonExamples(operation, examples) {
+  if (!operation?.requestBody?.content) {
+    return;
+  }
+
+  for (const mediaType of Object.keys(operation.requestBody.content)) {
+    const content = operation.requestBody.content[mediaType];
+    if (!content || typeof content !== "object") {
+      continue;
+    }
+    content.examples = {
+      ...(content.examples ?? {}),
+      ...examples
+    };
+  }
+}
+
+function enrichFieldCreateSchemasAndOperations() {
+  const fieldCreateVariants = [
+    {
+      componentName: "FormalooShortTextFieldCreate",
+      schemaName: "CharFieldRequest",
+      type: "short_text",
+      description: "Creates a short text field for single-line text answers."
+    },
+    {
+      componentName: "FormalooLongTextFieldCreate",
+      schemaName: "TextFieldRequest",
+      type: "long_text",
+      description: "Creates a long text field for multi-line text answers."
+    },
+    {
+      componentName: "FormalooRegexFieldCreate",
+      schemaName: "CharFieldRequest",
+      type: "regex",
+      description: "Creates a custom-validation text field. Include regex settings accepted by the field API."
+    },
+    {
+      componentName: "FormalooEmailFieldCreate",
+      schemaName: "EmailFieldRequest",
+      type: "email",
+      description: "Creates an email field."
+    },
+    {
+      componentName: "FormalooPhoneFieldCreate",
+      schemaName: "PhoneFieldRequest",
+      type: "phone",
+      description: "Creates a phone-number field."
+    },
+    {
+      componentName: "FormalooWebsiteFieldCreate",
+      schemaName: "WebsiteFieldRequest",
+      type: "website",
+      description: "Creates a website/URL field."
+    },
+    {
+      componentName: "FormalooNumberFieldCreate",
+      schemaName: "NumberFieldRequest",
+      type: "number",
+      description:
+        "Creates a number field. Use min_value, max_value, and decimal_places for numeric constraints."
+    },
+    {
+      componentName: "FormalooDateFieldCreate",
+      schemaName: "DateFieldRequest",
+      type: "date",
+      description:
+        "Creates a date field. Use fixed from_date/to_date or relative_range_start/relative_range_end when constraining answers."
+    },
+    {
+      componentName: "FormalooDateTimeFieldCreate",
+      schemaName: "DateTimeFieldRequest",
+      type: "datetime",
+      description: "Creates a date-time field."
+    },
+    {
+      componentName: "FormalooTimeFieldCreate",
+      schemaName: "TimeFieldRequest",
+      type: "time",
+      description: "Creates a time field."
+    },
+    {
+      componentName: "FormalooCheckboxFieldCreate",
+      schemaName: "BooleanFieldRequest",
+      type: "checkbox",
+      description: "Creates a required-style checkbox field with a yes/no value."
+    },
+    {
+      componentName: "FormalooYesNoFieldCreate",
+      schemaName: "YesNoFieldRequest",
+      type: "yes_no",
+      description: "Creates a yes/no field."
+    },
+    {
+      componentName: "FormalooChoiceFieldCreate",
+      schemaName: "ChoiceFieldRequest",
+      type: "choice",
+      description:
+        "Creates a single-choice field. Provide choices with choice_items or bulk_choices, but not both."
+    },
+    {
+      componentName: "FormalooDropdownFieldCreate",
+      schemaName: "DropdownFieldRequest",
+      type: "dropdown",
+      description:
+        "Creates a single-select dropdown field. Provide choices with choice_items or bulk_choices, but not both."
+    },
+    {
+      componentName: "FormalooMultipleSelectFieldCreate",
+      schemaName: "MultipleSelectFieldRequest",
+      type: "multiple_select",
+      description:
+        "Creates a multiple-select field. Use sub_type to choose standard multi-choice, dropdown multi-choice, or ranking.",
+      subType: {
+        values: ["standard", "dropdown", "ranking"],
+        default: "standard",
+        description:
+          "`standard` renders as normal multiple choice, `dropdown` renders as a multiple-choice dropdown, and `ranking` renders as a ranking field."
+      }
+    },
+    {
+      componentName: "FormalooRatingFieldCreate",
+      schemaName: "RatingFieldRequest",
+      type: "rating",
+      description:
+        "Creates a rating field. Use sub_type to choose Star Rating/CSAT, Like/Dislike, NPS, or Slider.",
+      subType: {
+        values: ["embeded", "like_dislike", "nps", "score"],
+        default: "embeded",
+        description:
+          "`embeded` is the dashboard-compatible Star Rating / CSAT subtype. The spelling is legacy API spelling. Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down. Some older/generated contracts may mention `star`; treat it as a legacy alias and prefer `embeded` for new fields."
+      }
+    },
+    {
+      componentName: "FormalooFileFieldCreate",
+      schemaName: "FileFieldRequest",
+      type: "file",
+      description: "Creates a file-upload field."
+    },
+    {
+      componentName: "FormalooSignatureFieldCreate",
+      schemaName: "SignatureFieldRequest",
+      type: "signature",
+      description: "Creates a signature field."
+    },
+    {
+      componentName: "FormalooMatrixFieldCreate",
+      schemaName: "MatrixFieldRequest",
+      type: "matrix",
+      description:
+        "Creates a matrix field. Use choice_groups for rows and choice_items for selectable options."
+    },
+    {
+      componentName: "FormalooMetaFieldCreate",
+      schemaName: "MetaFieldRequest",
+      type: "meta",
+      description: "Creates a content/meta field such as page break, section text, or video.",
+      subType: {
+        values: ["page_break", "section", "video"],
+        description:
+          "`page_break` divides a form into pages, `section` adds static content, and `video` embeds video content."
+      }
+    },
+    {
+      componentName: "FormalooOembedFieldCreate",
+      schemaName: "OembedFieldRequest",
+      type: "oembed",
+      description: "Creates an oEmbed field for external embedded content."
+    },
+    {
+      componentName: "FormalooHiddenFieldCreate",
+      schemaName: "HiddenFieldRequest",
+      type: "hidden",
+      description: "Creates a hidden field."
+    },
+    {
+      componentName: "FormalooVariableFieldCreate",
+      schemaName: "VariableFieldRequest",
+      type: "variable",
+      description: "Creates a logic/calculation variable field.",
+      subType: {
+        values: ["int", "decimal", "string", "formula"],
+        default: "int",
+        description:
+          "`int` and `decimal` are numeric variables, `string` is a text variable, and `formula` is calculated from a formula expression."
+      }
+    },
+    {
+      componentName: "FormalooProductFieldCreate",
+      schemaName: "ProductFieldRequest",
+      type: "product",
+      description: "Creates a product/payment field."
+    },
+    {
+      componentName: "FormalooLookupFieldCreate",
+      schemaName: "LookupFieldRequest",
+      type: "lookup",
+      description: "Creates a lookup field connected to linked rows or another related source."
+    },
+    {
+      componentName: "FormalooLinkedRowsFieldCreate",
+      schemaName: "LinkedRowsFieldRequest",
+      type: "linked_rows",
+      description: "Creates a linked-rows field that links this form to records in another form."
+    },
+    {
+      componentName: "FormalooRepeatingSectionFieldCreate",
+      schemaName: "RepeatingSectionFieldRequest",
+      type: "repeating_section",
+      description: "Creates a repeating section field."
+    },
+    {
+      componentName: "FormalooProfileFieldCreate",
+      schemaName: "ProfileFieldRequest",
+      type: "profile",
+      description: "Creates a profile field for portal/user-associated records."
+    },
+    {
+      componentName: "FormalooProfileDataFieldCreate",
+      schemaName: "ProfileDataFieldRequest",
+      type: "profile_data",
+      description: "Creates a profile-data field connected to a profile field."
+    },
+    {
+      componentName: "FormalooAssigneeFieldCreate",
+      schemaName: "AssigneeFieldRequest",
+      type: "assignee",
+      description: "Creates an assignee field."
+    },
+    {
+      componentName: "FormalooAIBoxFieldCreate",
+      schemaName: "AIBoxFieldRequest",
+      type: "ai_box",
+      description:
+        "Creates an AI Analysis field. Dashboard-created AI Analysis fields are admin-only and store output on the row."
+    },
+    {
+      componentName: "FormalooCountryFieldCreate",
+      schemaName: "CountryFieldRequest",
+      type: "country",
+      description: "Creates a country field."
+    },
+    {
+      componentName: "FormalooCityFieldCreate",
+      schemaName: "CityFieldRequest",
+      type: "city",
+      description: "Creates a city field."
+    },
+    {
+      componentName: "FormalooUserFieldCreate",
+      schemaName: "UserFieldRequest",
+      type: "user",
+      description: "Creates a user field."
+    },
+    {
+      componentName: "FormalooSuccessPageFieldCreate",
+      schemaName: "SuccessPageFieldRequest",
+      type: "success_page",
+      description: "Creates a success-page field."
+    }
+  ].filter(({ schemaName }) => spec.components.schemas[schemaName]);
+
+  for (const variant of fieldCreateVariants) {
+    spec.components.schemas[variant.componentName] = createTypedFieldSchema(variant);
+  }
+
+  spec.components.schemas.FormalooFieldCreateRequest = {
+    oneOf: fieldCreateVariants.map(({ componentName }) => ({
+      $ref: `#/components/schemas/${componentName}`
+    })),
+    discriminator: {
+      propertyName: "type",
+      mapping: Object.fromEntries(
+        fieldCreateVariants.map(({ type, componentName }) => [
+          type,
+          `#/components/schemas/${componentName}`
+        ])
+      )
+    },
+    description:
+      "Generic field creation payload. Use `type` to choose the field kind and `sub_type` when the field kind has variants. This schema reuses the same field-specific request schemas as the per-type field creation endpoints."
+  };
+
+  const fieldsCreate = spec.paths["/v3.0/fields/"]?.post;
+  if (fieldsCreate) {
+    upsertJsonRequestBody(fieldsCreate, "#/components/schemas/FormalooFieldCreateRequest", true);
+    setOperationDescription(
+      fieldsCreate,
+      "Recommended field creation endpoint for agents and form builders. It accepts all supported field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives."
+    );
+    setJsonExamples(fieldsCreate, {
+      short_text: {
+        summary: "Short text field",
+        value: {
+          form: "customer-feedback",
+          title: "Full name",
+          type: "short_text",
+          required: true
+        }
+      },
+      star_rating_csat: {
+        summary: "Star Rating / CSAT field",
+        value: {
+          form: "customer-feedback",
+          title: "How satisfied are you?",
+          type: "rating",
+          sub_type: "embeded",
+          range_start: 1,
+          range_end: 5
+        }
+      },
+      nps_rating: {
+        summary: "NPS field",
+        value: {
+          form: "customer-feedback",
+          title: "How likely are you to recommend us?",
+          type: "rating",
+          sub_type: "nps",
+          range_start: 0,
+          range_end: 10
+        }
+      },
+      multiple_choice: {
+        summary: "Multiple choice field",
+        value: {
+          form: "customer-feedback",
+          title: "Which products do you use?",
+          type: "multiple_select",
+          sub_type: "standard",
+          choice_items: [{ title: "Forms" }, { title: "Portals" }, { title: "Workflows" }]
+        }
+      },
+      ranking: {
+        summary: "Ranking field",
+        value: {
+          form: "customer-feedback",
+          title: "Rank these priorities",
+          type: "multiple_select",
+          sub_type: "ranking",
+          choice_items: [{ title: "Speed" }, { title: "Price" }, { title: "Support" }]
+        }
+      },
+      page_break: {
+        summary: "Page break",
+        value: {
+          form: "customer-feedback",
+          title: "Next section",
+          type: "meta",
+          sub_type: "page_break"
+        }
+      },
+      variable: {
+        summary: "Numeric variable",
+        value: {
+          form: "customer-feedback",
+          title: "Lead score",
+          type: "variable",
+          sub_type: "int",
+          admin_only: true
+        }
+      }
+    });
+  }
+
+  const perTypeExamples = {
+    fieldsRatingCreate: {
+      star_rating_csat: {
+        summary: "Star Rating / CSAT field",
+        value: {
+          form: "customer-feedback",
+          title: "How satisfied are you?",
+          sub_type: "embeded",
+          range_start: 1,
+          range_end: 5
+        }
+      }
+    },
+    fieldsMultipleSelectCreate: {
+      ranking: {
+        summary: "Ranking field",
+        value: {
+          form: "customer-feedback",
+          title: "Rank these priorities",
+          sub_type: "ranking",
+          choice_items: [{ title: "Speed" }, { title: "Price" }, { title: "Support" }]
+        }
+      }
+    },
+    fieldsMetaCreate: {
+      page_break: {
+        summary: "Page break",
+        value: {
+          form: "customer-feedback",
+          title: "Next section",
+          sub_type: "page_break"
+        }
+      }
+    },
+    fieldsVariableCreate: {
+      numeric_variable: {
+        summary: "Numeric variable",
+        value: {
+          form: "customer-feedback",
+          title: "Lead score",
+          sub_type: "int",
+          admin_only: true
+        }
+      }
+    }
+  };
+
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    for (const operation of Object.values(pathItem ?? {})) {
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      const examples = perTypeExamples[operation.operationId];
+      if (examples) {
+        setJsonExamples(operation, examples);
+      }
+      if (operation.operationId === "fieldsRatingCreate") {
+        setOperationDescription(
+          operation,
+          "For dashboard-compatible Star Rating / CSAT fields, use `sub_type: \"embeded\"` (legacy API spelling). Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
+        );
+      }
+      if (operation.operationId === "fieldsMultipleSelectCreate") {
+        setOperationDescription(
+          operation,
+          "Use `sub_type: \"standard\"` for normal multiple choice, `dropdown` for multiple-choice dropdown, and `ranking` for ranking fields."
+        );
+      }
+    }
+  }
+}
+
 function enrichBoardDeleteOperation() {
   spec.components.schemas.BoardDeleteRequest = {
     type: "object",
@@ -1139,18 +1617,51 @@ function enrichChoiceFieldSchemas() {
     }
 
     if (schema.properties.choice_items) {
-      schema.properties.choice_items.description =
-        schema.properties.choice_items.description ?? choiceInputDescription;
-      if (schema.properties.choice_items.type === "array" && !schema.properties.choice_items.items) {
-        schema.properties.choice_items.items = {
-          $ref: "#/components/schemas/FormalooBuilderChoiceInput"
-        };
-      }
+      schema.properties.choice_items = {
+        ...schema.properties.choice_items,
+        oneOf: [
+          {
+            type: "array",
+            items: { $ref: "#/components/schemas/FormalooBuilderChoiceInput" }
+          },
+          {
+            type: "object",
+            additionalProperties: true,
+            description:
+              "Legacy object shape accepted by some generated contracts. Prefer an array of choice objects for new integrations."
+          }
+        ],
+        description: schema.properties.choice_items.description ?? choiceInputDescription
+      };
+      delete schema.properties.choice_items.type;
+      delete schema.properties.choice_items.items;
+      delete schema.properties.choice_items.nullable;
     }
 
     if (schema.properties.bulk_choices) {
-      schema.properties.bulk_choices.description =
-        schema.properties.bulk_choices.description ?? bulkChoicesDescription;
+      schema.properties.bulk_choices = {
+        ...schema.properties.bulk_choices,
+        oneOf: [
+          {
+            type: "array",
+            items: { type: "string" },
+            description: "List of choice labels to add."
+          },
+          {
+            type: "string",
+            description: "Newline-separated choice labels to add."
+          },
+          {
+            type: "object",
+            additionalProperties: true,
+            description:
+              "Legacy object shape accepted by some generated contracts. Prefer an array or newline-separated string for new integrations."
+          }
+        ],
+        description: schema.properties.bulk_choices.description ?? bulkChoicesDescription
+      };
+      delete schema.properties.bulk_choices.type;
+      delete schema.properties.bulk_choices.nullable;
     }
   }
 }
@@ -1297,6 +1808,7 @@ enrichFormLogicSchemas();
 enrichThemeSchemas();
 enrichThemeOperations();
 enrichFormBuilderSchemasAndOperations();
+enrichFieldCreateSchemasAndOperations();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 normalizeSchemaTree(spec.components?.schemas);
