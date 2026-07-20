@@ -2,6 +2,8 @@
 
 This endpoint uses AI to help use the logic on the form more easilly. It can create the logic rules, explain what existing logic does, or suggest how user can use logic to improve the form.
 
+> Note: This dashboard AI workflow is documented for completeness. MCP/CLI agents should usually use stable form, field, variable, and form update contracts plus shared agent guidance for logic work unless this Magic endpoint is intentionally exposed for the integration.
+
 ## Flow
 
 First, the client should connect to the websockets, as they will receive the response there.
@@ -20,7 +22,7 @@ Based on the mode, the response can vary:
 
 ```json
 {
-  "logic": {}, // Suggested logic
+  "logic": [], // Suggested logic array
   "form": {"run_field_logics_on_update": true|false}, // Define whether the field logics should be applied on the update as well or not.
   "human_readable_logic": "", // A human-readable explanation of the logic.
   "new_variables": [ // Any new variables needed to enhance the form's logic/calculation.

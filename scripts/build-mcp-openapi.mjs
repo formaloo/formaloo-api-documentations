@@ -475,7 +475,7 @@ const coreMcpOperations = {
   formsRetrieve: {
     summary: "Get one form by slug",
     description:
-      "Retrieves a form's full admin configuration by slug in the active workspace. Use this before editing a form or inspecting fields, settings, theme, and behavior.",
+      "Retrieves a form's full admin configuration by slug in the active workspace. Use this before editing a form or inspecting fields, settings, theme, and behavior. The `theme` field is the assigned reusable v5 theme object, or null when no reusable theme is assigned.",
     parameterDescriptions: {
       slug: "Form slug."
     },
@@ -500,6 +500,11 @@ const coreMcpOperations = {
             slug: "customer-feedback",
             address: "customer-feedback",
             show_title: true,
+            theme: {
+              title: "Customer Feedback Theme",
+              slug: "customer-feedback-theme",
+              system_theme: false
+            },
             fields_list: [],
             submit_count: 42
           }
@@ -602,6 +607,42 @@ const coreMcpOperations = {
       }
     }
   },
+  boardsDestroy: {
+    summary: "Delete an app or board",
+    description:
+      "Deletes a board, shown as an app in the Formaloo UI. By default this deletes only the board/app. Set `delete_forms` only when the user explicitly confirms that connected forms should also be deleted.",
+    parameterDescriptions: {
+      boardSlug: "Board or app slug to delete.",
+      delete_forms:
+        "When true, connected forms and the primary form are deleted asynchronously after the board/app is deleted. Leave false or omit to keep forms."
+    },
+    mcp: {
+      tool_name: "delete_app",
+      aliases: ["delete_board", "remove_app", "remove_board"],
+      intent: "Delete a Formaloo app/board, optionally also deleting connected forms when explicitly requested.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      delete_board_only: {
+        summary: "Delete the app/board but keep connected forms",
+        value: {
+          delete_forms: false
+        }
+      },
+      delete_board_and_forms: {
+        summary: "Delete the app/board and connected forms",
+        value: {
+          delete_forms: true
+        }
+      }
+    }
+  },
   formsCreate: {
     summary: "Create a simple form",
     description:
@@ -678,7 +719,7 @@ const coreMcpOperations = {
   formsPartialUpdate: {
     summary: "Partially update a form",
     description:
-      "Updates selected editable fields on a form in the active workspace. Prefer this operation for small changes such as renaming a form.",
+      "Updates selected editable fields on a form in the active workspace. Prefer this operation for small changes such as renaming a form, assigning a reusable theme by slug, or saving reviewed logic changes when field, choice, variable, and page references are known.",
     parameterDescriptions: {
       slug: "Form slug."
     },
@@ -700,6 +741,37 @@ const coreMcpOperations = {
         value: {
           title: "Updated Customer Feedback"
         }
+      },
+      assign_theme: {
+        summary: "Assign a reusable theme to a form",
+        value: {
+          theme: "customer-feedback-theme"
+        }
+      },
+      update_form_logic: {
+        summary: "Update reviewed form logic",
+        value: {
+          run_field_logics_on_update: true,
+          logic: [
+            {
+              type: "field",
+              identifier: "satisfaction_choice",
+              actions: [
+                {
+                  action: "show",
+                  args: [{ type: "field", identifier: "follow_up_message" }],
+                  when: {
+                    operation: "is",
+                    args: [
+                      { type: "field", value: "satisfaction_choice" },
+                      { type: "choice", value: "choice_needs_help" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
       }
     },
     responseExamples: {
@@ -714,6 +786,202 @@ const coreMcpOperations = {
           }
         }
       }
+    }
+  },
+  formFieldsRetrieve: {
+    summary: "Get editable form and fields",
+    description:
+      "Retrieves the editable form-builder structure for a form, including current field definitions. Use this before adding, deleting, reordering, or changing multiple fields so exact field slugs, choice slugs, aliases, and existing settings can be preserved.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "get_form_builder",
+      aliases: ["get_form_fields", "get_editable_form", "inspect_form_builder"],
+      intent: "Get a Formaloo form with its editable field configuration.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        form_builder: {
+          summary: "Editable form and field structure",
+          value: {
+            form: {
+              status: "not_changed",
+              errors: {}
+            },
+            fields: [
+              {
+                status: "not_changed",
+                errors: {},
+                object: {
+                  ref_id: "name",
+                  slug: "short_text_abc123",
+                  type: "short_text",
+                  title: "Name",
+                  position: 1
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  formFieldsUpdate: {
+    summary: "Replace editable form and fields",
+    description:
+      "Replaces form metadata and field definitions together. Retrieve the current builder payload first, preserve fields that should remain, and use `slug` for existing fields. New fields may use temporary `ref_id` values so related fields can reference each other before real slugs are generated.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "update_form_builder",
+      aliases: ["replace_form_fields", "save_form_builder", "bulk_update_form_fields"],
+      intent: "Replace a Formaloo form's editable metadata and field list together.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      replace_form_builder: {
+        summary: "Replace form settings and fields together",
+        value: {
+          form: {
+            title: "Customer feedback",
+            button_text: "Submit"
+          },
+          fields: [
+            {
+              ref_id: "name",
+              type: "short_text",
+              title: "Name",
+              required: true
+            },
+            {
+              ref_id: "satisfaction",
+              type: "choice",
+              title: "How satisfied are you?",
+              choice_items: [
+                { ref_id: "happy", title: "Happy" },
+                { ref_id: "needs_help", title: "Needs help" }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  formFieldsPartialUpdate: {
+    summary: "Partially update editable form and fields",
+    description:
+      "Partially updates form metadata and field definitions together. This is the preferred endpoint for agent-driven form building because the response reports per-field status and errors. Include existing field `slug` values to update or keep them; omit a field only when intentionally removing it from the form's field order.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "patch_form_builder",
+      aliases: ["patch_form_fields", "edit_form_fields", "bulk_patch_form_fields"],
+      intent: "Partially update a Formaloo form's editable metadata and fields together.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      add_choice_field: {
+        summary: "Add a choice field while preserving an existing field",
+        value: {
+          form: {
+            title: "Customer feedback"
+          },
+          fields: [
+            {
+              ref_id: "existing_name",
+              slug: "short_text_abc123"
+            },
+            {
+              ref_id: "satisfaction",
+              type: "choice",
+              title: "How satisfied are you?",
+              choice_items: [
+                { ref_id: "happy", title: "Happy" },
+                { ref_id: "needs_help", title: "Needs help" }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    responseExamples: {
+      "200": {
+        updated_form_builder: {
+          summary: "Per-field update status",
+          value: {
+            form: {
+              status: "updated",
+              errors: {}
+            },
+            fields: [
+              {
+                status: "not_changed",
+                errors: {},
+                object: {
+                  ref_id: "existing_name",
+                  slug: "short_text_abc123",
+                  type: "short_text",
+                  title: "Name",
+                  position: 1
+                }
+              },
+              {
+                status: "created",
+                errors: {},
+                object: {
+                  ref_id: "satisfaction",
+                  slug: "choice_def456",
+                  type: "choice",
+                  title: "How satisfied are you?",
+                  position: 2
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  formFieldsDestroy: {
+    summary: "Delete a form from builder endpoint",
+    description:
+      "Deletes the form addressed by this builder endpoint. Use the regular delete_form operation when possible; this endpoint exists for builder parity and should only be used when the user explicitly wants to delete the whole form.",
+    parameterDescriptions: {
+      slug: "Form slug."
+    },
+    mcp: {
+      tool_name: "delete_form_builder_form",
+      aliases: ["delete_form_fields_resource"],
+      intent: "Delete the whole Formaloo form through the form-builder endpoint.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
     }
   },
   formsRowsCreate: {
@@ -753,6 +1021,279 @@ const coreMcpOperations = {
             submit_number: 1,
             tracking_code: "TRK-123"
           }
+        }
+      }
+    }
+  },
+  themesList: {
+    summary: "List v5 form themes",
+    description:
+      "Lists current v5 form themes available in the active workspace, including system and custom themes. Use this when choosing, previewing, or copying styling for a form. Prefer this operation over legacy form-theme endpoints for current theme workflows.",
+    parameterDescriptions: {
+      page: "Page number for paginated theme results.",
+      page_size: "Number of themes to return per page.",
+      pagination: "Pagination toggle when supported by the API.",
+      search: "Search text used to filter themes by title or related metadata.",
+      sort_by: "Sort expression for theme list ordering.",
+      system_theme: "Filter by whether the theme is a system theme."
+    },
+    mcp: {
+      tool_name: "list_themes",
+      aliases: ["list_form_themes", "show_themes", "find_themes"],
+      intent: "List current Formaloo v5 form themes in the selected workspace.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.themes",
+      user_data: false,
+      requires_confirmation: false,
+      result_path_note:
+        "MCP/CLI executors receive the Formaloo response envelope under `data`; direct OpenAPI schema consumers should read the documented response schema."
+    },
+    responseExamples: {
+      "200": {
+        theme_list: {
+          summary: "Paginated theme list",
+          value: {
+            count: 1,
+            next: null,
+            previous: null,
+            page_size: 20,
+            page_count: 1,
+            current_page: 1,
+            themes: [
+              {
+                title: "Customer Feedback Theme",
+                slug: "customer-feedback-theme",
+                system_theme: false,
+                form_type: "simple"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  themesCreate: {
+    summary: "Create a v5 form theme",
+    description:
+      "Creates a reusable v5 form theme in the active workspace. Use this when saving styling that can be applied across forms. Color fields use the API's stringified RGBA format, for example `{\"r\":31,\"g\":45,\"b\":61,\"a\":1}` encoded as a JSON string.",
+    mcp: {
+      tool_name: "create_theme",
+      aliases: ["create_form_theme", "new_theme", "save_theme"],
+      intent: "Create a reusable Formaloo v5 form theme.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true,
+      result_path_note:
+        "MCP/CLI executors receive the Formaloo response envelope under `data`; direct OpenAPI schema consumers should read the documented response schema."
+    },
+    requestExamples: {
+      create_theme: {
+        summary: "Create a simple theme",
+        value: {
+          title: "Customer Feedback Theme",
+          form_type: "simple",
+          text_color: "{\"r\":31,\"g\":45,\"b\":61,\"a\":1}",
+          button_color: "{\"r\":34,\"g\":197,\"b\":94,\"a\":1}",
+          background_color: "{\"r\":248,\"g\":250,\"b\":252,\"a\":1}",
+          submit_text_color: "{\"r\":255,\"g\":255,\"b\":255,\"a\":1}",
+          logo_position: "center",
+          show_title: true,
+          theme_config: {
+            form_layout: "center",
+            modern_view: true,
+            font_size: "large"
+          }
+        }
+      }
+    },
+    responseExamples: {
+      "201": {
+        created_theme: {
+          summary: "Created theme",
+          value: {
+            title: "Customer Feedback Theme",
+            slug: "customer-feedback-theme",
+            system_theme: false,
+            form_type: "simple"
+          }
+        }
+      }
+    }
+  },
+  themesRetrieve: {
+    summary: "Get one v5 form theme",
+    description:
+      "Retrieves a current v5 form theme by slug. Use this before editing a theme so unknown theme_config keys and existing color values can be preserved.",
+    parameterDescriptions: {
+      slug: "Theme slug."
+    },
+    mcp: {
+      tool_name: "get_theme",
+      aliases: ["show_theme", "theme_details", "get_form_theme"],
+      intent: "Get a reusable Formaloo v5 form theme by slug.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: false,
+      result_path_note:
+        "MCP/CLI executors receive the Formaloo response envelope under `data`; direct OpenAPI schema consumers should read the documented response schema."
+    },
+    responseExamples: {
+      "200": {
+        theme: {
+          summary: "Theme details",
+          value: {
+            title: "Customer Feedback Theme",
+            slug: "customer-feedback-theme",
+            system_theme: false,
+            form_type: "simple",
+            theme_config: {
+              form_layout: "center",
+              modern_view: true
+            }
+          }
+        }
+      }
+    }
+  },
+  themesPartialUpdate: {
+    summary: "Partially update a v5 form theme",
+    description:
+      "Updates selected editable fields on a current v5 form theme. Prefer this operation for targeted theme edits. Retrieve the theme first and preserve unknown `theme_config` keys unless the user explicitly asks to reset them.",
+    parameterDescriptions: {
+      slug: "Theme slug."
+    },
+    mcp: {
+      tool_name: "patch_theme",
+      aliases: ["update_theme", "edit_theme", "partially_update_theme"],
+      intent: "Partially update a reusable Formaloo v5 form theme.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true,
+      result_path_note:
+        "MCP/CLI executors receive the Formaloo response envelope under `data`; direct OpenAPI schema consumers should read the documented response schema."
+    },
+    requestExamples: {
+      update_theme_colors: {
+        summary: "Update selected theme colors",
+        value: {
+          button_color: "{\"r\":34,\"g\":197,\"b\":94,\"a\":1}",
+          submit_text_color: "{\"r\":255,\"g\":255,\"b\":255,\"a\":1}",
+          theme_config: {
+            form_layout: "center",
+            modern_view: true
+          }
+        }
+      }
+    },
+    responseExamples: {
+      "200": {
+        updated_theme: {
+          summary: "Updated theme",
+          value: {
+            title: "Customer Feedback Theme",
+            slug: "customer-feedback-theme",
+            system_theme: false,
+            form_type: "simple"
+          }
+        }
+      }
+    }
+  },
+  themesDestroy: {
+    summary: "Delete a v5 form theme",
+    description:
+      "Deletes a business-owned reusable v5 theme. If forms currently use the theme, ask whether they should be moved to a replacement theme and pass `replace_with_theme` when the user chooses one.",
+    parameterDescriptions: {
+      slug: "Theme slug to delete."
+    },
+    mcp: {
+      tool_name: "delete_theme",
+      aliases: ["remove_theme", "destroy_theme", "delete_form_theme"],
+      intent: "Delete a reusable Formaloo v5 form theme.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      delete_and_replace_theme: {
+        summary: "Move linked forms to a replacement theme before deleting",
+        value: {
+          replace_with_theme: "replacement-theme-slug"
+        }
+      }
+    }
+  },
+  themesCopyCreate: {
+    summary: "Copy a v5 form theme",
+    description:
+      "Copies an existing workspace or system theme into the active workspace. Use this before customizing a system/shared theme or before making risky changes.",
+    parameterDescriptions: {
+      slug: "Theme slug to copy."
+    },
+    mcp: {
+      tool_name: "copy_theme",
+      aliases: ["duplicate_theme", "fork_theme", "copy_form_theme"],
+      intent: "Copy a reusable Formaloo v5 form theme.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      copy_theme: {
+        summary: "Copy a theme with a custom title",
+        value: {
+          title: "Customer Feedback Theme Copy"
+        }
+      }
+    }
+  },
+  formsCreateThemeCreate: {
+    summary: "Create a v5 theme from a form",
+    description:
+      "Creates a reusable v5 theme from an existing form's current visual styling. Use this when the current form design should become a reusable preset.",
+    parameterDescriptions: {
+      slug: "Source form slug."
+    },
+    mcp: {
+      tool_name: "create_theme_from_form",
+      aliases: ["save_form_theme", "extract_theme_from_form", "make_theme_from_form"],
+      intent: "Create a reusable Formaloo v5 theme from a form's current styling.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      create_theme_from_form: {
+        summary: "Create a reusable theme from a form",
+        value: {
+          title: "Customer Feedback Theme"
         }
       }
     }

@@ -1,6 +1,8 @@
-# Magic submit
+# Magic design
 
 You can use this endpoint to get suggestions for a new form theme. How it works is that you send the user's request in the body to the form maker service.
+
+> Note: This dashboard AI workflow is documented for completeness. MCP/CLI agents should usually use stable theme, form, and file contracts plus shared agent guidance for theme work unless this Magic endpoint is intentionally exposed for the integration.
 
 ``` json
 {
