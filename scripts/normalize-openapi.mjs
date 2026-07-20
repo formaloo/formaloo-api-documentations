@@ -1122,6 +1122,68 @@ function createTypedFieldSchema({ schemaName, type, description, subType, notes 
   };
 }
 
+function createManualTypedFieldSchema({ type, description }) {
+  return {
+    type: "object",
+    additionalProperties: true,
+    description,
+    required: ["type"],
+    properties: {
+      form: {
+        type: "string",
+        nullable: true,
+        description: "Slug of the form to which this field will be added."
+      },
+      repeating_section: {
+        type: "string",
+        nullable: true,
+        description: "Slug of the repeating section field to which this field will be added."
+      },
+      beforeFieldRefId: {
+        type: "string",
+        nullable: true,
+        description: "Optional field ref_id used to insert the new field before an existing field."
+      },
+      type: {
+        type: "string",
+        enum: [type],
+        description: `Field type discriminator. Must be \`${type}\` for this payload shape.`
+      },
+      title: {
+        type: "string",
+        nullable: true,
+        description: "Field title or label shown to users."
+      },
+      description: {
+        type: "string",
+        nullable: true,
+        description: "Optional help text or rich text shown with the field."
+      },
+      alias: {
+        type: "string",
+        nullable: true,
+        description: "Optional user-defined field alias, unique within the form when set."
+      },
+      required: {
+        type: "boolean",
+        description: "Whether the field must be answered by submitters."
+      },
+      admin_only: {
+        type: "boolean",
+        description: "Whether the field is visible only to admins and hidden from submitters."
+      },
+      invisible: {
+        type: "boolean",
+        description: "Whether the field is hidden from the public form view."
+      },
+      read_only: {
+        type: "boolean",
+        description: "Whether submitters can view but not edit the field."
+      }
+    }
+  };
+}
+
 function setOperationDescription(operation, description) {
   if (!operation) {
     return;
@@ -1343,6 +1405,13 @@ function enrichFieldCreateSchemasAndOperations() {
       description: "Creates a repeating section field."
     },
     {
+      componentName: "FormalooTableFieldCreate",
+      manualSchema: true,
+      type: "table",
+      description:
+        "Creates a table field for collecting multiple rows of structured data. This field type is available in the dashboard form editor; the backend-generated OpenAPI currently exposes the `table` enum value but not a dedicated request schema, so this generic schema documents the verified create shape and leaves field-specific table configuration as additional properties."
+    },
+    {
       componentName: "FormalooProfileFieldCreate",
       schemaName: "ProfileFieldRequest",
       type: "profile",
@@ -1380,6 +1449,13 @@ function enrichFieldCreateSchemasAndOperations() {
       description: "Creates a city field."
     },
     {
+      componentName: "FormalooEmailVerificationFieldCreate",
+      manualSchema: true,
+      type: "email_verification",
+      description:
+        "Creates an email verification field that verifies the submitter's email by OTP. This field type is available in the dashboard form editor; the backend-generated OpenAPI currently exposes the `email_verification` enum value but not a dedicated request schema, so this generic schema documents the verified create shape."
+    },
+    {
       componentName: "FormalooUserFieldCreate",
       schemaName: "UserFieldRequest",
       type: "user",
@@ -1391,10 +1467,12 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "success_page",
       description: "Creates a success-page field."
     }
-  ].filter(({ schemaName }) => spec.components.schemas[schemaName]);
+  ].filter(({ schemaName, manualSchema }) => manualSchema || spec.components.schemas[schemaName]);
 
   for (const variant of fieldCreateVariants) {
-    spec.components.schemas[variant.componentName] = createTypedFieldSchema(variant);
+    spec.components.schemas[variant.componentName] = variant.manualSchema
+      ? createManualTypedFieldSchema(variant)
+      : createTypedFieldSchema(variant);
   }
 
   spec.components.schemas.FormalooFieldCreateRequest = {
@@ -1411,7 +1489,7 @@ function enrichFieldCreateSchemasAndOperations() {
       )
     },
     description:
-      "Generic field creation payload for documented, schema-backed field types. Use `type` to choose the field kind and `sub_type` when the field kind has variants. This schema reuses the same field-specific request schemas as the per-type field creation endpoints; dashboard-only shortcuts and special flows may require additional defaults not represented here."
+      "Generic field creation payload for documented form-editor field types. Use `type` to choose the field kind and `sub_type` when the field kind has variants. Most variants reuse the same field-specific request schemas as the per-type field creation endpoints. `table` and `email_verification` are documented here because the backend-generated OpenAPI currently exposes them as field-type enum values but does not generate dedicated request schemas for them."
   };
 
   const fieldsCreate = spec.paths["/v3.0/fields/"]?.post;
@@ -1419,7 +1497,7 @@ function enrichFieldCreateSchemasAndOperations() {
     upsertJsonRequestBody(fieldsCreate, "#/components/schemas/FormalooFieldCreateRequest", true);
     setOperationDescription(
       fieldsCreate,
-      "Recommended field creation endpoint for agents and form builders when adding documented, schema-backed field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives. Some dashboard editor shortcuts and special fields apply extra UI defaults or use contracts that are not yet fully represented in the generated OpenAPI schema."
+      "Recommended field creation endpoint for agents and form builders when adding documented form-editor field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives. Some dashboard editor shortcuts apply extra UI defaults, and `table` / `email_verification` are documented through the generic field-create schema because the generated backend OpenAPI does not currently expose dedicated request schemas for them."
     );
     setJsonExamples(fieldsCreate, {
       short_text: {
@@ -1473,6 +1551,31 @@ function enrichFieldCreateSchemasAndOperations() {
           choice_items: [{ title: "Speed" }, { title: "Price" }, { title: "Support" }]
         }
       },
+      table: {
+        summary: "Table field",
+        value: {
+          form: "customer-feedback",
+          title: "Order items",
+          type: "table"
+        }
+      },
+      email_verification: {
+        summary: "Email verification field",
+        value: {
+          form: "customer-feedback",
+          title: "Verify your email",
+          type: "email_verification"
+        }
+      },
+      ai_analysis: {
+        summary: "AI Analysis field",
+        value: {
+          form: "customer-feedback",
+          title: "Summarize this response",
+          type: "ai_box",
+          admin_only: true
+        }
+      },
       page_break: {
         summary: "Page break",
         value: {
@@ -1480,6 +1583,16 @@ function enrichFieldCreateSchemasAndOperations() {
           title: "Next section",
           type: "meta",
           sub_type: "page_break"
+        }
+      },
+      review: {
+        summary: "Review answers field",
+        value: {
+          form: "customer-feedback",
+          title: "Review",
+          type: "meta",
+          sub_type: "section",
+          description: "Review your answers before submitting:\n\n@review"
         }
       },
       variable: {
