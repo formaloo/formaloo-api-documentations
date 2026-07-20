@@ -1411,7 +1411,7 @@ function enrichFieldCreateSchemasAndOperations() {
       )
     },
     description:
-      "Generic field creation payload. Use `type` to choose the field kind and `sub_type` when the field kind has variants. This schema reuses the same field-specific request schemas as the per-type field creation endpoints."
+      "Generic field creation payload for documented, schema-backed field types. Use `type` to choose the field kind and `sub_type` when the field kind has variants. This schema reuses the same field-specific request schemas as the per-type field creation endpoints; dashboard-only shortcuts and special flows may require additional defaults not represented here."
   };
 
   const fieldsCreate = spec.paths["/v3.0/fields/"]?.post;
@@ -1419,7 +1419,7 @@ function enrichFieldCreateSchemasAndOperations() {
     upsertJsonRequestBody(fieldsCreate, "#/components/schemas/FormalooFieldCreateRequest", true);
     setOperationDescription(
       fieldsCreate,
-      "Recommended field creation endpoint for agents and form builders. It accepts all supported field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives."
+      "Recommended field creation endpoint for agents and form builders when adding documented, schema-backed field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives. Some dashboard editor shortcuts and special fields apply extra UI defaults or use contracts that are not yet fully represented in the generated OpenAPI schema."
     );
     setJsonExamples(fieldsCreate, {
       short_text: {

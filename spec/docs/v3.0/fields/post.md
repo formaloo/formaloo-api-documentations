@@ -1,4 +1,4 @@
-Creates a form field using the `type` supplied in the request body. This is the recommended endpoint for agents, CLI clients, and form builders that programmatically add mixed field types through one URL.
+Creates a form field using the `type` supplied in the request body. This is the recommended endpoint for agents, CLI clients, and form builders that programmatically add documented, schema-backed field types through one URL.
 
 Use the `type` field to choose the field kind, and use `sub_type` only for field families that have variants.
 
@@ -25,3 +25,5 @@ Common examples:
 `embeded` is the legacy API spelling used for dashboard-compatible Star Rating / CSAT fields. Some generated contracts may also show `star`; prefer `embeded` for new fields that should edit cleanly in the dashboard.
 
 For choice-like fields, provide choices with either `choice_items` or `bulk_choices`, but not both. See the per-type field endpoints for the field-specific settings reused by this generic endpoint.
+
+Some dashboard editor items are shortcuts or special flows rather than distinct simple field contracts. For example, Contact Info creates multiple normal fields, Terms and Conditions and Review apply generated defaults, and some special fields may require additional contracts that are not yet fully represented in the generated OpenAPI schema.
