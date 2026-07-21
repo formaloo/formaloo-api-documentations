@@ -14,7 +14,8 @@ data-retention/anonymization policy and how each one is configured.
 
 - Rendering a privacy/retention dashboard across a business's forms.
 - Auditing which forms have anonymization enabled and their retention windows.
-- Discovering the `form` slugs needed for the per-form retrieve/update endpoints.
+- Discovering the `form` slugs whose config is created/updated through the
+  form-fields endpoint (`form-fields/<slug>/`).
 
 ### Notes
 
