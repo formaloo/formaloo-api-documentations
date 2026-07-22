@@ -15,7 +15,7 @@ function asStringArray(value) {
   }
 
   return value
-    .map((item) => item.trim())
+    .map((item) => String(item ?? "").trim())
     .filter(Boolean);
 }
 
@@ -157,6 +157,14 @@ const excludedTagTokens = new Set(asStringArray(excludeSettings.tags).map(normal
 const excludedPathPrefixes = asStringArray(excludeSettings.pathPrefixes).map(preparePathRule);
 const excludedPathPatterns = asStringArray(excludeSettings.pathPatterns).map(prepareWildcardRule);
 const excludedEndpoints = new Set(asStringArray(excludeSettings.endpoints).map((endpoint) => normalizePathForCompare(endpoint)));
+const excludedHttpMethods = new Set(asStringArray(excludeSettings.httpMethods).map((method) => method.toLowerCase()));
+const approvedExcludedPutOperationIds = new Set(asStringArray(settings.approvedExcludedPutOperationIds));
+const methodExceptions = new Map(
+  Object.entries(settings.methodExceptions ?? {}).map(([method, operationIds]) => [
+    method.toLowerCase(),
+    new Set(asStringArray(operationIds))
+  ])
+);
 const excludedServiceIndex = await loadServiceExclusionIndex(excludedServices);
 
 const spec = JSON.parse(await fs.readFile(normalizedSpecPath, "utf8"));
@@ -256,6 +264,63 @@ function shouldExcludeEndpoint(pathKey) {
 
 function shouldExcludePath(pathKey) {
   return shouldExcludeByPathPrefix(pathKey) || shouldExcludeByWildcard(pathKey) || shouldExcludeEndpoint(pathKey);
+}
+
+function getOperationId(operation) {
+  const operationId = operation?.operationId;
+  return typeof operationId === "string" && operationId.trim().length > 0 ? operationId : null;
+}
+
+function isMethodException(method, operation) {
+  const operationId = getOperationId(operation);
+  return operationId !== null && methodExceptions.get(method.toLowerCase())?.has(operationId) === true;
+}
+
+function shouldExcludeByHttpMethod(method, operation) {
+  const methodToken = method.toLowerCase();
+  return excludedHttpMethods.has(methodToken) && !isMethodException(methodToken, operation);
+}
+
+const unsupportedSettingsErrors = [];
+if (settings.approvedExcludedPutOperationIds !== undefined && !Array.isArray(settings.approvedExcludedPutOperationIds)) {
+  unsupportedSettingsErrors.push("approvedExcludedPutOperationIds must be an array.");
+}
+
+if (
+  settings.methodExceptions !== undefined &&
+  (!settings.methodExceptions || typeof settings.methodExceptions !== "object" || Array.isArray(settings.methodExceptions))
+) {
+  unsupportedSettingsErrors.push("methodExceptions must be an object keyed by HTTP method.");
+}
+
+for (const [method, operationIds] of Object.entries(settings.methodExceptions ?? {})) {
+  if (!Array.isArray(operationIds)) {
+    unsupportedSettingsErrors.push(`methodExceptions.${method} must be an array.`);
+  }
+}
+
+if (excludedHttpMethods.has("put")) {
+  for (const [method, operationIds] of methodExceptions.entries()) {
+    if (method !== "put") {
+      unsupportedSettingsErrors.push(`methodExceptions.${method} is not supported for the MCP artifact.`);
+    }
+
+    for (const operationId of operationIds) {
+      if (method === "put" && operationId !== "paymentMethodsUpdate") {
+        unsupportedSettingsErrors.push(`Only paymentMethodsUpdate may be retained as a PUT exception, found ${operationId}.`);
+      }
+
+      if (approvedExcludedPutOperationIds.has(operationId)) {
+        unsupportedSettingsErrors.push(
+          `${operationId} cannot be both retained in methodExceptions.${method} and dropped by approvedExcludedPutOperationIds.`
+        );
+      }
+    }
+  }
+}
+
+if (unsupportedSettingsErrors.length > 0) {
+  throw new Error(`Invalid MCP OpenAPI settings:\n- ${unsupportedSettingsErrors.join("\n- ")}`);
 }
 
 function getRefTarget(openapiSpec, ref) {
@@ -1468,6 +1533,20 @@ function enrichMcpOperations(openapiSpec) {
         operation.summary = descriptionFix.summary;
         operation.description = descriptionFix.description;
       }
+
+      if (method === "put" && operation.operationId === "paymentMethodsUpdate") {
+        operation.description = [
+          operation.description,
+          "Temporary legacy PUT exception for payment method updates. Use this operation only until a PATCH replacement is available; do not model it as a partial update."
+        ]
+          .filter((part) => typeof part === "string" && part.trim().length > 0)
+          .join("\n\n");
+        operation["x-formaloo-legacy-put"] = {
+          legacy_put_exception: true,
+          temporary: true,
+          replacement_policy: "Remove this PUT exception when a PATCH payment method update operation is available."
+        };
+      }
     }
   }
 }
@@ -1475,6 +1554,12 @@ function enrichMcpOperations(openapiSpec) {
 const filteredPaths = {};
 const usedTagNames = new Set();
 let removedOperations = 0;
+const observedMcpScopedPutOperationIds = new Set();
+const retainedPutOperationIds = new Set();
+const droppedApprovedPutOperationIds = new Set();
+const unknownPutOperations = [];
+const retainedPutRecords = new Map();
+const mcpScopedPatchRecords = [];
 
 for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
   if (!pathItem || typeof pathItem !== "object") {
@@ -1490,7 +1575,35 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
       continue;
     }
 
-    if (pathExcluded || shouldExcludeByService(pathKey, method, operation) || operationHasExcludedTag(operation)) {
+    const methodToken = method.toLowerCase();
+    const excludedByMcpScope =
+      pathExcluded || shouldExcludeByService(pathKey, method, operation) || operationHasExcludedTag(operation);
+    const operationId = getOperationId(operation);
+
+    if (methodToken === "patch" && !excludedByMcpScope) {
+      mcpScopedPatchRecords.push({ operationId, pathKey });
+    }
+
+    if (methodToken === "put" && !excludedByMcpScope) {
+      if (operationId !== null) {
+        observedMcpScopedPutOperationIds.add(operationId);
+      }
+
+      if (isMethodException(methodToken, operation)) {
+        retainedPutOperationIds.add(operationId);
+        retainedPutRecords.set(operationId, { pathKey, operation });
+      } else if (operationId !== null && approvedExcludedPutOperationIds.has(operationId)) {
+        droppedApprovedPutOperationIds.add(operationId);
+        removedOperations += 1;
+        continue;
+      } else {
+        unknownPutOperations.push(`${operationId ?? "<missing operationId>"} PUT ${pathKey}`);
+        removedOperations += 1;
+        continue;
+      }
+    }
+
+    if (shouldExcludeByHttpMethod(method, operation) || excludedByMcpScope) {
       removedOperations += 1;
       continue;
     }
@@ -1507,6 +1620,42 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
   }
 }
 
+const putGateErrors = [];
+const staleApprovedPutOperationIds = [];
+for (const operationId of approvedExcludedPutOperationIds) {
+  if (!observedMcpScopedPutOperationIds.has(operationId)) {
+    staleApprovedPutOperationIds.push(operationId);
+  }
+}
+
+for (const operationId of methodExceptions.get("put") ?? []) {
+  if (!retainedPutOperationIds.has(operationId)) {
+    putGateErrors.push(`${operationId} is configured as a retained PUT exception but was not found in the MCP-scoped upstream spec.`);
+  }
+}
+
+if (unknownPutOperations.length > 0) {
+  putGateErrors.push(
+    `Unknown MCP-scoped PUT operation(s) require review before exclusion or retention: ${unknownPutOperations.join(", ")}.`
+  );
+}
+
+const retainedPaymentPut = retainedPutRecords.get("paymentMethodsUpdate");
+if (methodExceptions.get("put")?.has("paymentMethodsUpdate") === true && retainedPaymentPut) {
+  const paymentPatchCounterpart = mcpScopedPatchRecords.find(
+    (record) => record.operationId === "paymentMethodsPartialUpdate" || record.pathKey === retainedPaymentPut.pathKey
+  );
+  if (paymentPatchCounterpart) {
+    putGateErrors.push(
+      `paymentMethodsUpdate is still retained as a legacy PUT exception, but PATCH ${paymentPatchCounterpart.pathKey} is available. Remove the PUT exception and use PATCH.`
+    );
+  }
+}
+
+if (putGateErrors.length > 0) {
+  throw new Error(`MCP PUT review gate failed:\n- ${putGateErrors.join("\n- ")}`);
+}
+
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
 relaxWorkspaceHeaderRequirements(spec);
@@ -1520,6 +1669,11 @@ console.log(`MCP filtered spec -> ${path.relative(rootDir, mcpSpecPath)}`);
 console.log(`MCP settings file -> ${path.relative(rootDir, settingsPath)}`);
 if (excludedServiceIndex.missingServices.length > 0) {
   console.log(`Unknown services in settings: ${excludedServiceIndex.missingServices.join(", ")}`);
+}
+if (staleApprovedPutOperationIds.length > 0) {
+  console.log(
+    `Stale approved PUT exclusions not present in current MCP scope: ${staleApprovedPutOperationIds.sort().join(", ")}`
+  );
 }
 console.log(`Removed operations: ${removedOperations}`);
 console.log(`Remaining paths: ${Object.keys(spec.paths ?? {}).length}`);

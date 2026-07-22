@@ -1,5 +1,8 @@
 {
   "exclude": {
+    "httpMethods": [
+      "put"
+    ],
     "services": [
       "authentication",
       "ai"
@@ -49,6 +52,41 @@
       "/profiles/{type}/request-login/",
       "/prompt-categories/{tagSlug}/examples/",
       "/usage/"
+    ]
+  },
+  "approvedExcludedPutOperationIds": [
+    "boardsBlocksItemsUpdate",
+    "boardsBlocksUpdate",
+    "boardsUpdate",
+    "anonymizationConfigsUpdate",
+    "businessEnginesUpdate",
+    "businessesMembersUpdate",
+    "businessesTeamsUpdate",
+    "businessesUpdate",
+    "campaignsUpdate",
+    "draftRowsUpdate",
+    "emailServersUpdate",
+    "emailTemplatesUpdate",
+    "fieldsUpdate",
+    "foldersUpdate",
+    "formFieldsUpdate",
+    "formsUpdate",
+    "formsWebhooksUpdate",
+    "pdfTemplatesUpdate",
+    "recurringSubmissionsUpdate",
+    "profileUpdate",
+    "rowsUpdate",
+    "sharedBoardsBlocksRowsUpdate",
+    "sharedBoardsProfileUpdate",
+    "tagsUpdate",
+    "themesUpdate",
+    "userFormRowsUpdate",
+    "userFormsSsoConfigUpdate",
+    "userFormsUpdate"
+  ],
+  "methodExceptions": {
+    "put": [
+      "paymentMethodsUpdate"
     ]
   }
 }
