@@ -36,6 +36,8 @@ rm -f "$ROOT_DIR/openapi-v3.0.yaml" "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 
 echo "Fetching upstream specifications..."
 node "$ROOT_DIR/scripts/fetch-specs.mjs"
+echo "Stripping PUT operations from source specifications..."
+node "$ROOT_DIR/scripts/strip-put-operations.mjs"
 node "$ROOT_DIR/scripts/prepare-doc-stubs.mjs"
 
 bundle_spec() {
