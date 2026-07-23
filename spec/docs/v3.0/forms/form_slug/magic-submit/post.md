@@ -2,6 +2,8 @@
 
 You can use this endpoint to get suggestions for filling a form based on a text. How it works is that you send the user's text in the body to the form maker service.
 
+> Note: This dashboard AI workflow is documented for completeness. MCP/CLI agents should usually extract structured values directly and submit through stable row or form-display submission contracts unless this Magic endpoint is intentionally exposed for the integration.
+
 ``` json
 {
     "input_text": "My name is John doe, and I currently work as a sales manager at the Silly Company."

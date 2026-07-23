@@ -36,6 +36,8 @@ rm -f "$ROOT_DIR/openapi-v3.0.yaml" "$ROOT_DIR/openapi-v3.0.mcp.yaml"
 
 echo "Fetching upstream specifications..."
 node "$ROOT_DIR/scripts/fetch-specs.mjs"
+echo "Stripping PUT operations from source specifications..."
+node "$ROOT_DIR/scripts/strip-put-operations.mjs"
 node "$ROOT_DIR/scripts/prepare-doc-stubs.mjs"
 
 bundle_spec() {
@@ -89,7 +91,8 @@ echo "Building HTML documentation..."
 "$REDOCLY_BIN" build-docs "$ROOT_DIR/openapi-v3.0.yaml" -o "$HTML_DIR/index.html"
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$HTML_DIR/openapi-v3.0.yaml"
 cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
-cp -rn "$ROOT_DIR/assets" "$HTML_DIR/"
+mkdir -p "$HTML_DIR/assets"
+cp -R "$ROOT_DIR/assets/." "$HTML_DIR/assets/"
 
 echo "Packaging release artifacts..."
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$RELEASE_DIR/openapi-v3.0.yaml"

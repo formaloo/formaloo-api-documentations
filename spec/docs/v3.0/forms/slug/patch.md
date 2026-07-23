@@ -6,7 +6,43 @@ This document explains how Formaloo’s logic system works so AI agents can reli
 
 ---
 
+## Form patch payload
+
+Use `PATCH` for targeted form edits. Send only the fields you intend to change.
+
+Common patch fields include:
+
+- `title`, `description`, `address`, `show_title`, `button_text`, `success_message`, and `error_message`.
+- `theme`: reusable v5 theme slug to assign to the form. Use `/v3.0/themes/` to list, create, copy, or edit reusable themes first.
+- asset slug fields such as `logo_slug`, `background_image_slug`, `favicon_slug`, `meta_image_slug`, `banner_slug`, and `cover_image_slug`.
+- field membership/order fields such as `form_fields` when supported by the returned form schema.
+- `primary_field`: primary field slug.
+- `logic`: complete logic array to save on the form.
+- `run_field_logics_on_update`: whether field logic should also run on row update for changed fields.
+- notification/template fields such as `admin_email_notif_template`, `user_email_notif_template`, `rows_pdf_template`, `admin_pdf_template`, and `user_pdf_template`.
+
+Before patching `logic`, retrieve the form and use exact field, choice, variable, template, webhook, and success-page slugs. Sending `logic` replaces the saved logic array; it is not a merge, append, or natural-language instruction.
+
+For styling changes, prefer assigning or updating a reusable theme resource. Older form-level styling fields such as `theme_config`, `button_color`, `text_color`, and image slug fields may still be accepted for compatibility/fallback rendering, but they are not the preferred current theme workflow.
+
+---
+
 ## 2. Logic Structure
+
+In form create/update payloads, the form's `logic` property is an array of logic items:
+
+```json
+{
+  "logic": [
+    {
+      "type": "field",
+      "identifier": "field_slug",
+      "actions": []
+    }
+  ],
+  "run_field_logics_on_update": true
+}
+```
 
 Each logic item is a JSON object:
 
@@ -65,6 +101,7 @@ Each logic item is a JSON object:
 | `send_slack`   | Slack notification        |
 | `generate_pdf` | Generate documents        |
 | `redirect`     | Send user to external URL |
+| `set_related`  | Set related record data   |
 
 ---
 
@@ -72,11 +109,19 @@ Each logic item is a JSON object:
 
 Conditions are expressed in the `when` clause.
 
+Allowed operation keys:
+
+`equal`, `not_equal`, `gte`, `lte`, `gt`, `lt`, `is`, `is_not`, `on`, `not_on`, `before`, `after`, `before_or_on`, `after_or_on`, `is_answered`, `contains`, `not_contains`, `starts_with`, `ends_with`, `always`, `otherwise`, `smallest`, `greatest`, `has_changed_to`.
+
+Compound grouping uses `and` or `or` with nested condition objects in `args`.
+
 ### Comparisons
 
 ```json
 {"operation": "gt", "args": [field_ref, const]}
 {"operation": "lte", "args": [field_ref, const]}
+{"operation": "equal", "args": [field_ref, const]}
+{"operation": "not_equal", "args": [field_ref, const]}
 ```
 
 ### Choice Checks
@@ -90,6 +135,7 @@ Conditions are expressed in the `when` clause.
 
 ```json
 {"operation": "is_answered", "args": [field_ref]}
+{"operation": "has_changed_to", "args": [field_ref, value_ref]}
 ```
 
 ### Logical Combinations
@@ -103,7 +149,7 @@ Conditions are expressed in the `when` clause.
 
 ### Update logic
 
-The `update` logic rules are ran on the field edit, and wil be ignored on the form submission.
+The `update` logic rules run on field edit/update flows and are ignored on form submission.
 
 If the `run_field_logics_on_update` setting on the form is `true`, the `field` logic will be run on row update as well. But only for the fields that are being changed.
 
@@ -138,6 +184,17 @@ If the `run_field_logics_on_update` setting on the form is `true`, the `field` l
 
   ```json
   {"type": "matrix", "value": "matrix_slug.group_slug"}
+  ```
+* **Table Reference**:
+
+  ```json
+  {"type": "table", "value": "table_slug.row_slug.column_slug"}
+  ```
+* **Formula or Link Literal**:
+
+  ```json
+  {"type": "formula", "value": "CONCAT({first_name}, ' ', {last_name})"}
+  {"type": "link", "value": "https://example.com/thanks"}
   ```
 
 ---
