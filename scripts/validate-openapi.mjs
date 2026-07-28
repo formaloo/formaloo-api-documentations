@@ -41,6 +41,47 @@ for (const pattern of introDisallowedPatterns) {
   }
 }
 
+const logicArgumentTypeEnum =
+  spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
+const expectedLogicArgumentTypes = [
+  "field",
+  "choice",
+  "variable",
+  "constant",
+  "matrix",
+  "table",
+  "user",
+  "row",
+  "success_page",
+  "link",
+  "send_email_template",
+  "send_email_receiver",
+  "webhook",
+  "slack",
+  "pdf_template"
+];
+
+if (
+  JSON.stringify(logicArgumentTypeEnum) !==
+  JSON.stringify(expectedLogicArgumentTypes)
+) {
+  errors.push(
+    "FormalooLogicArgument.type must match the backend operation/action argument constants."
+  );
+}
+
+const logicIdentifierDescription =
+  spec.components?.schemas?.FormalooLogicArgument?.properties?.identifier
+    ?.description ?? "";
+if (
+  !logicIdentifierDescription.includes("jump_to_success_page") ||
+  !logicIdentifierDescription.includes("default_success_page")
+) {
+  errors.push(
+    "FormalooLogicArgument.identifier must document the executable success-page routing contract."
+  );
+}
+
 if (spec.info?.externalDocs) {
   errors.push("OpenAPI info.externalDocs should not be present in the final normalized spec.");
 }

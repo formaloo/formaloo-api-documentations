@@ -421,7 +421,7 @@ function ensureFormalooLogicSchemas() {
   spec.components.schemas.FormalooLogicArgument = {
     type: "object",
     description:
-      "Argument object used by Formaloo form logic conditions and actions. Conditions commonly use `value`; action targets commonly use `identifier`.",
+      "Argument object used by Formaloo form logic conditions and actions. Condition arguments use `value`. Action object references and variables use `identifier`; action constants use `value`.",
     properties: {
       type: {
         type: "string",
@@ -433,13 +433,15 @@ function ensureFormalooLogicSchemas() {
           "constant",
           "matrix",
           "table",
-          "formula",
+          "user",
+          "row",
+          "success_page",
           "link",
           "send_email_template",
+          "send_email_receiver",
           "webhook",
           "slack",
-          "pdf_template",
-          "value"
+          "pdf_template"
         ]
       },
       value: {
@@ -455,7 +457,7 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         nullable: true,
         description:
-          "Action-side reference identifier. Examples: target field slug, variable slug, choice slug, email template slug, webhook slug, PDF template slug, or ending page slug. Literal constants, formulas, and links commonly use `value` instead."
+          "Action-side reference identifier. Examples: target field slug, variable slug, email template slug, webhook slug, or PDF template slug. For `jump_to_success_page`, use one `type: field` argument whose identifier is the success-page field slug or `default_success_page`. Literal constants and links use `value` instead."
       }
     },
     required: ["type"]
@@ -550,7 +552,7 @@ function ensureFormalooLogicSchemas() {
       args: {
         type: "array",
         description:
-          "Action arguments. References such as fields, variables, choices, templates, webhooks, PDFs, and ending pages commonly use `identifier`; literal constants, formulas, and links commonly use `value`.",
+          "Action arguments. Object references and variables use `identifier`; literal constants and links use `value`. `jump_to_success_page` requires exactly one `type: field` argument whose identifier is the success-page field slug or `default_success_page`.",
         items: { $ref: "#/components/schemas/FormalooLogicArgument" }
       },
       when: {
@@ -585,7 +587,7 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         nullable: true,
         description:
-          "Trigger field slug for field/update rules. Submit rules may omit this when the rule applies to the submit event."
+          "Trigger field slug for `field` rules. `submit` and `update` rules may omit it."
       },
       actions: {
         type: "array",
