@@ -54,6 +54,7 @@ bundle_spec() {
 echo "Bundling service specifications..."
 bundle_spec "$SPEC_DIR/icas.yaml" "$SPEC_DIR/icas-bundled.json"
 bundle_spec "$SPEC_DIR/formz.yaml" "$SPEC_DIR/formz-bundled.json"
+bundle_spec "$SPEC_DIR/formz-mcp.yaml" "$SPEC_DIR/formz-mcp-bundled.json"
 bundle_spec "$SPEC_DIR/authentication.yaml" "$SPEC_DIR/authentication-bundled.json"
 bundle_spec "$SPEC_DIR/storage.yaml" "$SPEC_DIR/storage-bundled.json"
 bundle_spec "$SPEC_DIR/ai.yaml" "$SPEC_DIR/ai-bundled.json"
@@ -74,6 +75,15 @@ PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" node "$ROOT_DIR/sc
 
 echo "Rendering final YAML artifact..."
 "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-public.normalized.json" --output "$ROOT_DIR/openapi-v3.0.yaml"
+
+echo "Merging MCP specification shell..."
+"$OPENAPI_MERGE_BIN" --config "$SPEC_DIR/openapi-merge-mcp.json"
+
+echo "Normalizing MCP source contract..."
+PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" \
+  RAW_SPEC_NAME="openapi-merged.mcp.raw.json" \
+  NORMALIZED_SPEC_NAME="openapi-mcp-source.normalized.json" \
+  node "$ROOT_DIR/scripts/normalize-openapi.mjs"
 
 echo "Rendering MCP YAML artifact..."
 node "$ROOT_DIR/scripts/build-mcp-openapi.mjs"

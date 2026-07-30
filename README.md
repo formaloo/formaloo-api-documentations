@@ -68,7 +68,9 @@ Target `dev` first for new documentation or generated-spec improvements unless t
 
 ### MCP-Focused OpenAPI Guidance
 
-The MCP artifact (`openapi-v3.0.mcp.yaml`) should stay accurate for direct API users and easy to use for MCP/CLI clients:
+The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). Endpoint description Markdown files are shared with the public build and keep resolving from `spec/docs/v3.0/`. The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
+
+The MCP artifact should stay accurate for direct API users and easy to use for MCP/CLI clients:
 
 - Keep required API headers documented when the underlying API requires them. For example, `x-api-key` is required for direct Formaloo API calls and should remain visible in the spec.
 - When a hosted MCP server or CLI has a configured Formaloo API key, the client should inject that configured value instead of asking the user or agent to provide `x-api-key` for each tool call.

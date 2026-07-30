@@ -3,7 +3,9 @@ import path from "node:path";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const intermediateDir = path.join(rootDir, "artifacts", "intermediate");
-const normalizedSpecPath = path.join(intermediateDir, "openapi-public.normalized.json");
+// The MCP artifact is sourced from the formz `mcp-1.0` contract merged with the
+// other services, normalized separately from the public v3.0 contract.
+const normalizedSpecPath = path.join(intermediateDir, "openapi-mcp-source.normalized.json");
 const mcpSpecPath = path.join(intermediateDir, "openapi-mcp.filtered.json");
 const defaultSettingsPath = path.join(rootDir, "spec", "mcp-openapi-settings.json");
 

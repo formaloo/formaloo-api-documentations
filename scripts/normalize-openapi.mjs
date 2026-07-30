@@ -4,8 +4,11 @@ import path from "node:path";
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
 const intermediateDir = path.join(artifactsDir, "intermediate");
-const rawSpecPath = path.join(intermediateDir, "openapi-merged.raw.json");
-const normalizedSpecPath = path.join(intermediateDir, "openapi-public.normalized.json");
+const rawSpecPath = path.join(intermediateDir, process.env.RAW_SPEC_NAME || "openapi-merged.raw.json");
+const normalizedSpecPath = path.join(
+  intermediateDir,
+  process.env.NORMALIZED_SPEC_NAME || "openapi-public.normalized.json"
+);
 const publicContractPath = path.join(rootDir, "spec", "public-contract.json");
 const metadataPath = path.join(rootDir, "spec", "operation-metadata.json");
 const tagMetadataPath = path.join(rootDir, "spec", "tag-metadata.json");
