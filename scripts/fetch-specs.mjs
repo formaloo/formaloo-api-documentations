@@ -65,9 +65,25 @@ function fetchSpec(outputPath, url) {
   execFileSync("curl", ["--http1.1", ...commonArgs], { stdio: "inherit" });
 }
 
+// The mcp-1.0 contract references docs/mcp-1.0/*.md description files, but the
+// endpoint descriptions are maintained once under spec/docs/v3.0/. Rewrite the
+// references so the MCP build reads the same markdown files as the v3.0 build.
+async function rewriteMcpDocRefs(outputPath) {
+  const contents = await fs.readFile(outputPath, "utf8");
+  const rewritten = contents.replaceAll("docs/mcp-1.0/", "docs/v3.0/");
+  if (rewritten !== contents) {
+    await fs.writeFile(outputPath, rewritten, "utf8");
+    console.log(`Rewrote docs/mcp-1.0/ references to docs/v3.0/ in ${path.relative(rootDir, outputPath)}`);
+  }
+}
+
 for (const [name, url] of Object.entries(sources)) {
   const outputPath = path.join(specDir, `${name}.yaml`);
   fetchSpec(outputPath, url);
+
+  if (name === "formz-mcp") {
+    await rewriteMcpDocRefs(outputPath);
+  }
 
   console.log(`Fetched ${name} spec -> ${path.relative(rootDir, outputPath)}`);
 }

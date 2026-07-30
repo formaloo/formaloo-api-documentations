@@ -79,6 +79,9 @@ echo "Rendering final YAML artifact..."
 echo "Merging MCP specification shell..."
 "$OPENAPI_MERGE_BIN" --config "$SPEC_DIR/openapi-merge-mcp.json"
 
+echo "Backfilling required MCP operations missing from the mcp-1.0 contract..."
+node "$ROOT_DIR/scripts/backfill-mcp-operations.mjs"
+
 echo "Normalizing MCP source contract..."
 PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" \
   RAW_SPEC_NAME="openapi-merged.mcp.raw.json" \

@@ -68,7 +68,9 @@ Target `dev` first for new documentation or generated-spec improvements unless t
 
 ### MCP-Focused OpenAPI Guidance
 
-The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). Endpoint description Markdown files are shared with the public build and keep resolving from `spec/docs/v3.0/`. The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
+The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). Endpoint description Markdown files are shared with the public build and keep resolving from `spec/docs/v3.0/`; `scripts/fetch-specs.mjs` rewrites any `docs/mcp-1.0/` references in the fetched mcp-1.0 contract to `docs/v3.0/`, so no separate Markdown set exists for MCP. The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
+
+While the upstream `mcp-1.0` contract is being rolled out, `scripts/backfill-mcp-operations.mjs` copies validator-required operations that are missing from the `mcp-1.0` merge (for example `formsRetrieve`, `formsPartialUpdate`, `fieldsPartialUpdate`) from the formz v3.0 bundle and logs each backfilled operation. The step is a no-op once the upstream contract exposes them; remove the script when the rollout is complete.
 
 The MCP artifact should stay accurate for direct API users and easy to use for MCP/CLI clients:
 
