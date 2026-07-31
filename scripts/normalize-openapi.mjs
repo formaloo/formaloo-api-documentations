@@ -1784,6 +1784,473 @@ function enrichChoiceFieldSchemas() {
   }
 }
 
+function enrichRowSchemas() {
+  spec.components.schemas.FormalooRowFieldValue = {
+    anyOf: [
+      { type: "string" },
+      { type: "number" },
+      { type: "boolean" },
+      { type: "array", items: { type: "string" } },
+      { type: "object", additionalProperties: true }
+    ],
+    nullable: true,
+    description:
+      "Field value in a row. Type varies by field type: strings for text/choice/date, numbers for numeric/rating, booleans for yes_no/checkbox, arrays for multiple_select/matrix, objects for linked_rows/repeating_section, or null for unanswered fields."
+  };
+
+  spec.components.schemas.FormalooRowFieldValues = {
+    type: "object",
+    additionalProperties: { $ref: "#/components/schemas/FormalooRowFieldValue" },
+    nullable: true,
+    description:
+      "Row field data as a field_slug-to-value mapping. Each key is a field slug from the form definition."
+  };
+
+  spec.components.schemas.FormalooRenderedFieldData = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Human-readable rendered version of row data. Keys are field slugs; values are display-friendly representations (e.g., choice titles instead of slugs, formatted dates, file URLs)."
+  };
+
+  spec.components.schemas.FormalooCalculationScore = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Calculation and scoring results for this row. Keys are variable field slugs; values are computed scores/results."
+  };
+
+  const rowSchemas = [
+    "AddRow", "Row", "RowSearch", "ProfileRow", "ProfileRowUpdate",
+    "TeamAssignmentRow", "SubmitUserForm", "SubmitForm", "AssignedRow",
+    "SharedBoardBlockRowActions", "UserFormRowActions", "RowActions", "RowResult"
+  ];
+
+  for (const schemaName of rowSchemas) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties) continue;
+
+    if (schema.properties.data && schema.properties.data.type === "object" && JSON.stringify(schema.properties.data.additionalProperties) === "{}") {
+      schema.properties.data = { $ref: "#/components/schemas/FormalooRowFieldValues" };
+    }
+
+    if (schema.properties.rendered_data && schema.properties.rendered_data.type === "object" && JSON.stringify(schema.properties.rendered_data.additionalProperties) === "{}") {
+      const readOnly = schema.properties.rendered_data.readOnly;
+      schema.properties.rendered_data = {
+        allOf: [{ $ref: "#/components/schemas/FormalooRenderedFieldData" }],
+        ...(readOnly ? { readOnly: true } : {}),
+        description: "Human-readable rendered representation of row field values."
+      };
+    }
+
+    if (schema.properties.readable_data && schema.properties.readable_data.type === "object" && JSON.stringify(schema.properties.readable_data.additionalProperties) === "{}") {
+      const readOnly = schema.properties.readable_data.readOnly;
+      schema.properties.readable_data = {
+        allOf: [{ $ref: "#/components/schemas/FormalooRenderedFieldData" }],
+        ...(readOnly ? { readOnly: true } : {}),
+        description: "Human-readable representation of row field values, similar to rendered_data."
+      };
+    }
+
+    if (schema.properties.calculation_score && schema.properties.calculation_score.type === "object" && JSON.stringify(schema.properties.calculation_score.additionalProperties) === "{}") {
+      schema.properties.calculation_score = { $ref: "#/components/schemas/FormalooCalculationScore" };
+    }
+
+    if (schema.properties.extra_response && schema.properties.extra_response.type === "object" && JSON.stringify(schema.properties.extra_response.additionalProperties) === "{}") {
+      schema.properties.extra_response = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Additional response metadata returned with the row, such as integration results or computed values."
+      };
+    }
+  }
+}
+
+function enrichBlockSchemas() {
+  spec.components.schemas.FormalooAccessSettings = {
+    type: "object",
+    description: "Visibility and access control settings for a block or menu item.",
+    properties: {
+      public: { type: "boolean", description: "Visible to all visitors including unauthenticated users." },
+      user_roles: { type: "boolean", description: "Restricted to users with specific roles." },
+      logged_in_only: { type: "boolean", description: "Visible only to authenticated users." },
+      logged_out_only: { type: "boolean", description: "Visible only to unauthenticated visitors." },
+      team_members_only: { type: "boolean", description: "Visible only to workspace team members." },
+      lock_external_access: { type: "boolean", description: "Block access from external/shared contexts." },
+      team_members_access_level: { type: "boolean", description: "Use team member access level restrictions." }
+    },
+    additionalProperties: true
+  };
+
+  spec.components.schemas.FormalooBlockConfig = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description: "Block-specific configuration. Shape varies by block type (form_result, kanban, stats, content, menu, etc.)."
+  };
+
+  spec.components.schemas.FormalooBlockFilters = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description: "Data filter configuration applied to this block. Defines which rows or records are displayed."
+  };
+
+  const blockSchemas = [
+    "Block", "UpdateBlock", "ContentBlock", "AISummaryBlock",
+    "FormChartsBlock", "FormDisplayBlock", "MenuBlock", "StatsBlock",
+    "KanbanBlockCreate", "KanbanBlockCreateRequest",
+    "FormResultBlockCreate", "FormResultBlockCreateRequest",
+    "FormResultBlockDuplicate", "FormResultBlockDuplicateRequest",
+    "MenuItem", "MenuItemDuplicate", "MenuItemDuplicateRequest",
+    "MenuItemUpdate", "SimpleMenuItem",
+    "ContentBlockRequest", "AISummaryBlockRequest",
+    "FormChartsBlockRequest", "FormDisplayBlockRequest",
+    "StatsBlockRequest", "PatchedMenuItemUpdateRequest",
+    "MenuBlockRequest", "PatchedUpdateBlockRequest"
+  ];
+
+  for (const schemaName of blockSchemas) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties) continue;
+
+    if (schema.properties.access_settings && schema.properties.access_settings.type === "object" && JSON.stringify(schema.properties.access_settings.additionalProperties) === "{}") {
+      const nullable = schema.properties.access_settings.nullable;
+      schema.properties.access_settings = {
+        allOf: [{ $ref: "#/components/schemas/FormalooAccessSettings" }],
+        ...(nullable ? { nullable: true } : {})
+      };
+    }
+
+    if (schema.properties.config && schema.properties.config.type === "object" && JSON.stringify(schema.properties.config.additionalProperties) === "{}") {
+      const nullable = schema.properties.config.nullable;
+      schema.properties.config = {
+        allOf: [{ $ref: "#/components/schemas/FormalooBlockConfig" }],
+        ...(nullable ? { nullable: true } : {})
+      };
+    }
+
+    if (schema.properties.filters && schema.properties.filters.type === "object" && JSON.stringify(schema.properties.filters.additionalProperties) === "{}") {
+      const nullable = schema.properties.filters.nullable;
+      schema.properties.filters = {
+        allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
+        ...(nullable ? { nullable: true } : {})
+      };
+    }
+
+    if (schema.properties.content_filters && schema.properties.content_filters.type === "object" && JSON.stringify(schema.properties.content_filters.additionalProperties) === "{}") {
+      schema.properties.content_filters = {
+        allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
+        readOnly: true,
+        description: "Computed content filters for this block."
+      };
+    }
+
+    if (schema.properties.export_info && schema.properties.export_info.type === "object" && JSON.stringify(schema.properties.export_info.additionalProperties) === "{}") {
+      schema.properties.export_info = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Export configuration for this block."
+      };
+    }
+
+    if (schema.properties.settings && schema.properties.settings.type === "object" && JSON.stringify(schema.properties.settings.additionalProperties) === "{}") {
+      schema.properties.settings = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Additional settings for this block."
+      };
+    }
+
+    if (schema.properties.content && schema.properties.content.type === "object" && JSON.stringify(schema.properties.content.additionalProperties) === "{}") {
+      schema.properties.content = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Block content data. Shape varies by block type."
+      };
+    }
+
+    if (schema.properties.copy_info && schema.properties.copy_info.type === "object" && JSON.stringify(schema.properties.copy_info.additionalProperties) === "{}") {
+      schema.properties.copy_info = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        readOnly: true,
+        description: "Copy/duplication metadata for this item."
+      };
+    }
+
+    if (schema.properties.sub_items && schema.properties.sub_items.type === "object" && JSON.stringify(schema.properties.sub_items.additionalProperties) === "{}") {
+      schema.properties.sub_items = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        description: "Nested child menu items for group-type items."
+      };
+    }
+
+    if (schema.properties.blocks && schema.properties.blocks.type === "object" && JSON.stringify(schema.properties.blocks.additionalProperties) === "{}") {
+      schema.properties.blocks = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        readOnly: true,
+        description: "Child blocks for this menu item."
+      };
+    }
+  }
+}
+
+function enrichBoardSchemas() {
+  const boardSchemas = [
+    "Board", "BoardCopy", "BoardUpdate", "PrivateBoard", "SharedBoard", "MoveBoard",
+    "BoardList", "BoardRequest", "BoardCopyRequest", "PatchedBoardUpdateRequest",
+    "PinnedBoardList", "TemplateBoardList"
+  ];
+
+  for (const schemaName of boardSchemas) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties) continue;
+
+    if (schema.properties.theme_config && schema.properties.theme_config.type === "object" && JSON.stringify(schema.properties.theme_config.additionalProperties) === "{}") {
+      schema.properties.theme_config = {
+        $ref: "#/components/schemas/FormalooThemeConfig"
+      };
+    }
+
+    if (schema.properties.config && schema.properties.config.type === "object" && JSON.stringify(schema.properties.config.additionalProperties) === "{}") {
+      schema.properties.config = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Board-level configuration settings."
+      };
+    }
+
+    if (schema.properties.copy_info && schema.properties.copy_info.type === "object" && JSON.stringify(schema.properties.copy_info.additionalProperties) === "{}") {
+      schema.properties.copy_info = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        readOnly: true,
+        description: "Copy/duplication metadata for this board."
+      };
+    }
+
+    if (schema.properties.blocks && schema.properties.blocks.type === "object" && JSON.stringify(schema.properties.blocks.additionalProperties) === "{}") {
+      schema.properties.blocks = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        description: "Board block objects or slugs."
+      };
+    }
+  }
+}
+
+function enrichFormSummarySchemas() {
+  spec.components.schemas.FormalooSubmissionConfig = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description: "Form submission configuration flags. Example: {\"accept_voice_messages\": true}. Shape is freeform and may include feature flags for submission behavior."
+  };
+
+  spec.components.schemas.FormalooLocalizedContent = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Localized UI text overrides for the form. Contains categories like \"errors\" with message keys mapped to translated strings."
+  };
+
+  spec.components.schemas.FormalooSlackAccesses = {
+    type: "array",
+    items: { type: "string" },
+    nullable: true,
+    description: "List of Slack access slugs connected to this form for submission notifications."
+  };
+
+  const formSchemas = [
+    "FormUpdate", "CreateForm", "CreateFormRequest", "ShowForm",
+    "FormShort", "FormSummary", "BoardFormBatch", "PatchedFormUpdateRequest",
+    "ShowFormSummary", "FormBasic"
+  ];
+
+  for (const schemaName of formSchemas) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties) continue;
+
+    if (schema.properties.localized_content && schema.properties.localized_content.type === "object" && JSON.stringify(schema.properties.localized_content.additionalProperties) === "{}") {
+      schema.properties.localized_content = { $ref: "#/components/schemas/FormalooLocalizedContent" };
+    }
+
+    if (schema.properties.submission_config && schema.properties.submission_config.type === "object" && JSON.stringify(schema.properties.submission_config.additionalProperties) === "{}") {
+      schema.properties.submission_config = { $ref: "#/components/schemas/FormalooSubmissionConfig" };
+    }
+
+    if (schema.properties.slack_accesses && schema.properties.slack_accesses.type === "object" && JSON.stringify(schema.properties.slack_accesses.additionalProperties) === "{}") {
+      schema.properties.slack_accesses = { $ref: "#/components/schemas/FormalooSlackAccesses" };
+    }
+
+    if (schema.properties.forward_submit_emails_to && schema.properties.forward_submit_emails_to.type === "object" && JSON.stringify(schema.properties.forward_submit_emails_to.additionalProperties) === "{}") {
+      schema.properties.forward_submit_emails_to = {
+        type: "array",
+        items: { type: "string", format: "email" },
+        nullable: true,
+        description: "Email addresses to forward submission notifications to."
+      };
+    }
+
+    if (schema.properties.logic_metadata && schema.properties.logic_metadata.type === "object" && JSON.stringify(schema.properties.logic_metadata.additionalProperties) === "{}") {
+      schema.properties.logic_metadata = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        readOnly: true,
+        description: "Computed metadata about form logic rules. Read-only summary of logic configuration."
+      };
+    }
+
+    if (schema.properties.fields && schema.properties.fields.type === "object" && JSON.stringify(schema.properties.fields.additionalProperties) === "{}") {
+      schema.properties.fields = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        readOnly: true,
+        description: "Form field objects. Read-only list of field definitions with their configuration."
+      };
+    }
+
+    if (schema.properties.fields_list && schema.properties.fields_list.type === "object" && JSON.stringify(schema.properties.fields_list.additionalProperties) === "{}") {
+      schema.properties.fields_list = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        readOnly: true,
+        description: "Flat list of form field objects."
+      };
+    }
+
+    if (schema.properties.row_tags && schema.properties.row_tags.type === "object" && JSON.stringify(schema.properties.row_tags.additionalProperties) === "{}") {
+      schema.properties.row_tags = {
+        type: "array",
+        items: { type: "object", properties: { slug: { type: "string" }, title: { type: "string" } }, additionalProperties: true },
+        description: "Row tags/labels available for this form."
+      };
+    }
+
+    if (schema.properties.theme_config && schema.properties.theme_config.type === "object" && JSON.stringify(schema.properties.theme_config.additionalProperties) === "{}") {
+      schema.properties.theme_config = {
+        $ref: "#/components/schemas/FormalooThemeConfig"
+      };
+    }
+  }
+}
+
+function enrichFieldConfigSchemas() {
+  spec.components.schemas.FormalooFieldConfig = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Field-specific configuration. Shape varies by field type. May include validation rules, display settings, calculation formulas, and integration settings."
+  };
+
+  spec.components.schemas.FormalooAcceptableAnswers = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description: "Acceptable answer patterns or values for field validation. Used for quiz scoring and answer verification."
+  };
+
+  for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
+    if (!schema?.properties) continue;
+
+    const isFieldSchema = schemaName.includes("Field") || schemaName.includes("FieldAction") || schemaName.includes("FieldRequest");
+    if (!isFieldSchema) continue;
+
+    if (schema.properties.config && schema.properties.config.type === "object" && JSON.stringify(schema.properties.config.additionalProperties) === "{}") {
+      schema.properties.config = { $ref: "#/components/schemas/FormalooFieldConfig" };
+    }
+
+    if (schema.properties.theme_config && schema.properties.theme_config.type === "object" && JSON.stringify(schema.properties.theme_config.additionalProperties) === "{}") {
+      schema.properties.theme_config = {
+        allOf: [{ $ref: "#/components/schemas/FormalooThemeConfig" }],
+        nullable: true,
+        description: "Field-level theme configuration overrides."
+      };
+    }
+
+    if (schema.properties.acceptable_answers && schema.properties.acceptable_answers.type === "object" && JSON.stringify(schema.properties.acceptable_answers.additionalProperties) === "{}") {
+      schema.properties.acceptable_answers = { $ref: "#/components/schemas/FormalooAcceptableAnswers" };
+    }
+
+    if (schema.properties.unacceptable_answers && schema.properties.unacceptable_answers.type === "object" && JSON.stringify(schema.properties.unacceptable_answers.additionalProperties) === "{}") {
+      schema.properties.unacceptable_answers = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Blocked/unacceptable answer patterns for field validation."
+      };
+    }
+  }
+}
+
+function enrichIntegrationSchemas() {
+  spec.components.schemas.FormalooIntegrationMappedFields = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description: "Field mapping configuration between Formaloo form fields and the external integration service fields. Keys are external field identifiers; values are Formaloo field slugs or mapping objects."
+  };
+
+  for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
+    if (!schema?.properties) continue;
+
+    if (schema.properties.mapped_fields && schema.properties.mapped_fields.type === "object" && JSON.stringify(schema.properties.mapped_fields.additionalProperties) === "{}") {
+      schema.properties.mapped_fields = { $ref: "#/components/schemas/FormalooIntegrationMappedFields" };
+    }
+  }
+}
+
+function enrichRemainingGenericSchemas() {
+  for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
+    if (!schema?.properties) continue;
+
+    if (schema.properties.submission_data && schema.properties.submission_data.type === "object" && JSON.stringify(schema.properties.submission_data.additionalProperties) === "{}") {
+      schema.properties.submission_data = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Submission row data as field_slug-to-value mapping. Values vary by field type."
+      };
+    }
+
+    if (schema.properties.calculation_score && schema.properties.calculation_score.type === "object" && JSON.stringify(schema.properties.calculation_score.additionalProperties) === "{}") {
+      schema.properties.calculation_score = { $ref: "#/components/schemas/FormalooCalculationScore" };
+    }
+
+    if (schema.properties.stats_settings && schema.properties.stats_settings.type === "object" && JSON.stringify(schema.properties.stats_settings.additionalProperties) === "{}") {
+      schema.properties.stats_settings = {
+        type: "object",
+        additionalProperties: true,
+        nullable: true,
+        description: "Statistics display settings for this block."
+      };
+    }
+
+    if (schema.properties.form_fields && schema.properties.form_fields.type === "object" && JSON.stringify(schema.properties.form_fields.additionalProperties) === "{}") {
+      schema.properties.form_fields = {
+        type: "array",
+        items: { type: "object", additionalProperties: true },
+        description: "Form field definitions associated with this user form."
+      };
+    }
+  }
+}
+
 function collectComponentUsage(rootNode) {
   const usedComponents = new Map();
   const visitedRefs = new Set();
@@ -1929,6 +2396,13 @@ enrichFormBuilderSchemasAndOperations();
 enrichFieldCreateSchemasAndOperations();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
+enrichRowSchemas();
+enrichBlockSchemas();
+enrichBoardSchemas();
+enrichFormSummarySchemas();
+enrichFieldConfigSchemas();
+enrichIntegrationSchemas();
+enrichRemainingGenericSchemas();
 normalizeSchemaTree(spec.components?.schemas);
 pruneUnusedSchemas();
 
