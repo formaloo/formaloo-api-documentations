@@ -421,6 +421,16 @@ function normalizeSchemaTree(node) {
 }
 
 function ensureFormalooLogicSchemas() {
+  spec.components.schemas.FormalooLogicScalarValue = {
+    anyOf: [
+      { type: "string", nullable: true },
+      { type: "number", nullable: true },
+      { type: "boolean", nullable: true }
+    ],
+    description:
+      "Scalar logic argument value. Referenced slugs are strings; constants may be strings, numbers, booleans, or null."
+  };
+
   spec.components.schemas.FormalooLogicArgument = {
     type: "object",
     description:
@@ -448,11 +458,7 @@ function ensureFormalooLogicSchemas() {
         ]
       },
       value: {
-        anyOf: [
-          { type: "string", nullable: true },
-          { type: "number", nullable: true },
-          { type: "boolean", nullable: true }
-        ],
+        $ref: "#/components/schemas/FormalooLogicScalarValue",
         description:
           "Condition-side primitive value or referenced slug. Examples: field slug for `field`, choice slug for `choice`, numeric/text value for `constant`, or `matrix_slug.group_slug` for `matrix`."
       },
@@ -651,6 +657,37 @@ function enrichFormLogicSchemas() {
         "When true, field logic is also evaluated on row update for fields included in the update payload."
     };
   }
+
+  for (const schemaName of ["ActionArgument", "OperationArgument"]) {
+    const schema = spec.components.schemas[schemaName];
+    if (
+      schema?.properties?.value &&
+      schema.properties.value.type === "object" &&
+      JSON.stringify(schema.properties.value.additionalProperties) === "{}"
+    ) {
+      schema.properties.value = {
+        $ref: "#/components/schemas/FormalooLogicScalarValue",
+        description:
+          schema.properties.value.description ??
+          "Scalar logic argument value. Lists and objects are not accepted."
+      };
+    }
+  }
+
+  const operationSchema = spec.components.schemas.Operation;
+  if (
+    operationSchema?.properties?.args &&
+    operationSchema.properties.args.type === "object" &&
+    JSON.stringify(operationSchema.properties.args.additionalProperties) === "{}"
+  ) {
+    operationSchema.properties.args = {
+      type: "array",
+      items: { type: "object", additionalProperties: true },
+      description:
+        operationSchema.properties.args.description ??
+        "Operation arguments. For and/or operations, items are nested condition objects; otherwise items are argument objects with type and value."
+    };
+  }
 }
 
 function ensureFormalooThemeSchemas() {
@@ -757,6 +794,29 @@ function ensureFormalooThemeSchemas() {
       }
     }
   };
+
+  spec.components.schemas.FormalooFieldThemeConfig = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Field-level presentation settings. Preserve unknown keys on partial update because field renderers may support keys not represented in this schema.",
+    properties: {
+      choice_layout: {
+        type: "string",
+        nullable: true,
+        enum: ["single_column", "multi_column"],
+        description:
+          "Choice layout for choice-like fields. The dashboard labels `multi_column` as Wrap."
+      },
+      field_width: {
+        type: "string",
+        nullable: true,
+        enum: ["default", "one-third", "one-half", "two-thirds", "full"],
+        description: "Field width in the form layout."
+      }
+    }
+  };
 }
 
 function enrichThemeSchemas() {
@@ -798,7 +858,7 @@ function enrichThemeSchemas() {
 
     if (schema.properties.form_type) {
       schema.properties.form_type.description =
-        "Form presentation type for this theme. Common values include `simple`, `multi_step`, and `nps`.";
+        "Form presentation type for this theme. Valid API values are `simple` and `multi_step`.";
     }
 
     if (schema.properties.logo_position) {
@@ -1737,23 +1797,13 @@ function enrichChoiceFieldSchemas() {
     if (schema.properties.choice_items) {
       schema.properties.choice_items = {
         ...schema.properties.choice_items,
-        oneOf: [
-          {
-            type: "array",
-            items: { $ref: "#/components/schemas/FormalooBuilderChoiceInput" }
-          },
-          {
-            type: "object",
-            additionalProperties: true,
-            description:
-              "Legacy object shape accepted by some generated contracts. Prefer an array of choice objects for new integrations."
-          }
-        ],
+        type: "array",
+        items: { $ref: "#/components/schemas/FormalooBuilderChoiceInput" },
         description: schema.properties.choice_items.description ?? choiceInputDescription
       };
-      delete schema.properties.choice_items.type;
-      delete schema.properties.choice_items.items;
+      delete schema.properties.choice_items.oneOf;
       delete schema.properties.choice_items.nullable;
+      delete schema.properties.choice_items.additionalProperties;
     }
 
     if (schema.properties.bulk_choices) {
@@ -1768,18 +1818,13 @@ function enrichChoiceFieldSchemas() {
           {
             type: "string",
             description: "Newline-separated choice labels to add."
-          },
-          {
-            type: "object",
-            additionalProperties: true,
-            description:
-              "Legacy object shape accepted by some generated contracts. Prefer an array or newline-separated string for new integrations."
           }
         ],
         description: schema.properties.bulk_choices.description ?? bulkChoicesDescription
       };
       delete schema.properties.bulk_choices.type;
       delete schema.properties.bulk_choices.nullable;
+      delete schema.properties.bulk_choices.additionalProperties;
     }
   }
 }
@@ -1790,12 +1835,22 @@ function enrichRowSchemas() {
       { type: "string" },
       { type: "number" },
       { type: "boolean" },
-      { type: "array", items: { type: "string" } },
+      {
+        type: "array",
+        items: {
+          anyOf: [
+            { type: "string" },
+            { type: "number" },
+            { type: "boolean" },
+            { type: "object", additionalProperties: true }
+          ]
+        }
+      },
       { type: "object", additionalProperties: true }
     ],
     nullable: true,
     description:
-      "Field value in a row. Type varies by field type: strings for text/choice/date, numbers for numeric/rating, booleans for yes_no/checkbox, arrays for multiple_select/matrix, objects for linked_rows/repeating_section, or null for unanswered fields."
+      "Field value in a row. Type varies by field type: strings for text/choice/date/file slugs, numbers for numeric/rating, booleans for yes_no/checkbox, arrays for multiple_select, multi-file, or repeating_section values, objects for matrix/table/lookup-style values, or null for unanswered fields."
   };
 
   spec.components.schemas.FormalooRowFieldValues = {
@@ -1825,7 +1880,8 @@ function enrichRowSchemas() {
   const rowSchemas = [
     "AddRow", "Row", "RowSearch", "ProfileRow", "ProfileRowUpdate",
     "TeamAssignmentRow", "SubmitUserForm", "SubmitForm", "AssignedRow",
-    "SharedBoardBlockRowActions", "UserFormRowActions", "RowActions", "RowResult"
+    "SharedBoardBlockRowActions", "UserFormRowActions", "RowActions", "RowResult",
+    "TeamAssignmentRowRequest"
   ];
 
   for (const schemaName of rowSchemas) {
@@ -1969,10 +2025,20 @@ function enrichBlockSchemas() {
 
     if (schema.properties.content && schema.properties.content.type === "object" && JSON.stringify(schema.properties.content.additionalProperties) === "{}") {
       schema.properties.content = {
-        type: "object",
-        additionalProperties: true,
+        oneOf: [
+          {
+            type: "array",
+            items: { type: "object", additionalProperties: true },
+            description: "Rich content node list."
+          },
+          {
+            type: "object",
+            additionalProperties: true,
+            description: "Legacy single rich content node."
+          }
+        ],
         nullable: true,
-        description: "Block content data. Shape varies by block type."
+        description: "Menu item rich content data. Usually an array of content node objects."
       };
     }
 
@@ -2177,9 +2243,9 @@ function enrichFieldConfigSchemas() {
 
     if (schema.properties.theme_config && schema.properties.theme_config.type === "object" && JSON.stringify(schema.properties.theme_config.additionalProperties) === "{}") {
       schema.properties.theme_config = {
-        allOf: [{ $ref: "#/components/schemas/FormalooThemeConfig" }],
+        allOf: [{ $ref: "#/components/schemas/FormalooFieldThemeConfig" }],
         nullable: true,
-        description: "Field-level theme configuration overrides."
+        description: "Field-level presentation settings."
       };
     }
 
@@ -2193,6 +2259,34 @@ function enrichFieldConfigSchemas() {
         additionalProperties: true,
         nullable: true,
         description: "Blocked/unacceptable answer patterns for field validation."
+      };
+    }
+
+    if (schema.properties.images && schema.properties.images.type === "object" && JSON.stringify(schema.properties.images.additionalProperties) === "{}") {
+      schema.properties.images = {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            slug: {
+              type: "string",
+              description: "Existing product image record slug to update or preserve."
+            },
+            image: {
+              type: "string",
+              nullable: true,
+              description: "Base64 image data for a new image, or an existing image URL to reuse."
+            },
+            url: {
+              type: "string",
+              readOnly: true,
+              description: "Resolved image URL returned by the API."
+            }
+          },
+          additionalProperties: true
+        },
+        description:
+          "Product field image objects. Send `image` for new uploads or `slug` for existing image records."
       };
     }
   }
@@ -2234,8 +2328,18 @@ function enrichRemainingGenericSchemas() {
 
     if (schema.properties.stats_settings && schema.properties.stats_settings.type === "object" && JSON.stringify(schema.properties.stats_settings.additionalProperties) === "{}") {
       schema.properties.stats_settings = {
-        type: "object",
-        additionalProperties: true,
+        oneOf: [
+          {
+            type: "array",
+            items: { type: "object", additionalProperties: true },
+            description: "Legacy list of available stats and whether each stat is active."
+          },
+          {
+            type: "object",
+            additionalProperties: true,
+            description: "Object-shaped statistics display settings."
+          }
+        ],
         nullable: true,
         description: "Statistics display settings for this block."
       };
