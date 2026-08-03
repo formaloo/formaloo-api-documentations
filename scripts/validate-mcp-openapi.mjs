@@ -191,7 +191,91 @@ function validateMcpMetadata(operationId, operation) {
   }
 }
 
+function resolveParameter(parameter) {
+  if (!parameter || typeof parameter !== "object") {
+    return null;
+  }
+
+  if (typeof parameter.$ref !== "string" || !parameter.$ref.startsWith("#/")) {
+    return parameter;
+  }
+
+  let current = spec;
+  for (const part of parameter.$ref.slice(2).split("/")) {
+    current = current?.[part];
+    if (!current) {
+      return null;
+    }
+  }
+
+  return current;
+}
+
+function findHeaderParameter(pathKey, operation, headerName) {
+  const parameters = [...(spec.paths?.[pathKey]?.parameters ?? []), ...(operation.parameters ?? [])];
+  return (
+    parameters
+      .map(resolveParameter)
+      .find(
+        (parameter) =>
+          parameter?.in === "header" &&
+          typeof parameter.name === "string" &&
+          parameter.name.toLowerCase() === headerName
+      ) ?? null
+  );
+}
+
+function validateHeaderRequirements() {
+  for (const [operationId, { pathKey, method, operation }] of operations.entries()) {
+    const label = `${operationId} ${method.toUpperCase()} ${pathKey}`;
+    const apiKeyHeader = findHeaderParameter(pathKey, operation, "x-api-key");
+
+    if (!apiKeyHeader) {
+      errors.push(`${label} does not document the required x-api-key header.`);
+    } else if (apiKeyHeader.required !== true) {
+      errors.push(`${label} must mark x-api-key as required.`);
+    }
+
+    for (const headerName of ["x-workspace", "authorization"]) {
+      const header = findHeaderParameter(pathKey, operation, headerName);
+      if (header && header.required !== true) {
+        errors.push(`${label} documents ${headerName} but does not mark it as required.`);
+      }
+    }
+
+    const metadata = operation["x-formaloo-mcp"];
+    if (metadata && typeof metadata.requires_workspace === "boolean") {
+      const documentsWorkspace = findHeaderParameter(pathKey, operation, "x-workspace") !== null;
+      if (metadata.requires_workspace !== documentsWorkspace) {
+        errors.push(
+          `${label} x-formaloo-mcp.requires_workspace is ${metadata.requires_workspace}, but the operation ${documentsWorkspace ? "documents" : "omits"} the x-workspace header.`
+        );
+      }
+    }
+  }
+}
+
+function validateDeleteSuccessResponses() {
+  for (const [operationId, { pathKey, method, operation }] of operations.entries()) {
+    if (method !== "delete") {
+      continue;
+    }
+
+    const label = `${operationId} DELETE ${pathKey}`;
+    const responses = operation.responses ?? {};
+    if (!responses["200"]) {
+      errors.push(`${label} must document a 200 success response.`);
+    }
+
+    if (responses["204"]) {
+      errors.push(`${label} must not document a 204 response; Formaloo deletes answer with 200.`);
+    }
+  }
+}
+
 collectOperations();
+validateHeaderRequirements();
+validateDeleteSuccessResponses();
 
 for (const operationId of coreOperationIds) {
   validateRequiredOperation(operationId, "Required MCP core operation");

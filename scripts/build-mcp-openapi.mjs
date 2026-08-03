@@ -342,52 +342,6 @@ function getRefTarget(openapiSpec, ref) {
   return current;
 }
 
-function relaxWorkspaceHeaderParameter(openapiSpec, parameter) {
-  if (!parameter || typeof parameter !== "object") {
-    return;
-  }
-
-  let target = parameter;
-  if (typeof parameter.$ref === "string") {
-    target = getRefTarget(openapiSpec, parameter.$ref);
-  }
-
-  if (
-    target?.in === "header" &&
-    typeof target.name === "string" &&
-    target.name.toLowerCase() === "x-workspace"
-  ) {
-    target.required = false;
-  }
-}
-
-function relaxWorkspaceHeaderRequirements(openapiSpec) {
-  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
-    if (!pathItem || typeof pathItem !== "object") {
-      continue;
-    }
-
-    for (const parameter of pathItem.parameters ?? []) {
-      relaxWorkspaceHeaderParameter(openapiSpec, parameter);
-    }
-
-    for (const method of httpMethods) {
-      const operation = pathItem[method];
-      if (!operation || typeof operation !== "object") {
-        continue;
-      }
-
-      for (const parameter of operation.parameters ?? []) {
-        relaxWorkspaceHeaderParameter(openapiSpec, parameter);
-      }
-    }
-  }
-
-  for (const parameter of Object.values(openapiSpec.components?.parameters ?? {})) {
-    relaxWorkspaceHeaderParameter(openapiSpec, parameter);
-  }
-}
-
 const coreMcpOperations = {
   profileRetrieve: {
     summary: "Get current authenticated user profile",
@@ -1388,11 +1342,19 @@ const localDescriptionFixes = {
 
 const mcpApiKeyHeaderDescription = [
   "Formaloo API key.",
-  "Required for direct Formaloo API calls.",
+  "Required for every Formaloo API call.",
   "Hosted MCP servers and CLI clients should supply this from their configured credentials instead of asking the user or agent to pass it on each request."
 ].join(" ");
+const mcpWorkspaceHeaderDescription = [
+  "Workspace identifier for this workspace-scoped request.",
+  "Required whenever an endpoint documents this header; endpoints that are not workspace-scoped omit it entirely.",
+  "Use list_workspaces or the businesses endpoints to discover the correct workspace slug.",
+  "Formaloo API paths and fields still call this resource a business."
+].join(" ");
+const mcpDeleteSuccessDescription =
+  "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
 
-function buildMcpAuthMetadata(mcpMetadata) {
+function buildMcpAuthMetadata(operation) {
   return {
     api_key: {
       required: true,
@@ -1402,10 +1364,10 @@ function buildMcpAuthMetadata(mcpMetadata) {
         "Hosted MCP servers and CLI clients should inject a configured API key; do not model it as a natural-language task argument."
     },
     workspace: {
-      required: Boolean(mcpMetadata?.requires_workspace),
+      required: hasHeaderParameter(operation, "x-workspace"),
       header: "x-workspace",
       usage:
-        "Workspace selector for workspace-scoped requests. Use list_workspaces or the businesses endpoints to discover the correct workspace slug."
+        "Workspace selector for workspace-scoped requests. Required when the operation documents the x-workspace header. Use list_workspaces or the businesses endpoints to discover the correct workspace slug."
     }
   };
 }
@@ -1457,50 +1419,98 @@ function applyParameterDescriptions(operation, descriptions = {}) {
   }
 }
 
-function updateApiKeyHeaderParameter(openapiSpec, parameter) {
+function resolveParameter(openapiSpec, parameter) {
   if (!parameter || typeof parameter !== "object") {
-    return;
+    return null;
   }
 
-  let target = parameter;
-  if (typeof parameter.$ref === "string") {
-    target = getRefTarget(openapiSpec, parameter.$ref);
-  }
-
-  if (
-    target?.in === "header" &&
-    typeof target.name === "string" &&
-    target.name.toLowerCase() === "x-api-key"
-  ) {
-    target.description = mcpApiKeyHeaderDescription;
-    target.required = true;
-  }
+  return typeof parameter.$ref === "string" ? getRefTarget(openapiSpec, parameter.$ref) : parameter;
 }
 
-function updateApiKeyHeaderDescriptions(openapiSpec) {
+function hasHeaderParameter(operation, headerName) {
+  return (operation?.parameters ?? []).some((parameter) => {
+    const target = resolveParameter(spec, parameter);
+    return (
+      target?.in === "header" &&
+      typeof target.name === "string" &&
+      target.name.toLowerCase() === headerName
+    );
+  });
+}
+
+// Every documented Formaloo header is mandatory in the MCP artifact: x-api-key on every call,
+// and x-workspace / Authorization on the operations that mention them. Operations that do not
+// need a workspace or a token omit the header instead of marking it optional.
+function enforceHeaderRequirements(openapiSpec) {
+  const applyPolicy = (parameter) => {
+    const target = resolveParameter(openapiSpec, parameter);
+    if (target?.in !== "header" || typeof target.name !== "string") {
+      return;
+    }
+
+    switch (target.name.toLowerCase()) {
+      case "x-api-key":
+        target.required = true;
+        target.description = mcpApiKeyHeaderDescription;
+        break;
+      case "x-workspace":
+        target.required = true;
+        target.description = mcpWorkspaceHeaderDescription;
+        break;
+      case "authorization":
+        target.required = true;
+        break;
+      default:
+        break;
+    }
+  };
+
   for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== "object") {
       continue;
     }
 
     for (const parameter of pathItem.parameters ?? []) {
-      updateApiKeyHeaderParameter(openapiSpec, parameter);
+      applyPolicy(parameter);
     }
 
     for (const method of httpMethods) {
-      const operation = pathItem[method];
-      if (!operation || typeof operation !== "object") {
-        continue;
-      }
-
-      for (const parameter of operation.parameters ?? []) {
-        updateApiKeyHeaderParameter(openapiSpec, parameter);
+      for (const parameter of pathItem[method]?.parameters ?? []) {
+        applyPolicy(parameter);
       }
     }
   }
 
   for (const parameter of Object.values(openapiSpec.components?.parameters ?? {})) {
-    updateApiKeyHeaderParameter(openapiSpec, parameter);
+    applyPolicy(parameter);
+  }
+}
+
+// Formaloo answers successful deletes with 200, while the generated upstream contracts
+// still declare 204.
+function enforceDeleteSuccessResponses(openapiSpec) {
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    const operation = pathItem?.delete;
+    if (!operation || typeof operation !== "object") {
+      continue;
+    }
+
+    const responses = { ...(operation.responses ?? {}) };
+    const noContentResponse = responses["204"];
+    delete responses["204"];
+
+    if (!responses["200"]) {
+      responses["200"] = {
+        ...(noContentResponse ?? {}),
+        description: mcpDeleteSuccessDescription
+      };
+    }
+
+    operation.responses = Object.fromEntries(
+      Object.keys(responses)
+        .sort()
+        .map((statusCode) => [statusCode, responses[statusCode]])
+    );
   }
 }
 
@@ -1522,7 +1532,7 @@ function enrichMcpOperations(openapiSpec) {
         operation.description = coreDefinition.description;
         operation["x-formaloo-mcp"] = {
           ...coreDefinition.mcp,
-          auth: buildMcpAuthMetadata(coreDefinition.mcp)
+          auth: buildMcpAuthMetadata(operation)
         };
         applyParameterDescriptions(operation, coreDefinition.parameterDescriptions);
         setRequestExamples(operation, coreDefinition.requestExamples);
@@ -1660,8 +1670,8 @@ if (putGateErrors.length > 0) {
 
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
-relaxWorkspaceHeaderRequirements(spec);
-updateApiKeyHeaderDescriptions(spec);
+enforceHeaderRequirements(spec);
+enforceDeleteSuccessResponses(spec);
 enrichMcpOperations(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });

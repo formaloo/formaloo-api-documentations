@@ -1112,28 +1112,6 @@ function enrichFormBuilderSchemasAndOperations() {
     }
   };
 
-  // for (const schemaName of ["FormAndFieldsUpdateRequest", "PatchedFormAndFieldsUpdateRequest"]) {
-  //   const schema = spec.components.schemas[schemaName];
-  //   if (!schema || typeof schema !== "object") {
-  //     continue;
-  //   }
-  //   schema.description =
-  //     "Bulk form-builder payload for updating form metadata and field definitions together.";
-  //   schema.properties = schema.properties ?? {};
-  //   schema.properties.form = {
-  //     type: "object",
-  //     additionalProperties: true,
-  //     description:
-  //       "Partial form update object using the same editable form fields as `PATCH /v3.0/forms/{slug}/`."
-  //   };
-  //   schema.properties.fields = {
-  //     type: "array",
-  //     description:
-  //       "Ordered list of fields to create, update, preserve, or reposition. Include fields that should remain in the form; omitting an existing field removes it from the submitted field order.",
-  //     items: { $ref: "#/components/schemas/FormalooBuilderFieldInput" }
-  //   };
-  // }
-
   const responseSchema = spec.components.schemas.FormAndFieldsUpdate;
   if (responseSchema && typeof responseSchema === "object") {
     responseSchema.description =
