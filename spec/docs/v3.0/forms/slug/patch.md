@@ -329,3 +329,118 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 * Use variables for all price, score, or computed values.
 * Avoid circular logic (a field showing/hiding itself).
 * Test with fallback conditions (`otherwise`) to ensure graceful behavior.
+
+---
+
+## Example request: update form title and success message
+
+```json
+{
+  "title": "Customer Feedback",
+  "button_text": "Send feedback",
+  "success_message": "Thanks — we received your response."
+}
+```
+
+## Example request: enable quiz score display
+
+```json
+{
+  "show_calculations_score_result": true,
+  "show_calculations_right_answers": true
+}
+```
+
+Create scored fields first (`is_calculatable: true` with `calculation_items`), then enable these form-level flags so respondents see their score and correct answers.
+
+## Example request: add conditional logic
+
+Retrieve the form first and use exact field and choice slugs. Sending `logic` replaces the entire saved logic array.
+
+```json
+{
+  "run_field_logics_on_update": true,
+  "logic": [
+    {
+      "type": "field",
+      "identifier": "gy4rVVkR",
+      "actions": [
+        {
+          "action": "hide",
+          "args": [
+            { "type": "field", "identifier": "2CnHsPK8" }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              { "type": "field", "value": "gy4rVVkR" },
+              { "type": "choice", "value": "Pcw2IIqa" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "field",
+      "identifier": "2CnHsPK8",
+      "actions": [
+        {
+          "action": "show",
+          "args": [
+            { "type": "field", "identifier": "CbRiscoJ" }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              { "type": "field", "value": "2CnHsPK8" },
+              { "type": "choice", "value": "mpZLsseg" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Example request: update logic that runs on row edit
+
+```json
+{
+  "run_field_logics_on_update": true,
+  "logic": [
+    {
+      "type": "update",
+      "actions": [
+        {
+          "action": "add",
+          "args": [
+            { "type": "constant", "value": 8 },
+            { "type": "variable", "identifier": "4k4lCE9I" }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              { "type": "field", "value": "Sycr1aDS" },
+              { "type": "constant", "value": "no" }
+            ]
+          }
+        },
+        {
+          "action": "set",
+          "args": [
+            { "type": "constant", "value": 0 },
+            { "type": "variable", "identifier": "4k4lCE9I" }
+          ],
+          "when": {
+            "operation": "otherwise",
+            "args": []
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+`update` logic runs on field edit/update flows and is ignored on form submission. When `run_field_logics_on_update` is `true`, `field` logic also runs on row update for changed fields.
