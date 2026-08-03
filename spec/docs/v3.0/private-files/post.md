@@ -30,3 +30,9 @@ curl --location --request POST 'https://api.formaloo.me/v3.0/private-files/' \
     }
 }
 ```
+
+## Behavior
+
+- **Status:** `200` / `201`
+- **Response:** JSON resolving an uploaded file reference to its access URL
+- Not a raw file response — the body is the standard JSON envelope with a URL, not file bytes

@@ -20,3 +20,7 @@ Deletes a form and its submission data. Use this only when the user intends to r
 ```
 
 This permanently removes the form resource for the caller. Confirm the form `slug` with `GET /v3.0/forms/{slug}/` before deleting.
+
+## Behavior
+
+Returns `200` with envelope `{"status": 200, "errors": {...}, "data": {}}` — an empty `data` object — on success. There is no separate confirmation step.
