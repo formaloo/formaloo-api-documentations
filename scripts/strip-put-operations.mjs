@@ -11,6 +11,7 @@ const specDir = path.join(rootDir, "spec");
 const specFiles = [
   "icas.yaml",
   "formz.yaml",
+  "formz-mcp.yaml",
   "authentication.yaml",
   "storage.yaml",
   "ai.yaml",

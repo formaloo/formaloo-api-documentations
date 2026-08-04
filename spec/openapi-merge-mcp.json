@@ -1,0 +1,23 @@
+{
+  "inputs": [
+    {
+      "inputFile": "./v3.0-bundled.json"
+    },
+    {
+      "inputFile": "./icas-bundled.json"
+    },
+    {
+      "inputFile": "./formz-mcp-bundled.json"
+    },
+    {
+      "inputFile": "./authentication-bundled.json"
+    },
+    {
+      "inputFile": "./storage-bundled.json"
+    },
+    {
+      "inputFile": "./ai-bundled.json"
+    }
+  ],
+  "output": "../artifacts/intermediate/openapi-merged.mcp.raw.json"
+}

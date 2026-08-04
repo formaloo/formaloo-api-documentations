@@ -8,6 +8,7 @@ const manifestPath = path.join(artifactsDir, "generated-doc-stubs.txt");
 const specFiles = [
   "icas.yaml",
   "formz.yaml",
+  "formz-mcp.yaml",
   "authentication.yaml",
   "storage.yaml",
   "ai.yaml"

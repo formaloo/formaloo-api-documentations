@@ -12,3 +12,54 @@ Color fields such as `text_color`, `button_color`, `theme_color`, `field_color`,
 ```
 
 For targeted edits, send only the fields you intend to change. If sending `theme_config`, include the existing keys you want to preserve.
+
+## Example request
+
+```json
+{
+  "title": "Customer Satisfaction Survey",
+  "button_color": "{\"r\":255,\"g\":0,\"b\":0,\"a\":1}",
+  "background_color": "{\"r\":255,\"g\":180,\"b\":0,\"a\":1}",
+  "logo_position": "center",
+  "theme_config": {
+    "form_layout": "center",
+    "modern_view": true,
+    "font_size": "large",
+    "fullwidth_theme": false,
+    "display_welcome_page": true,
+    "customized_texts": {
+      "start_btn": "Let's Go!",
+      "continue_btn": "Next Step"
+    },
+    "field_background_color": "{\"r\":255,\"g\":255,\"b\":255,\"a\":0.8}"
+  }
+}
+```
+
+## Example response (`200`)
+
+```json
+{
+  "status": 200,
+  "errors": {
+    "general_errors": [],
+    "form_errors": {}
+  },
+  "data": {
+    "theme": {
+      "slug": "G1ow5o0q",
+      "title": "Customer Satisfaction Survey",
+      "button_color": "{\"r\":255,\"g\":0,\"b\":0,\"a\":1}",
+      "background_color": "{\"r\":255,\"g\":180,\"b\":0,\"a\":1}",
+      "logo_position": "center",
+      "theme_config": {
+        "form_layout": "center",
+        "modern_view": true,
+        "font_size": "large",
+        "fullwidth_theme": false,
+        "display_welcome_page": true
+      }
+    }
+  }
+}
+```

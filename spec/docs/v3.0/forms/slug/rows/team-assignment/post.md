@@ -8,3 +8,10 @@ In order to user this endpoint:
 - The assignee field should accept both teams and users.
 
 Other than the response and the mentioned requirements, this endpoint is the same as add row endpoint.
+
+## Async / Lifecycle
+
+- **Status:** `200` (not `202`), even though row-creation work is queued as a background job
+- **Asynchronous:** yes — despite the sync-looking `200` status, actual row creation happens asynchronously
+- **Implication:** a `200` here does **not** guarantee that the assigned rows exist yet
+- **Next / poll:** no dedicated status endpoint for this job; verify later via row listing if needed

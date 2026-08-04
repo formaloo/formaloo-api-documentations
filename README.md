@@ -68,9 +68,15 @@ Target `dev` first for new documentation or generated-spec improvements unless t
 
 ### MCP-Focused OpenAPI Guidance
 
-The MCP artifact (`openapi-v3.0.mcp.yaml`) should stay accurate for direct API users and easy to use for MCP/CLI clients:
+The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). Endpoint description Markdown files are shared with the public build and keep resolving from `spec/docs/v3.0/`; `scripts/fetch-specs.mjs` rewrites any `docs/mcp-1.0/` references in the fetched mcp-1.0 contract to `docs/v3.0/`, so no separate Markdown set exists for MCP. The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
+
+While the upstream `mcp-1.0` contract is being rolled out, `scripts/backfill-mcp-operations.mjs` copies validator-required operations that are missing from the `mcp-1.0` merge (for example `formsRetrieve`, `formsPartialUpdate`, `fieldsPartialUpdate`) from the formz v3.0 bundle and logs each backfilled operation. The step is a no-op once the upstream contract exposes them; remove the script when the rollout is complete.
+
+The MCP artifact should stay accurate for direct API users and easy to use for MCP/CLI clients:
 
 - Keep required API headers documented when the underlying API requires them. For example, `x-api-key` is required for direct Formaloo API calls and should remain visible in the spec.
+- Header requirements follow one rule in the MCP artifact: `x-api-key` is required on every operation, and `x-workspace` and `Authorization` are required on every operation that documents them. An operation that does not need a workspace or a token omits the header instead of marking it optional. `scripts/build-mcp-openapi.mjs` enforces this and `scripts/validate-mcp-openapi.mjs` fails the build when an operation drifts.
+- Successful deletes answer with `200`, not `204`. The MCP build rewrites the generated `204` responses and the validator rejects any `DELETE` operation that lacks `200` or still declares `204`. The public `openapi-v3.0.yaml` artifact still mirrors the upstream `204` because it is not rewritten.
 - When a hosted MCP server or CLI has a configured Formaloo API key, the client should inject that configured value instead of asking the user or agent to provide `x-api-key` for each tool call.
 - Describe product terminology in user-facing language first, then mention legacy API terms where needed. For example, use “workspace” first and explain that API paths may still use “business”.
 - For high-value MCP operations, include clear summaries, examples, result paths, pagination notes, and `x-formaloo-mcp` metadata so agents can choose the right operation without guessing from raw operation IDs.

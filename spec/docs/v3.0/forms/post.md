@@ -328,3 +328,74 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 * Use variables for all price, score, or computed values.
 * Avoid circular logic (a field showing/hiding itself).
 * Test with fallback conditions (`otherwise`) to ensure graceful behavior.
+
+---
+
+## Example request: create a basic form
+
+```json
+{
+  "title": "Customer Feedback",
+  "description": "Tell us how we can improve.",
+  "show_title": true,
+  "button_text": "Submit",
+  "success_message": "Thanks for your feedback.",
+  "form_type": "simple"
+}
+```
+
+## Example response (`201`)
+
+```json
+{
+  "status": 201,
+  "errors": {
+    "general_errors": [],
+    "form_errors": {}
+  },
+  "data": {
+    "form": {
+      "slug": "kTX4WMpC",
+      "address": "oukll",
+      "title": "Customer Feedback",
+      "show_title": true,
+      "description": "Tell us how we can improve.",
+      "success_message": "Thanks for your feedback.",
+      "button_text": "Submit",
+      "form_type": "simple",
+      "fields": {},
+      "submit_count": 0,
+      "theme": null
+    }
+  }
+}
+```
+
+Create fields next with `POST /v3.0/fields/` (or a per-type field endpoint), then retrieve the form with `GET /v3.0/forms/{slug}/` before attaching logic, themes, or boards.
+
+## Example request: create a multi-step form
+
+Set `form_type` to `multi_step`, then add page breaks with `meta` + `sub_type: page_break` fields after the form exists.
+
+```json
+{
+  "title": "Onboarding Survey",
+  "description": "A short multi-page onboarding form.",
+  "form_type": "multi_step",
+  "show_title": true,
+  "button_text": "Continue"
+}
+```
+
+After create, add fields in order and insert page breaks between steps:
+
+```json
+{
+  "form": "kTX4WMpC",
+  "title": "About you",
+  "type": "meta",
+  "sub_type": "page_break"
+}
+```
+
+Use `jump` logic actions on multi-step forms to skip pages based on answers.

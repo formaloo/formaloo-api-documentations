@@ -81,3 +81,10 @@ One request targets a single category or an explicit slug list. Use separate cal
 ## Auth
 
 Authenticated request with `Authorization` and `x-api-key`. Workspace owner/admin only.
+
+## Async / Lifecycle
+
+- **Status:** `201` (201-shaped success response)
+- **Body:** `{"batch_id": ..., "accepted_count": ...}` (plus related fields documented above)
+- **Asynchronous:** yes — deletion is queued as a background job
+- **Next / poll:** no dedicated status-by-`batch_id` endpoint exists today. Treat that as a current limitation; do not assume a poll URL for the batch.

@@ -64,3 +64,74 @@ Dashboard editor shortcuts and special recipes:
 | Workspace Due Date | Create a workspace-level `datetime` field with `isWorkspaceLevel: true` and `alias` set to the workspace due-date alias supplied by the client/workspace context. |
 
 Some field types, including `table` and `email_verification`, are present in the backend field-type enum and dashboard editor but do not currently have dedicated generated request schemas. Use the generic create endpoint with the documented `type` value and common field properties (`form`, `title`, `description`, `required`, etc.) unless backend-specific configuration is required.
+
+## Example request: short text field
+
+```json
+{
+  "form": "kTX4WMpC",
+  "type": "short_text",
+  "title": "Full name",
+  "description": "Enter your first and last name.",
+  "required": true,
+  "max_length": 255
+}
+```
+
+## Example response (`201`)
+
+```json
+{
+  "status": 201,
+  "errors": {
+    "general_errors": [],
+    "form_errors": {}
+  },
+  "data": {
+    "field": {
+      "slug": "JgKgX2vVPh",
+      "type": "short_text",
+      "title": "Full name",
+      "description": "Enter your first and last name.",
+      "required": true,
+      "position": 0
+    }
+  }
+}
+```
+
+## Example request: number field
+
+```json
+{
+  "form": "kTX4WMpC",
+  "type": "number",
+  "title": "Your age",
+  "required": false,
+  "min_value": 1,
+  "max_value": 120
+}
+```
+
+## Example request: quiz choice field with scoring
+
+Create a scored choice field by enabling calculations and attaching score values per choice:
+
+```json
+{
+  "form": "kTX4WMpC",
+  "type": "choice",
+  "title": "What is the right choice?",
+  "required": true,
+  "is_calculatable": true,
+  "answer_description": "Charlie is the right answer.",
+  "choice_items": [
+    { "title": "Alpha" },
+    { "title": "Beta" },
+    { "title": "Charlie" },
+    { "title": "Delta" }
+  ]
+}
+```
+
+After create, retrieve the field (or the form) to get choice slugs, then patch the field with `calculation_items` that map each choice slug to a score. Enable form-level quiz display with `PATCH /v3.0/forms/{slug}/` using `show_calculations_score_result` and related flags.
