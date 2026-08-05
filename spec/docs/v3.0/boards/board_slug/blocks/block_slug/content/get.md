@@ -8,7 +8,7 @@ If you want to search on the whole fields:
 {"fields_filters":{}, "search": "lorem"}
 ```
 
-- If you want to apply the search only on a given request, you can send it on the query params: `?seach=lorem`
+- If you want to apply the search only on a given request, you can send it on the query params: `?search=lorem`
 
 Notes:
 - The search term is case-insensitive, so `Lorem` and `lorem` are the same.

@@ -534,18 +534,35 @@ const coreMcpOperations = {
     }
   },
   formsRowsList: {
-    summary: "List submissions or rows for a form",
+    summary: "List form submissions",
     description:
-      "Lists submissions, also called rows or records, for a specific form in the active workspace. This may expose customer-submitted data.",
+      "Lists form submissions (rows) with dashboard-parity filters: page/page_size, search, sort_by, status, created_by/updated_by/tags, submit_time/created_at/updated_at ranges (_gte/_lte), and dynamic {fieldSlug}/{fieldSlug}_{operator} field filters. RowQueryUtils supports contains/has/equal/exact/lt/lte/gt/gte and not_ variants; comma-separated bare field values become list filters. Response includes rows, count, and often top_fields for table columns.",
     parameterDescriptions: {
-      slug: "Form slug.",
+      slug: "Form slug whose submissions to list.",
+      page: "1-based page number.",
+      page_size: "Submissions per page.",
+      search: "Case-insensitive search across submission values.",
+      sort_by: "Comma-separated sort fields; prefix with - for descending.",
+      status: "Row status filter; use all (or omit) for every status.",
+      created_by: "Filter by creator first name or email.",
+      updated_by: "Filter by last updater first name or email.",
+      tags: "Comma-separated tag slugs.",
       submit_number: "Submission number filter.",
-      tracking_code: "Submission tracking code filter."
+      tracking_code: "Submission tracking code filter.",
+      created_at: "Created-at date filter (YYYY-MM-DD); also created_at_gte/lte.",
+      updated_at: "Updated-at date filter (YYYY-MM-DD); also updated_at_gte/lte.",
+      submit_time: "Submit-time timestamp filter; also submit_time_gte/lte.",
+      created_at_gte: "Created-at lower bound (inclusive).",
+      created_at_lte: "Created-at upper bound (inclusive).",
+      updated_at_gte: "Updated-at lower bound (inclusive).",
+      updated_at_lte: "Updated-at upper bound (inclusive).",
+      submit_time_gte: "Submit-time lower bound (inclusive).",
+      submit_time_lte: "Submit-time upper bound (inclusive)."
     },
     mcp: {
-      tool_name: "list_form_rows",
-      aliases: ["list_submissions", "show_submissions", "list_form_records"],
-      intent: "List submitted rows for a Formaloo form.",
+      tool_name: "list_form_submissions",
+      aliases: ["list_form_rows", "list_rows", "list_submissions", "show_submissions", "list_form_records"],
+      intent: "List submitted rows/submissions for a Formaloo form with filters.",
       requires_workspace: true,
       read_only: true,
       destructive: false,
