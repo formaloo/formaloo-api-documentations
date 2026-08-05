@@ -26,7 +26,7 @@ Common `theme_config` keys:
 - `form_layout`: common values are `top`, `center`, `left`, `right`, `left-full`, and `right-full`.
 - `modern_view`
 - `google_font`
-- `font_size`: enum `small` | `large` (base font-size preset).
+- `font_size`: enum `small` | `medium` | `large` (base font-size preset; renderer default is `medium` when omitted).
 - `background_image`
 - `background_type`
 - `background_shadow`

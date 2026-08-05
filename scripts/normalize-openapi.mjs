@@ -726,8 +726,8 @@ function ensureFormalooThemeSchemas() {
         type: "string",
         nullable: true,
         description:
-          "Base font-size preset. Allowed values are `small` and `large`.",
-        enum: ["small", "large"]
+          "Base font-size preset. Allowed values are `small`, `medium`, and `large`. Default in the form renderer is `medium` when omitted.",
+        enum: ["small", "medium", "large"]
       },
       background_image: {
         type: "object",
