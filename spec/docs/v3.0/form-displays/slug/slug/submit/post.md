@@ -1,10 +1,12 @@
 # Submit a form
 
-You can use this endpoint to submit a form. In order to do so, you should send a `post` request, containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For the choice fields, you should send the desired choice's slug, and so on.
+Submit through the form **display slug** path: `POST /v3.0/form-displays/slug/{slug}/submit/`. There is no address-based submit path. If you only have a public form address, resolve it first with `GET /v3.0/form-displays/address/{address}/` and use the returned display slug here.
+
+Send a `post` request containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For the choice fields, you should send the desired choice's slug, and so on.
 
 ## Submitting with Field Slugs
 
-Currently, forms can be submitted using field slugs, which are auto-generated and cannot be controlled by users. This approach requires retrieving the form, mapping your fields with respective field slugs, and then submitting the data, which reduces reusability of integrations.
+By default, request body keys must be **field slugs** (not titles, and not aliases unless `submit_by_alias` is true). Field slugs are auto-generated and cannot be controlled by users. This approach requires retrieving the form, mapping your fields with respective field slugs, and then submitting the data, which reduces reusability of integrations.
 
 The mapping should look something like this:
 
