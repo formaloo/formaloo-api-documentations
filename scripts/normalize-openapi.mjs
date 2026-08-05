@@ -1973,6 +1973,216 @@ function enrichRowSchemas() {
   }
 }
 
+function upsertQueryParameter(operation, parameter) {
+  if (!operation || !parameter?.name) {
+    return;
+  }
+  operation.parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+  const index = operation.parameters.findIndex(
+    (item) => item?.in === "query" && item?.name === parameter.name
+  );
+  if (index >= 0) {
+    operation.parameters[index] = {
+      ...operation.parameters[index],
+      ...parameter,
+      schema: {
+        ...(operation.parameters[index].schema || {}),
+        ...(parameter.schema || {})
+      },
+      description: parameter.description || operation.parameters[index].description
+    };
+    return;
+  }
+  operation.parameters.push(parameter);
+}
+
+function enrichFormsRowsListOperation() {
+  const listRows = spec.paths["/v3.0/forms/{slug}/rows/"]?.get;
+  if (!listRows) {
+    return;
+  }
+
+  listRows.summary = listRows.summary || "List form submissions";
+  const existingDescription = String(listRows.description || "").trim();
+  const filterNotice =
+    "Supports dashboard-parity filters: pagination (`page`, `page_size`), `search`, `sort_by`, `status`, meta (`created_by`, `updated_by`, `tags`, `tracking_code`, `submit_number`), timestamp/date ranges (`submit_time`/`created_at`/`updated_at` plus `_gte`/`_lte`/`_gt`/`_lt`), and dynamic `{fieldSlug}` / `{fieldSlug}_{operator}` field filters. `RowQueryUtils` supports contains/has/equal/exact/lt/lte/gt/gte and `not_` variants; comma-separated bare field values become list filters. Response includes `rows`, `count`, and often `top_fields` for table columns.";
+  if (!existingDescription.includes("dashboard-parity filters")) {
+    listRows.description = existingDescription
+      ? `${existingDescription}\n\n${filterNotice}`
+      : filterNotice;
+  }
+
+  const queryParams = [
+    {
+      in: "query",
+      name: "page",
+      required: false,
+      schema: { type: "integer" },
+      description: "A page number within the paginated result set."
+    },
+    {
+      in: "query",
+      name: "page_size",
+      required: false,
+      schema: { type: "integer" },
+      description: "Number of results to return per page."
+    },
+    {
+      in: "query",
+      name: "pagination",
+      required: false,
+      schema: { type: "string" },
+      description: "Set to `0` to disable pagination for this list."
+    },
+    {
+      in: "query",
+      name: "search",
+      required: false,
+      schema: { type: "string" },
+      description: "Case-insensitive search across submission values."
+    },
+    {
+      in: "query",
+      name: "sort_by",
+      required: false,
+      schema: { type: "string" },
+      description:
+        "Comma-separated sort fields. Prefix with `-` for descending (for example `-submit_time`, `-created_at`, or a field slug)."
+    },
+    {
+      in: "query",
+      name: "status",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by row status. Use `all` (or omit) for every status."
+    },
+    {
+      in: "query",
+      name: "tags",
+      required: false,
+      schema: { type: "string" },
+      description: "Comma-separated list of tag slugs."
+    },
+    {
+      in: "query",
+      name: "tracking_code",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by tracking code."
+    },
+    {
+      in: "query",
+      name: "submit_number",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by submit number."
+    },
+    {
+      in: "query",
+      name: "created_by",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by creator first name or email (icontains)."
+    },
+    {
+      in: "query",
+      name: "updated_by",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by last updater first name or email (icontains)."
+    },
+    {
+      in: "query",
+      name: "created_at",
+      required: false,
+      schema: { type: "string", format: "date" },
+      description:
+        "Date filter for created_at (`YYYY-MM-DD`). Range variants: `created_at_gte`, `created_at_lte`, `created_at_gt`, `created_at_lt`."
+    },
+    {
+      in: "query",
+      name: "created_at_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Created-at lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "created_at_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Created-at upper bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "updated_at",
+      required: false,
+      schema: { type: "string", format: "date" },
+      description:
+        "Date filter for updated_at (`YYYY-MM-DD`). Range variants: `updated_at_gte`, `updated_at_lte`, `updated_at_gt`, `updated_at_lt`."
+    },
+    {
+      in: "query",
+      name: "updated_at_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Updated-at lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "updated_at_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Updated-at upper bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "submit_time",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description:
+        "Timestamp filter for submit time (maps to row created_at). Also accepts `submit_time_gte`, `submit_time_lte`, `submit_time_gt`, `submit_time_lt`."
+    },
+    {
+      in: "query",
+      name: "submit_time_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Submit-time lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "submit_time_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Submit-time upper bound (inclusive)."
+    }
+  ];
+
+  for (const parameter of queryParams) {
+    upsertQueryParameter(listRows, parameter);
+  }
+
+  const paginated = spec.components?.schemas?.PaginatedRowList;
+  if (paginated?.properties && !paginated.properties.top_fields) {
+    paginated.properties.top_fields = {
+      type: "array",
+      description:
+        "Optional column hints for table UIs. Typically form field references (slug/title/type). Table columns are the form’s fields; when present, prefer this order.",
+      items: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          slug: { type: "string" },
+          title: { type: "string" },
+          type: { type: "string" },
+          alias: { type: "string" }
+        }
+      }
+    };
+  }
+}
+
 function enrichBlockSchemas() {
   spec.components.schemas.FormalooAccessSettings = {
     type: "object",
@@ -2550,6 +2760,7 @@ enrichFormDisplaySubmitContract();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 enrichRowSchemas();
+enrichFormsRowsListOperation();
 enrichBlockSchemas();
 enrichBoardSchemas();
 enrichFormSummarySchemas();
