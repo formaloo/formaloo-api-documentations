@@ -1235,6 +1235,20 @@ function createTypedFieldSchema({ schemaName, type, description, subType, notes 
   };
 }
 
+function resolveFieldRequestSchemaName(schemaName) {
+  if (!schemaName) {
+    return null;
+  }
+  if (spec.components.schemas[schemaName]) {
+    return schemaName;
+  }
+  const prefixedName = `FormBuilder${schemaName}`;
+  if (spec.components.schemas[prefixedName]) {
+    return prefixedName;
+  }
+  return null;
+}
+
 function createManualTypedFieldSchema({ type, description }) {
   return {
     type: "object",
@@ -1339,7 +1353,7 @@ function enrichFieldCreateSchemasAndOperations() {
     },
     {
       componentName: "FormalooRegexFieldCreate",
-      schemaName: "CharFieldRequest",
+      schemaName: "RegexFieldRequest",
       type: "regex",
       description: "Creates a custom-validation text field. Include regex settings accepted by the field API."
     },
@@ -1580,7 +1594,14 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "success_page",
       description: "Creates a success-page field."
     }
-  ].filter(({ schemaName, manualSchema }) => manualSchema || spec.components.schemas[schemaName]);
+  ]
+    .map((variant) => ({
+      ...variant,
+      schemaName: variant.manualSchema
+        ? variant.schemaName
+        : resolveFieldRequestSchemaName(variant.schemaName)
+    }))
+    .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
@@ -2408,6 +2429,43 @@ function enrichFormSummarySchemas() {
     const schema = spec.components.schemas[schemaName];
     if (!schema?.properties) continue;
 
+    for (const [propertyName, description] of [
+      ["success_message", "Message shown after a successful form submission."],
+      ["error_message", "Message shown when a form submission fails."]
+    ]) {
+      if (!schema.properties[propertyName]) {
+        schema.properties[propertyName] = {
+          type: "string",
+          nullable: true,
+          description
+        };
+      }
+    }
+
+    if (!schema.properties.ai_mode) {
+      schema.properties.ai_mode = {
+        type: "boolean",
+        nullable: true,
+        description: "Enables Formaloo AI-assisted form behavior when supported for the form."
+      };
+    }
+
+    if (!schema.properties.public_stats) {
+      schema.properties.public_stats = {
+        type: "boolean",
+        nullable: true,
+        description: "Whether form statistics are publicly visible."
+      };
+    }
+
+    if (!schema.properties.public_rows) {
+      schema.properties.public_rows = {
+        type: "boolean",
+        nullable: true,
+        description: "Whether form submission rows are publicly visible."
+      };
+    }
+
     if (schema.properties.localized_content && schema.properties.localized_content.type === "object" && JSON.stringify(schema.properties.localized_content.additionalProperties) === "{}") {
       schema.properties.localized_content = { $ref: "#/components/schemas/FormalooLocalizedContent" };
     }
@@ -2507,6 +2565,14 @@ function enrichFieldConfigSchemas() {
       };
     }
 
+    if (!schema.properties.answer_description && /Field(Request)?$/.test(schemaName)) {
+      schema.properties.answer_description = {
+        type: "string",
+        nullable: true,
+        description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
+      };
+    }
+
     if (schema.properties.acceptable_answers && schema.properties.acceptable_answers.type === "object" && JSON.stringify(schema.properties.acceptable_answers.additionalProperties) === "{}") {
       schema.properties.acceptable_answers = { $ref: "#/components/schemas/FormalooAcceptableAnswers" };
     }
@@ -2518,6 +2584,15 @@ function enrichFieldConfigSchemas() {
         nullable: true,
         description: "Blocked/unacceptable answer patterns for field validation."
       };
+    }
+
+    if (schemaName === "FormBuilderRegexFieldRequest") {
+      const charSchema = spec.components.schemas.FormBuilderCharFieldRequest;
+      for (const propertyName of ["max_length", "acceptable_answers", "unacceptable_answers"]) {
+        if (!schema.properties[propertyName] && charSchema?.properties?.[propertyName]) {
+          schema.properties[propertyName] = JSON.parse(JSON.stringify(charSchema.properties[propertyName]));
+        }
+      }
     }
 
     if (schema.properties.images && schema.properties.images.type === "object" && JSON.stringify(schema.properties.images.additionalProperties) === "{}") {
