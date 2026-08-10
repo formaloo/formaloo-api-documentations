@@ -809,6 +809,34 @@ const coreMcpOperations = {
       }
     }
   },
+  formsDestroy: {
+    summary: "Delete a form",
+    description:
+      "Deletes a form and its submission data from the active workspace. Use this only after confirming the exact form slug with the user; deleting a form is permanent and different from disconnecting it from an app or board.",
+    parameterDescriptions: {
+      slug: "Form slug to delete."
+    },
+    mcp: {
+      tool_name: "delete_form",
+      aliases: ["remove_form", "destroy_form", "delete_form_by_slug"],
+      intent: "Delete one Formaloo form and its submitted data.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: true,
+      requires_confirmation: true
+    },
+    responseExamples: {
+      "200": {
+        deleted_form: {
+          summary: "Deleted form",
+          value: {}
+        }
+      }
+    }
+  },
   formFieldsRetrieve: {
     summary: "Get editable form and fields",
     description:
@@ -1003,6 +1031,123 @@ const coreMcpOperations = {
       result_path: "data.data",
       user_data: false,
       requires_confirmation: true
+    }
+  },
+  fieldsRetrieve: {
+    summary: "Get one field by slug",
+    description:
+      "Retrieves one existing field by slug. Use this when the task is truly about one field. For form authoring, reshaping, ordering, logic-aware edits, or any change that depends on sibling fields and choices, start with the joint form-and-fields read (`formFieldsRetrieve`) because it returns the surrounding field list, ordering, choice slugs, aliases, and form settings needed for coordinated updates.",
+    parameterDescriptions: {
+      slug: "Field slug."
+    },
+    mcp: {
+      tool_name: "get_field",
+      aliases: ["show_field", "field_details", "get_form_field"],
+      intent: "Get one Formaloo field by slug when the task does not need full form-builder context.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.field",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        field: {
+          summary: "Field details",
+          value: {
+            slug: "short_text_abc123",
+            type: "short_text",
+            title: "Name",
+            alias: "name",
+            required: true
+          }
+        }
+      }
+    }
+  },
+  fieldsCreate: {
+    summary: "Create one field",
+    description:
+      "Creates one field on an existing form. This is appropriate for a simple single-field add. For normal form authoring, new forms, multi-field edits, ordering, removals, logic, or same-request field/choice references, start with the joint form-and-fields flow (`formFieldsRetrieve` then `formFieldsPartialUpdate`, or composed `create_form`/`update_form` tools) so the full form structure is updated together.",
+    mcp: {
+      tool_name: "create_field",
+      aliases: ["add_field", "create_form_field", "new_field"],
+      intent: "Create one Formaloo field on an existing form when a coordinated form-builder update is unnecessary.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data.field",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      create_short_text_field: {
+        summary: "Create a short text field",
+        value: {
+          form: "customer-feedback",
+          type: "short_text",
+          title: "Name",
+          alias: "name",
+          required: true
+        }
+      },
+      create_choice_field: {
+        summary: "Create a choice field",
+        value: {
+          form: "customer-feedback",
+          type: "choice",
+          title: "How satisfied are you?",
+          choice_items: [
+            { title: "Happy" },
+            { title: "Needs help" }
+          ]
+        }
+      }
+    },
+    responseExamples: {
+      "201": {
+        created_field: {
+          summary: "Created field",
+          value: {
+            slug: "short_text_abc123",
+            type: "short_text",
+            title: "Name",
+            alias: "name",
+            required: true
+          }
+        }
+      }
+    }
+  },
+  fieldsDestroy: {
+    summary: "Delete one field",
+    description:
+      "Deletes one existing field. This is appropriate for a confirmed single-field deletion. For coordinated removals, reordering, or updates that must preserve the rest of the form structure, start with the joint form-and-fields update (`formFieldsPartialUpdate`). Confirm the exact field slug with the user before deleting; deleting a field may affect existing logic or integrations.",
+    parameterDescriptions: {
+      slug: "Field slug to delete."
+    },
+    mcp: {
+      tool_name: "delete_field",
+      aliases: ["remove_field", "destroy_field", "delete_form_field"],
+      intent: "Delete one Formaloo field when a coordinated form-builder update is unnecessary.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    responseExamples: {
+      "200": {
+        deleted_field: {
+          summary: "Deleted field",
+          value: {}
+        }
+      }
     }
   },
   formsRowsCreate: {
