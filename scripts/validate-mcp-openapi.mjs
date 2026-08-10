@@ -141,6 +141,53 @@ function hasResponseExample(operation) {
   return false;
 }
 
+function resolveSchema(schema) {
+  if (!schema || typeof schema !== "object") {
+    return null;
+  }
+
+  if (typeof schema.$ref !== "string" || !schema.$ref.startsWith("#/")) {
+    return schema;
+  }
+
+  let current = spec;
+  for (const part of schema.$ref.slice(2).split("/")) {
+    current = current?.[part];
+    if (!current) {
+      return null;
+    }
+  }
+
+  return current;
+}
+
+function schemaLooksLikeFormalooEnvelope(schema) {
+  const target = resolveSchema(schema);
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+
+  const properties = target.properties;
+  return Boolean(
+    properties &&
+      typeof properties === "object" &&
+      properties.status &&
+      properties.errors &&
+      properties.data
+  );
+}
+
+function looksLikeFormalooEnvelopeExample(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.prototype.hasOwnProperty.call(value, "status") &&
+      Object.prototype.hasOwnProperty.call(value, "errors") &&
+      Object.prototype.hasOwnProperty.call(value, "data")
+  );
+}
+
 function hasRequestExample(operation) {
   for (const media of Object.values(operation.requestBody?.content ?? {})) {
     if (media && typeof media === "object" && (media.example || media.examples)) {
@@ -277,9 +324,77 @@ function validateDeleteSuccessResponses() {
   }
 }
 
+function validateResponseEnvelopes() {
+  const baseEnvelope = spec.components?.schemas?.FormalooResponseEnvelope;
+  const errorsSchema = spec.components?.schemas?.FormalooResponseErrors;
+  if (!schemaLooksLikeFormalooEnvelope(baseEnvelope)) {
+    errors.push("MCP spec must define components.schemas.FormalooResponseEnvelope with status, errors, and data properties.");
+  }
+
+  if (!errorsSchema || typeof errorsSchema !== "object") {
+    errors.push("MCP spec must define components.schemas.FormalooResponseErrors.");
+  }
+
+  for (const [operationId, { pathKey, method, operation }] of operations.entries()) {
+    let hasJsonSuccess = false;
+    let missingEnvelope = false;
+    let missingExampleEnvelope = false;
+
+    for (const [statusCode, response] of Object.entries(operation.responses ?? {})) {
+      if (!String(statusCode).startsWith("2") || !response || typeof response !== "object") {
+        continue;
+      }
+
+      const media = response.content?.["application/json"];
+      if (!media) {
+        continue;
+      }
+
+      hasJsonSuccess = true;
+
+      if (!schemaLooksLikeFormalooEnvelope(media.schema)) {
+        missingEnvelope = true;
+      }
+
+      if (media.example && !looksLikeFormalooEnvelopeExample(media.example)) {
+        missingExampleEnvelope = true;
+      }
+
+      for (const example of Object.values(media.examples ?? {})) {
+        if (
+          example &&
+          typeof example === "object" &&
+          Object.prototype.hasOwnProperty.call(example, "value") &&
+          !looksLikeFormalooEnvelopeExample(example.value)
+        ) {
+          missingExampleEnvelope = true;
+        }
+      }
+    }
+
+    if (!hasJsonSuccess) {
+      continue;
+    }
+
+    const label = `${operationId} ${method.toUpperCase()} ${pathKey}`;
+    if (missingEnvelope) {
+      errors.push(`${label} must model successful application/json responses as Formaloo envelope schemas.`);
+    }
+
+    if (operation["x-formaloo-response-envelope"]?.envelope !== true) {
+      errors.push(`${label} is missing x-formaloo-response-envelope metadata.`);
+    }
+
+    if (missingExampleEnvelope) {
+      errors.push(`${label} has a successful response example that is not wrapped in the Formaloo envelope.`);
+    }
+  }
+}
+
 collectOperations();
 validateHeaderRequirements();
 validateDeleteSuccessResponses();
+validateResponseEnvelopes();
 
 for (const operationId of coreOperationIds) {
   validateRequiredOperation(operationId, "Required MCP core operation");

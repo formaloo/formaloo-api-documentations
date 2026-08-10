@@ -1515,6 +1515,244 @@ const mcpWorkspaceHeaderDescription = [
 ].join(" ");
 const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
+const mcpEnvelopeResponseDescription =
+  "Wire response is the Formaloo API envelope: `{ status, errors, data }`. The `data` property contains the operation-specific success payload documented by this response schema.";
+
+function cloneJson(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return JSON.parse(JSON.stringify(value));
+}
+
+function pascalCase(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "Operation";
+  }
+
+  return normalized
+    .split(/\s+/)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("");
+}
+
+function ensureResponseEnvelopeBaseSchemas(openapiSpec) {
+  openapiSpec.components = openapiSpec.components ?? {};
+  openapiSpec.components.schemas = openapiSpec.components.schemas ?? {};
+
+  openapiSpec.components.schemas.FormalooResponseErrors = {
+    type: "object",
+    description:
+      "Formaloo error container. Successful responses usually return an empty object. Validation failures may include field-specific keys, form_errors, non_field_errors, or general_errors depending on the endpoint.",
+    properties: {
+      general_errors: {
+        type: "array",
+        items: { type: "string" },
+        description: "General non-field errors."
+      },
+      non_field_errors: {
+        type: "array",
+        items: { type: "string" },
+        description: "Validation errors that are not attached to one field."
+      },
+      form_errors: {
+        type: "object",
+        additionalProperties: true,
+        description: "Form-level validation errors keyed by API field name."
+      },
+      field_errors: {
+        type: "object",
+        additionalProperties: true,
+        description: "Field-level validation errors keyed by field slug, alias, or API field name."
+      }
+    },
+    additionalProperties: true
+  };
+
+  openapiSpec.components.schemas.FormalooEmptyData = {
+    type: "object",
+    description: "Empty Formaloo response data object.",
+    additionalProperties: true
+  };
+
+  openapiSpec.components.schemas.FormalooResponseEnvelope = {
+    type: "object",
+    required: ["status", "errors", "data"],
+    description:
+      "Base Formaloo API JSON response envelope. Operation-specific response schemas refine the `data` property.",
+    properties: {
+      status: {
+        type: "integer",
+        description: "HTTP-style status code echoed by the Formaloo API.",
+        example: 200
+      },
+      errors: {
+        $ref: "#/components/schemas/FormalooResponseErrors"
+      },
+      data: {
+        type: "object",
+        additionalProperties: true,
+        description: "Operation-specific success payload."
+      }
+    },
+    additionalProperties: true
+  };
+}
+
+function looksLikeResponseEnvelopeSchema(openapiSpec, schema) {
+  if (!schema || typeof schema !== "object") {
+    return false;
+  }
+
+  const target = typeof schema.$ref === "string" ? getRefTarget(openapiSpec, schema.$ref) : schema;
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+
+  const properties = target.properties;
+  return Boolean(
+    properties &&
+      typeof properties === "object" &&
+      properties.status &&
+      properties.errors &&
+      properties.data
+  );
+}
+
+function wrapResponseExampleValue(value, statusCode) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      status: Number(statusCode) || 200,
+      errors: {},
+      data: value ?? {}
+    };
+  }
+
+  if ("status" in value && "errors" in value && "data" in value) {
+    return value;
+  }
+
+  return {
+    status: Number(statusCode) || 200,
+    errors: {},
+    data: value
+  };
+}
+
+function wrapResponseExamples(media, statusCode) {
+  if (!media || typeof media !== "object") {
+    return;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(media, "example")) {
+    media.example = wrapResponseExampleValue(media.example, statusCode);
+  }
+
+  for (const example of Object.values(media.examples ?? {})) {
+    if (!example || typeof example !== "object" || !Object.prototype.hasOwnProperty.call(example, "value")) {
+      continue;
+    }
+
+    example.value = wrapResponseExampleValue(example.value, statusCode);
+  }
+}
+
+function annotateResponseEnvelopes(openapiSpec) {
+  ensureResponseEnvelopeBaseSchemas(openapiSpec);
+
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+
+      let hasEnvelopeResponse = false;
+
+      for (const [statusCode, response] of Object.entries(operation.responses ?? {})) {
+        if (!String(statusCode).startsWith("2") || !response || typeof response !== "object") {
+          continue;
+        }
+
+        const media = response.content?.["application/json"];
+        if (!media) {
+          continue;
+        }
+
+        const schema = media.schema;
+        if (!schema) {
+          media.schema = {
+            $ref: "#/components/schemas/FormalooResponseEnvelope"
+          };
+          response.description = [response.description, mcpEnvelopeResponseDescription]
+            .filter((part) => typeof part === "string" && part.trim().length > 0)
+            .join(" ");
+          wrapResponseExamples(media, statusCode);
+          hasEnvelopeResponse = true;
+          continue;
+        }
+
+        if (looksLikeResponseEnvelopeSchema(openapiSpec, schema)) {
+          response.description = [response.description, mcpEnvelopeResponseDescription]
+            .filter((part) => typeof part === "string" && part.trim().length > 0)
+            .join(" ");
+          wrapResponseExamples(media, statusCode);
+          hasEnvelopeResponse = true;
+          continue;
+        }
+
+        const componentName = `Formaloo${pascalCase(operation.operationId)}${statusCode}Response`;
+        const dataSchema = cloneJson(schema) ?? { $ref: "#/components/schemas/FormalooEmptyData" };
+        openapiSpec.components.schemas[componentName] = {
+          type: "object",
+          required: ["status", "errors", "data"],
+          description: `Formaloo response envelope for ${operation.operationId} ${statusCode}.`,
+          properties: {
+            status: {
+              type: "integer",
+              description: "HTTP-style status code echoed by the Formaloo API.",
+              example: Number(statusCode) || 200
+            },
+            errors: {
+              $ref: "#/components/schemas/FormalooResponseErrors"
+            },
+            data: dataSchema
+          },
+          additionalProperties: true
+        };
+
+        media.schema = { $ref: `#/components/schemas/${componentName}` };
+        wrapResponseExamples(media, statusCode);
+        response.description = [response.description, mcpEnvelopeResponseDescription]
+          .filter((part) => typeof part === "string" && part.trim().length > 0)
+          .join(" ");
+        hasEnvelopeResponse = true;
+      }
+
+      if (hasEnvelopeResponse) {
+        operation["x-formaloo-response-envelope"] = {
+          envelope: true,
+          status_path: "status",
+          errors_path: "errors",
+          data_path: "data",
+          base_schema: { $ref: "#/components/schemas/FormalooResponseEnvelope" },
+          data_schema:
+            "Each successful application/json response schema is a Formaloo envelope whose data property contains the operation-specific payload."
+        };
+      }
+    }
+  }
+}
 
 function buildMcpAuthMetadata(operation) {
   return {
@@ -1835,6 +2073,7 @@ spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && u
 enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
 enrichMcpOperations(spec);
+annotateResponseEnvelopes(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
