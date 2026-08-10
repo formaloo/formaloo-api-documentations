@@ -32,6 +32,10 @@ const coreOperationIds = [
   "boardsList",
   "formsCreate",
   "formsPartialUpdate",
+  "formsDestroy",
+  "fieldsRetrieve",
+  "fieldsCreate",
+  "fieldsDestroy",
   "formsRowsCreate"
 ];
 const requiredMcpReadyOperationIds = [
