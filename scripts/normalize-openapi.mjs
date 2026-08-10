@@ -725,8 +725,9 @@ function ensureFormalooThemeSchemas() {
       font_size: {
         type: "string",
         nullable: true,
-        description: "Base font-size preset.",
-        enum: ["small", "large"]
+        description:
+          "Base font-size preset. Allowed values are `small`, `medium`, and `large`. Default in the form renderer is `medium` when omitted.",
+        enum: ["small", "medium", "large"]
       },
       background_image: {
         type: "object",
@@ -858,7 +859,7 @@ function enrichThemeSchemas() {
 
     if (schema.properties.form_type) {
       schema.properties.form_type.description =
-        "Form presentation type for this theme. Valid API values are `simple` and `multi_step`.";
+        "Canonical form presentation type for this theme. Valid API values are `simple` and `multi_step`. Prefer this over legacy form-level `form_type`.";
     }
 
     if (schema.properties.logo_position) {
@@ -866,6 +867,8 @@ function enrichThemeSchemas() {
         "Logo position. Common values include `left`, `center`, `right`, or null.";
     }
   }
+
+  deprecateLegacyFormFields();
 
   for (const schemaName of ["FormUpdateRequest", "PatchedFormUpdateRequest"]) {
     const schema = spec.components.schemas[schemaName];
@@ -936,6 +939,73 @@ function upsertJsonResponse(operation, statusCode, schemaRef, description) {
   operation.responses[statusCode].content["application/json"] = {
     schema: { $ref: schemaRef }
   };
+}
+
+function deprecateLegacyFormFields() {
+  const formSchemaNames = [
+    "CreateForm",
+    "CreateFormRequest",
+    "FormUpdate",
+    "FormUpdateRequest",
+    "PatchedFormUpdateRequest",
+    "ShowForm",
+    "ShowFormSummary",
+    "FormShort",
+    "FormSummary",
+    "BoardFormBatch",
+    "BoardFormBatchRequest"
+  ];
+
+  for (const schemaName of formSchemaNames) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties || typeof schema.properties !== "object") {
+      continue;
+    }
+
+    if (schema.properties.needs_login) {
+      schema.properties.needs_login = {
+        ...schema.properties.needs_login,
+        deprecated: true,
+        description:
+          "Deprecated. Legacy flag previously used to require login before submitting. Ignore for new integrations; prefer current public-submit and portal auth flows."
+      };
+    }
+
+    if (schema.properties.form_type) {
+      schema.properties.form_type = {
+        ...schema.properties.form_type,
+        deprecated: true,
+        description:
+          "Deprecated legacy form-level presentation type. Prefer theme.form_type (`simple` or `multi_step`); runtime reads prefer the assigned theme when present."
+      };
+    }
+  }
+}
+
+function enrichFormDisplaySubmitContract() {
+  const submitPath = spec.paths?.["/v3.0/form-displays/slug/{slug}/submit/"];
+  const operation = submitPath?.post;
+  if (!operation) {
+    return;
+  }
+
+  setOperationDescription(
+    operation,
+    [
+      "Submit uses the form **display slug** path parameter (`/v3.0/form-displays/slug/{slug}/submit/`), not the public form address.",
+      "Resolve address to display slug via `GET /v3.0/form-displays/address/{address}/` when you only have an address.",
+      "By default, request body field keys must be **field slugs**. To submit by field aliases instead, set `submit_by_alias: true` and use aliases as keys (do not mix aliases and slugs)."
+    ].join(" ")
+  );
+
+  const submitSchema = spec.components.schemas.SubmitFormRequest;
+  if (submitSchema?.properties?.submit_by_alias) {
+    submitSchema.properties.submit_by_alias = {
+      ...submitSchema.properties.submit_by_alias,
+      description:
+        "When true, treat additional request-body keys as field aliases instead of field slugs. Default is false (slug keys). Do not mix aliases and slugs in one request."
+    };
+  }
 }
 
 function enrichThemeOperations() {
@@ -2476,6 +2546,7 @@ enrichThemeSchemas();
 enrichThemeOperations();
 enrichFormBuilderSchemasAndOperations();
 enrichFieldCreateSchemasAndOperations();
+enrichFormDisplaySubmitContract();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 enrichRowSchemas();
