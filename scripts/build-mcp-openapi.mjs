@@ -1517,6 +1517,34 @@ const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
 const mcpEnvelopeResponseDescription =
   "Wire response is the Formaloo API envelope: `{ status, errors, data }`. The `data` property contains the operation-specific success payload documented by this response schema.";
+const formalooLogicConditionOperations = [
+  "equal",
+  "not_equal",
+  "gt",
+  "lt",
+  "gte",
+  "lte",
+  "greatest",
+  "smallest",
+  "is",
+  "is_not",
+  "on",
+  "not_on",
+  "before",
+  "after",
+  "before_or_on",
+  "after_or_on",
+  "is_answered",
+  "contains",
+  "not_contains",
+  "starts_with",
+  "ends_with",
+  "has_changed_to",
+  "and",
+  "or",
+  "always",
+  "otherwise"
+];
 
 function cloneJson(value) {
   if (value === undefined) {
@@ -1752,6 +1780,55 @@ function annotateResponseEnvelopes(openapiSpec) {
       }
     }
   }
+}
+
+function enforceBoundedLogicHelperSchemas(openapiSpec) {
+  const schemas = openapiSpec.components?.schemas;
+  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicArgument) {
+    return;
+  }
+
+  const operationProperty = {
+    type: "string",
+    description: "Nested condition operation.",
+    enum: formalooLogicConditionOperations
+  };
+
+  schemas.FormalooLogicShallowCondition = {
+    type: "object",
+    description:
+      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
+    properties: {
+      operation: operationProperty,
+      args: {
+        type: "array",
+        description:
+          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
+        items: {
+          type: "object",
+          additionalProperties: true
+        }
+      }
+    },
+    required: ["operation", "args"]
+  };
+
+  schemas.FormalooLogicCondition.properties.operation = {
+    ...(schemas.FormalooLogicCondition.properties.operation ?? {}),
+    enum: formalooLogicConditionOperations
+  };
+  schemas.FormalooLogicCondition.properties.args = {
+    ...(schemas.FormalooLogicCondition.properties.args ?? {}),
+    type: "array",
+    items: {
+      anyOf: [
+        { $ref: "#/components/schemas/FormalooLogicArgument" },
+        { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
+      ],
+      description:
+        "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+    }
+  };
 }
 
 function buildMcpAuthMetadata(operation) {
@@ -2074,6 +2151,7 @@ enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
 enrichMcpOperations(spec);
 annotateResponseEnvelopes(spec);
+enforceBoundedLogicHelperSchemas(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
