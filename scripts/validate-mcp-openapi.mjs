@@ -391,10 +391,74 @@ function validateResponseEnvelopes() {
   }
 }
 
+function validateTypedHelperSchemas() {
+  const logicConditionArgRefs =
+    spec.components?.schemas?.FormalooLogicCondition?.properties?.args?.items?.oneOf
+      ?.map((item) => item?.$ref)
+      .filter(Boolean) ?? [];
+  if (
+    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
+  ) {
+    errors.push(
+      "FormalooLogicCondition.args.items must be a bounded oneOf of FormalooLogicArgument and FormalooLogicShallowCondition."
+    );
+  }
+
+  const builderField = spec.components?.schemas?.FormalooBuilderFieldInput;
+  if (builderField?.properties) {
+    const builderFieldTypeEnum = builderField.properties.type?.enum;
+    for (const fieldType of ["short_text", "website", "multiple_select", "rating", "repeating_section"]) {
+      if (!Array.isArray(builderFieldTypeEnum) || !builderFieldTypeEnum.includes(fieldType)) {
+        errors.push(`FormalooBuilderFieldInput.type enum must include ${fieldType}.`);
+      }
+    }
+
+    const builderBulkChoices = builderField.properties.bulk_choices;
+    const hasBulkChoicesArray = builderBulkChoices?.oneOf?.some(
+      (item) => item?.type === "array" && item?.items?.type === "string"
+    );
+    const hasBulkChoicesString = builderBulkChoices?.oneOf?.some((item) => item?.type === "string");
+    if (!hasBulkChoicesArray || !hasBulkChoicesString) {
+      errors.push("FormalooBuilderFieldInput.bulk_choices must explicitly allow string[] or newline string.");
+    }
+  }
+
+  for (const [enumName, expectedValue] of Object.entries({
+    FormBuilderWebsiteFieldTypeEnum: "website",
+    FormBuilderMultipleSelectFieldTypeEnum: "multiple_select",
+    FormBuilderRatingFieldTypeEnum: "rating",
+    FormBuilderRepeatingSectionFieldTypeEnum: "repeating_section"
+  })) {
+    const values = spec.components?.schemas?.[enumName]?.enum;
+    if (values && (!Array.isArray(values) || !values.includes(expectedValue))) {
+      errors.push(`${enumName} must include ${expectedValue}.`);
+    }
+  }
+
+  for (const schemaName of [
+    "FormBuilderChoiceFieldRequest",
+    "FormBuilderDropdownFieldRequest",
+    "FormBuilderMultipleSelectFieldRequest"
+  ]) {
+    const bulkChoices = spec.components?.schemas?.[schemaName]?.properties?.bulk_choices;
+    if (!bulkChoices) {
+      continue;
+    }
+
+    const hasArray = bulkChoices.oneOf?.some((item) => item?.type === "array" && item?.items?.type === "string");
+    const hasString = bulkChoices.oneOf?.some((item) => item?.type === "string");
+    if (!hasArray || !hasString) {
+      errors.push(`${schemaName}.bulk_choices must explicitly allow string[] or newline string.`);
+    }
+  }
+}
+
 collectOperations();
 validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
+validateTypedHelperSchemas();
 
 for (const operationId of coreOperationIds) {
   validateRequiredOperation(operationId, "Required MCP core operation");

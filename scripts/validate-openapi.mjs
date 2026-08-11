@@ -82,6 +82,68 @@ if (
   );
 }
 
+const logicConditionArgsItems =
+  spec.components?.schemas?.FormalooLogicCondition?.properties?.args?.items;
+const logicConditionArgRefs =
+  logicConditionArgsItems?.oneOf?.map((item) => item?.$ref).filter(Boolean) ?? [];
+if (
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
+) {
+  errors.push(
+    "FormalooLogicCondition.args.items must be a bounded oneOf of FormalooLogicArgument and FormalooLogicShallowCondition."
+  );
+}
+
+const builderFieldTypeEnum =
+  spec.components?.schemas?.FormalooBuilderFieldInput?.properties?.type?.enum;
+if (spec.components?.schemas?.FormalooBuilderFieldInput) {
+  for (const fieldType of ["short_text", "website", "multiple_select", "rating", "repeating_section"]) {
+    if (!Array.isArray(builderFieldTypeEnum) || !builderFieldTypeEnum.includes(fieldType)) {
+      errors.push(`FormalooBuilderFieldInput.type enum must include ${fieldType}.`);
+    }
+  }
+
+  const builderBulkChoices =
+    spec.components.schemas.FormalooBuilderFieldInput?.properties?.bulk_choices;
+  const hasBulkChoicesArray = builderBulkChoices?.oneOf?.some(
+    (item) => item?.type === "array" && item?.items?.type === "string"
+  );
+  const hasBulkChoicesString = builderBulkChoices?.oneOf?.some((item) => item?.type === "string");
+  if (!hasBulkChoicesArray || !hasBulkChoicesString) {
+    errors.push("FormalooBuilderFieldInput.bulk_choices must explicitly allow string[] or newline string.");
+  }
+}
+
+for (const [enumName, expectedValue] of Object.entries({
+  FormBuilderWebsiteFieldTypeEnum: "website",
+  FormBuilderMultipleSelectFieldTypeEnum: "multiple_select",
+  FormBuilderRatingFieldTypeEnum: "rating",
+  FormBuilderRepeatingSectionFieldTypeEnum: "repeating_section"
+})) {
+  const values = spec.components?.schemas?.[enumName]?.enum;
+  if (values && (!Array.isArray(values) || !values.includes(expectedValue))) {
+    errors.push(`${enumName} must include ${expectedValue}.`);
+  }
+}
+
+for (const schemaName of [
+  "FormBuilderChoiceFieldRequest",
+  "FormBuilderDropdownFieldRequest",
+  "FormBuilderMultipleSelectFieldRequest"
+]) {
+  const bulkChoices = spec.components?.schemas?.[schemaName]?.properties?.bulk_choices;
+  if (!bulkChoices) {
+    continue;
+  }
+
+  const hasArray = bulkChoices.oneOf?.some((item) => item?.type === "array" && item?.items?.type === "string");
+  const hasString = bulkChoices.oneOf?.some((item) => item?.type === "string");
+  if (!hasArray || !hasString) {
+    errors.push(`${schemaName}.bulk_choices must explicitly allow string[] or newline string.`);
+  }
+}
+
 if (spec.info?.externalDocs) {
   errors.push("OpenAPI info.externalDocs should not be present in the final normalized spec.");
 }

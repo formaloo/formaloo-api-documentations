@@ -103,6 +103,72 @@ const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
 const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
+const formalooFieldTypeValues = [
+  "generic_field",
+  "short_text",
+  "long_text",
+  "regex",
+  "yes_no",
+  "checkbox",
+  "choice",
+  "dropdown",
+  "multiple_select",
+  "choice_fetch",
+  "table",
+  "repeating_section",
+  "matrix",
+  "website",
+  "email",
+  "phone",
+  "email_verification",
+  "meta",
+  "oembed",
+  "success_page",
+  "file",
+  "signature",
+  "hidden",
+  "city",
+  "country",
+  "number",
+  "product",
+  "rating",
+  "lookup",
+  "linked_rows",
+  "time",
+  "date",
+  "user",
+  "profile",
+  "profile_data",
+  "variable"
+];
+const formalooLogicConditionOperations = [
+  "is",
+  "is_not",
+  "equal",
+  "not_equal",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "on",
+  "not_on",
+  "before",
+  "after",
+  "before_or_on",
+  "after_or_on",
+  "contains",
+  "not_contains",
+  "starts_with",
+  "ends_with",
+  "is_answered",
+  "smallest",
+  "greatest",
+  "has_changed_to",
+  "and",
+  "or",
+  "always",
+  "otherwise"
+];
 
 function titleizeTag(slug) {
   const overrides = {
@@ -472,6 +538,26 @@ function ensureFormalooLogicSchemas() {
     required: ["type"]
   };
 
+  spec.components.schemas.FormalooLogicShallowCondition = {
+    type: "object",
+    description:
+      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
+    properties: {
+      operation: {
+        type: "string",
+        description: "Nested condition operation.",
+        enum: formalooLogicConditionOperations
+      },
+      args: {
+        type: "array",
+        description:
+          "Nested operation arguments. Use FormalooLogicArgument objects here; avoid deeper nesting in generated clients that cannot represent recursive schemas.",
+        items: { $ref: "#/components/schemas/FormalooLogicArgument" }
+      }
+    },
+    required: ["operation", "args"]
+  };
+
   spec.components.schemas.FormalooLogicCondition = {
     type: "object",
     description:
@@ -481,44 +567,18 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Condition operation. Common operations include comparison, choice, state, and boolean-composition operations.",
-        enum: [
-          "is",
-          "is_not",
-          "equal",
-          "not_equal",
-          "gt",
-          "gte",
-          "lt",
-          "lte",
-          "on",
-          "not_on",
-          "before",
-          "after",
-          "before_or_on",
-          "after_or_on",
-          "contains",
-          "not_contains",
-          "starts_with",
-          "ends_with",
-          "is_answered",
-          "smallest",
-          "greatest",
-          "has_changed_to",
-          "and",
-          "or",
-          "always",
-          "otherwise"
-        ]
+        enum: formalooLogicConditionOperations
       },
       args: {
         type: "array",
         description:
           "Operation arguments. Condition args use `value`, not `identifier`. For `is`, use field ref plus choice/value ref. For comparisons, use field ref plus constant/value ref. For `and`/`or`, args are nested condition objects with their own `operation` and `args`. For `always` and `otherwise`, use an empty array. This intentionally stays non-recursive for MCP/tool-schema compatibility.",
         items: {
-          type: "object",
-          additionalProperties: true,
-          description:
-            "Either a FormalooLogicArgument or a nested condition object for `and`/`or`."
+          oneOf: [
+            { $ref: "#/components/schemas/FormalooLogicArgument" },
+            { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
+          ],
+          description: "Either a FormalooLogicArgument or a bounded nested condition object for `and`/`or`."
         }
       }
     },
@@ -682,7 +742,12 @@ function enrichFormLogicSchemas() {
   ) {
     operationSchema.properties.args = {
       type: "array",
-      items: { type: "object", additionalProperties: true },
+      items: {
+        oneOf: [
+          { $ref: "#/components/schemas/FormalooLogicArgument" },
+          { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
+        ]
+      },
       description:
         operationSchema.properties.args.description ??
         "Operation arguments. For and/or operations, items are nested condition objects; otherwise items are argument objects with type and value."
@@ -1127,8 +1192,9 @@ function enrichFormBuilderSchemasAndOperations() {
       },
       type: {
         type: "string",
+        enum: formalooFieldTypeValues,
         description:
-          "Field type for new fields, for example `short_text`, `long_text`, `email`, `number`, `choice`, `dropdown`, `multiple_select`, `lookup`, `linked_rows`, or `profile`."
+          "Field type for new fields."
       },
       title: {
         type: "string",
@@ -1141,6 +1207,17 @@ function enrichFormBuilderSchemasAndOperations() {
         items: { $ref: "#/components/schemas/FormalooBuilderChoiceInput" }
       },
       bulk_choices: {
+        oneOf: [
+          {
+            type: "array",
+            items: { type: "string" },
+            description: "List of choice labels to add."
+          },
+          {
+            type: "string",
+            description: "Newline-separated choice labels to add."
+          }
+        ],
         description:
           "Convenience input for appending choices on choice-like fields. May be a list of labels or a newline-separated string. Do not send with `choice_items`."
       },
