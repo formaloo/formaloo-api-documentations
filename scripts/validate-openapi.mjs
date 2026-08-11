@@ -28,6 +28,14 @@ const defaultPrefix = publicContract.defaultVersionPrefix;
 const legacyPaths = new Set(Object.keys(publicContract.legacyPaths));
 const knownSecuritySchemes = new Set(Object.keys(spec.components?.securitySchemes ?? {}));
 
+function sameMembers(actual, expected) {
+  return (
+    Array.isArray(actual) &&
+    actual.length === expected.length &&
+    expected.every((value) => actual.includes(value))
+  );
+}
+
 const introDisallowedPatterns = [
   /https:\/\/api\.formaloo\.me\/v1\.0\//,
   /https:\/\/api\.formaloo\.me\/v2\.0\//,
@@ -60,13 +68,86 @@ const expectedLogicArgumentTypes = [
   "slack",
   "pdf_template"
 ];
+const expectedLogicOperations = [
+  "is",
+  "is_not",
+  "equal",
+  "not_equal",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "on",
+  "not_on",
+  "before",
+  "after",
+  "before_or_on",
+  "after_or_on",
+  "contains",
+  "not_contains",
+  "starts_with",
+  "ends_with",
+  "is_answered",
+  "smallest",
+  "greatest",
+  "has_changed_to",
+  "and",
+  "or",
+  "always",
+  "otherwise"
+];
+const expectedLogicActions = [
+  "show",
+  "hide",
+  "disable",
+  "jump",
+  "jump_to_success_page",
+  "submit",
+  "set",
+  "add",
+  "subtract",
+  "multiply",
+  "divide",
+  "send_email",
+  "send_webhook",
+  "send_slack",
+  "generate_pdf",
+  "set_related",
+  "redirect"
+];
 
-if (
-  JSON.stringify(logicArgumentTypeEnum) !==
-  JSON.stringify(expectedLogicArgumentTypes)
-) {
+if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
   errors.push(
     "FormalooLogicArgument.type must match the backend operation/action argument constants."
+  );
+}
+
+const logicOperationEnum =
+  spec.components?.schemas?.FormalooLogicCondition?.properties?.operation?.enum;
+if (!sameMembers(logicOperationEnum, expectedLogicOperations)) {
+  errors.push(
+    "FormalooLogicCondition.operation must match the backend OperationType constants."
+  );
+}
+
+const logicActionEnum =
+  spec.components?.schemas?.FormalooLogicAction?.properties?.action?.enum;
+if (!sameMembers(logicActionEnum, expectedLogicActions)) {
+  errors.push(
+    "FormalooLogicAction.action must match the backend ActionType constants."
+  );
+}
+
+const logicActionDescription =
+  spec.components?.schemas?.FormalooLogicAction?.properties?.action
+    ?.description ?? "";
+if (
+  !logicActionDescription.includes("disable") ||
+  !logicActionDescription.includes("no-op") ||
+  !logicActionDescription.includes("dashboard UI does not expose")
+) {
+  errors.push(
+    "FormalooLogicAction.action must document disable as backend-accepted but not active/recommended."
   );
 }
 
@@ -80,6 +161,60 @@ if (
   errors.push(
     "FormalooLogicArgument.identifier must document the executable success-page routing contract."
   );
+}
+
+const logicConditionArgsItems =
+  spec.components?.schemas?.FormalooLogicCondition?.properties?.args?.items;
+const logicConditionArgRefs =
+  logicConditionArgsItems?.anyOf?.map((item) => item?.$ref).filter(Boolean) ?? [];
+if (
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
+) {
+  errors.push(
+    "FormalooLogicCondition.args.items must compose FormalooLogicArgument and FormalooLogicShallowCondition with anyOf."
+  );
+}
+
+if (spec.components?.schemas?.FormalooBuilderFieldInput) {
+  const builderBulkChoices =
+    spec.components.schemas.FormalooBuilderFieldInput?.properties?.bulk_choices;
+  const hasBulkChoicesArray = builderBulkChoices?.oneOf?.some(
+    (item) => item?.type === "array" && item?.items?.type === "string"
+  );
+  const hasBulkChoicesString = builderBulkChoices?.oneOf?.some((item) => item?.type === "string");
+  if (!hasBulkChoicesArray || !hasBulkChoicesString) {
+    errors.push("FormalooBuilderFieldInput.bulk_choices must explicitly allow string[] or newline string.");
+  }
+}
+
+for (const [enumName, expectedValue] of Object.entries({
+  FormBuilderWebsiteFieldTypeEnum: "website",
+  FormBuilderMultipleSelectFieldTypeEnum: "multiple_select",
+  FormBuilderRatingFieldTypeEnum: "rating",
+  FormBuilderRepeatingSectionFieldTypeEnum: "repeating_section"
+})) {
+  const values = spec.components?.schemas?.[enumName]?.enum;
+  if (values && (!Array.isArray(values) || !values.includes(expectedValue))) {
+    errors.push(`${enumName} must include ${expectedValue}.`);
+  }
+}
+
+for (const schemaName of [
+  "FormBuilderChoiceFieldRequest",
+  "FormBuilderDropdownFieldRequest",
+  "FormBuilderMultipleSelectFieldRequest"
+]) {
+  const bulkChoices = spec.components?.schemas?.[schemaName]?.properties?.bulk_choices;
+  if (!bulkChoices) {
+    continue;
+  }
+
+  const hasArray = bulkChoices.oneOf?.some((item) => item?.type === "array" && item?.items?.type === "string");
+  const hasString = bulkChoices.oneOf?.some((item) => item?.type === "string");
+  if (!hasArray || !hasString) {
+    errors.push(`${schemaName}.bulk_choices must explicitly allow string[] or newline string.`);
+  }
 }
 
 if (spec.info?.externalDocs) {
