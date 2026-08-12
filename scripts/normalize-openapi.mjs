@@ -2263,14 +2263,97 @@ function enrichBlockSchemas() {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Block-specific configuration. Shape varies by block type (form_result, kanban, stats, content, menu, etc.)."
+    description:
+      "Dashboard block UI configuration. Shape varies by block type; retrieve the block first and preserve existing keys when changing one nested setting."
   };
 
   spec.components.schemas.FormalooBlockFilters = {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Data filter configuration applied to this block. Defines which rows or records are displayed."
+    description:
+      "Saved dashboard filters for result, kanban, gallery, chart, and AI data blocks. Send the complete intended filter snapshot when saving filters on a block.",
+    properties: {
+      fields_filters: {
+        type: "object",
+        additionalProperties: true,
+        description:
+          "Per-field predicates keyed by saved field slug or dashboard filter key. Use an empty object to intentionally clear field filters."
+      },
+      search: {
+        type: "string",
+        nullable: true,
+        description: "Saved search term. Omit or set null to clear it."
+      },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved tag filters. Omit or use an empty array when the intended saved filter has no tags."
+      },
+      status: {
+        type: "string",
+        nullable: true,
+        description: "Saved row status filter."
+      },
+      sort_by: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved dashboard sort expressions in dashboard order. Use an empty array to clear sorting."
+      },
+      meta_data_fields: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved table metadata column settings.",
+        properties: {
+          exclude: {
+            type: "array",
+            items: { type: "string" },
+            description: "Metadata column keys hidden in result/table views."
+          }
+        }
+      },
+      user_field: {
+        type: "string",
+        nullable: true,
+        description:
+          "Saved end-user ownership/access field slug for My Data style portal filtering. Set null to clear a sticky dashboard value."
+      },
+      assignee_field: {
+        type: "string",
+        nullable: true,
+        description: "Saved assignee field slug. Set null to clear a sticky dashboard value."
+      }
+    }
+  };
+
+  spec.components.schemas.FormalooBlockSettings = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Dashboard block presentation settings. Retrieve the block first and preserve existing keys when changing one nested setting.",
+    properties: {
+      columns_count: {
+        type: "string",
+        minLength: 1,
+        description: "Gallery/grid card column count. Send a string for direct settings writes."
+      },
+      card_fields: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved field slugs shown on gallery/grid cards."
+      },
+      columns_width: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved table column widths keyed by field or metadata key."
+      },
+      color: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved chart/block color settings keyed by field, choice, or chart setting."
+      }
+    }
   };
 
   const blockSchemas = [
@@ -2334,10 +2417,9 @@ function enrichBlockSchemas() {
 
     if (schema.properties.settings && schema.properties.settings.type === "object" && JSON.stringify(schema.properties.settings.additionalProperties) === "{}") {
       schema.properties.settings = {
-        type: "object",
-        additionalProperties: true,
+        allOf: [{ $ref: "#/components/schemas/FormalooBlockSettings" }],
         nullable: true,
-        description: "Additional settings for this block."
+        type: "object"
       };
     }
 
@@ -2386,6 +2468,91 @@ function enrichBlockSchemas() {
         description: "Child blocks for this menu item."
       };
     }
+  }
+
+  const updateBlockRequest = spec.components.schemas.PatchedUpdateBlockRequest;
+  if (updateBlockRequest?.properties) {
+    updateBlockRequest.description =
+      "Patch an existing board/app block. The API uses one PATCH endpoint across block types, so send fields that match the existing block type unless intentionally changing type.";
+    updateBlockRequest.properties.fields = updateBlockRequest.properties.fields ?? {
+      type: "array",
+      items: { type: "string" },
+      description: "Ordered saved field slugs shown by form_result, form_charts, kanban, and gallery blocks."
+    };
+    updateBlockRequest.properties.filters = updateBlockRequest.properties.filters ?? {
+      allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
+      nullable: true,
+      type: "object"
+    };
+    updateBlockRequest.properties.settings = updateBlockRequest.properties.settings ?? {
+      allOf: [{ $ref: "#/components/schemas/FormalooBlockSettings" }],
+      nullable: true,
+      type: "object"
+    };
+    updateBlockRequest.properties.columns_field = updateBlockRequest.properties.columns_field ?? {
+      type: "string",
+      nullable: true,
+      description: "Choice-like field slug used as kanban columns. Use choice, dropdown, rating, or yes_no fields."
+    };
+    updateBlockRequest.properties.items_field = updateBlockRequest.properties.items_field ?? {
+      type: "string",
+      description: "Non-file field slug used as the primary card/item label in kanban or gallery views."
+    };
+    updateBlockRequest.properties.featured_image_field = updateBlockRequest.properties.featured_image_field ?? {
+      type: "string",
+      nullable: true,
+      description: "File field slug used as the gallery/card image."
+    };
+    updateBlockRequest.properties.display_type = updateBlockRequest.properties.display_type ?? {
+      type: "string",
+      enum: ["open_web", "display_single_page", "display_multi_page", "kanban", "grid_view"],
+      description:
+        "Dashboard display mode. For form_display blocks use open_web, display_single_page, or display_multi_page. For kanban/gallery blocks use kanban or grid_view."
+    };
+    updateBlockRequest.properties.style_type = updateBlockRequest.properties.style_type ?? {
+      type: "string",
+      enum: ["card", "embed"],
+      description: "Form display style."
+    };
+    updateBlockRequest.properties.mode = updateBlockRequest.properties.mode ?? {
+      type: "string",
+      enum: ["editable", "read_only"],
+      description: "Kanban edit mode."
+    };
+    updateBlockRequest.properties.user_can_edit = updateBlockRequest.properties.user_can_edit ?? {
+      type: "boolean",
+      description: "Allows the end user/row owner to edit matching rows when access settings permit it."
+    };
+    updateBlockRequest.properties.assignee_can_edit = updateBlockRequest.properties.assignee_can_edit ?? {
+      type: "boolean",
+      description: "Allows the assigned user to edit matching rows when access settings permit it."
+    };
+    updateBlockRequest.properties.voting_status = updateBlockRequest.properties.voting_status ?? {
+      type: "string",
+      enum: ["disabled", "for_internal_users", "for_external_users"],
+      description: "Saved voting behavior for result/kanban-style blocks."
+    };
+    updateBlockRequest.properties.export_info = updateBlockRequest.properties.export_info ?? {
+      type: "object",
+      additionalProperties: true,
+      nullable: true,
+      description: "Saved export configuration for result/kanban-style blocks."
+    };
+    updateBlockRequest.properties.user_questions = updateBlockRequest.properties.user_questions ?? {
+      type: "string",
+      nullable: true,
+      description: "AI summary prompt/questions for the block to answer from the selected form data."
+    };
+    updateBlockRequest.properties.length = updateBlockRequest.properties.length ?? {
+      type: "string",
+      enum: ["short", "medium", "long"],
+      description: "AI summary length."
+    };
+    updateBlockRequest.properties.ai_engine_id = updateBlockRequest.properties.ai_engine_id ?? {
+      type: "string",
+      nullable: true,
+      description: "Optional AI engine id used by dashboard AI summary blocks."
+    };
   }
 }
 
