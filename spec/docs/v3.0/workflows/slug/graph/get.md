@@ -1,0 +1,1 @@
+Returns a Mermaid flowchart derived from the workflow blueprint. Use this when presenting the plan visually to a user or another agent. The graph is generated from `nodes[].actions[]` and is not a separate stored source of truth.

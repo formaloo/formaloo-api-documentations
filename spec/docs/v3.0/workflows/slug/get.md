@@ -1,0 +1,1 @@
+Retrieves one workflow by slug, including its current blueprint and status. Use this when an agent needs the full plan before editing, validating, generating a graph, managing bindings, or restoring a prior version.

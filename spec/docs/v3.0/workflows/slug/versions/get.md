@@ -1,0 +1,1 @@
+Lists version history for a workflow. Use this when reviewing prior blueprint revisions before restore. Capture depends on workspace versioning eligibility; the current blueprint on the workflow resource itself is always available regardless.

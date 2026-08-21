@@ -1,0 +1,1 @@
+Lists workflows for the active business. Use this when an agent needs to discover existing workflow plans, resume iteration on a prior plan, or choose a workflow by title or status before validating, building bindings, or restoring a version.
