@@ -85,18 +85,48 @@ The MCP artifact should stay accurate for direct API users and easy to use for M
 
 ### Adding Manual Descriptions
 
-Manual descriptions are stored as Markdown files matching the endpoint path and HTTP method. For example, the endpoint `PATCH /v3.0/forms/{slug}/` uses:
+Each operation can have one Markdown file. That file is inlined into the generated spec as the operation description. The OpenAPI schema already documents parameters, headers, field names, types, and request/response structure. The Markdown file is for human/agent guidance that the schema cannot express.
 
-- `spec/docs/v3.0/forms/{slug}/patch.md`
-- `spec/docs/v3.0/forms/{slug}/put.md` (if PUT is also supported)
+#### File location
 
-To create local placeholder markdown files for missing endpoint docs, run:
+Store files under `spec/docs/v3.0/`. Mirror the API path as directories; use the lowercase HTTP method as the filename. Path parameters are the parameter name without braces.
+
+| Endpoint | File |
+| --- | --- |
+| `DELETE /v3.0/boards/{boardSlug}/` | `spec/docs/v3.0/boards/board_slug/delete.md` |
+| `PATCH /v3.0/forms/{slug}/` | `spec/docs/v3.0/forms/slug/patch.md` |
+| `GET /v3.0/forms/` | `spec/docs/v3.0/forms/get.md` |
+
+One file per HTTP method on that path. PUT is stripped from the public spec; do not add `put.md`.
+
+To create empty placeholder files for operations that the fetched specs already reference, run:
 
 ```bash
 npm run prepare-doc-stubs
 ```
 
-`./generate.sh` also prepares these paths during the build, but it removes temporary stubs before exiting so the worktree stays clean.
+`./generate.sh` also prepares these paths during the build, but it removes temporary stubs before exiting so the worktree stays clean. Fill in the file that matches the endpoint, then keep that file in git.
+
+#### What to include
+
+Write what a caller needs to use the endpoint correctly, not a restatement of the schema. Typical contents:
+
+- **What it does.** One or two sentences in product language. Mention UI names when they differ from API names (for example, a board is an app in the Formaloo UI).
+- **Considerations.** Defaults, side effects, destructive or irreversible behavior, flags that change scope, confirmation requirements, related endpoints to prefer instead, and async or lifecycle notes when the `200` does not mean the work is finished.
+- **Request and response examples.** Short, realistic JSON (or HTTP) snippets for the non-obvious cases: a success body, a notable error, or a request that shows a flag or payload shape the schema does not make obvious.
+
+Reference example: `spec/docs/v3.0/boards/board_slug/delete.md`. It states that the call deletes a board/app, that connected forms are kept unless `delete_forms=true`, shows that flag as a query string and as a body, includes a `200` envelope and a `400` error, and notes that form cleanup is queued in the background.
+
+#### What not to include
+
+Do not duplicate the auto-generated OpenAPI contract. Leave these out of the Markdown file:
+
+- Lists of fields with descriptions, types, required/optional, or enums
+- Request or response structure, schema trees, or parameter tables
+- Auth headers, path parameters, query parameter inventories, or status-code catalogs that already appear on the operation
+- Exhaustive copies of resource objects
+
+A snippet that shows a payload shape is fine. A field-by-field spec is not. If the generated schema is wrong, fix it in the source service contract, not by documenting the fields here.
 
 ### Version Introductions
 
