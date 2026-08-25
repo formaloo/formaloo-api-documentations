@@ -534,18 +534,35 @@ const coreMcpOperations = {
     }
   },
   formsRowsList: {
-    summary: "List submissions or rows for a form",
+    summary: "List form submissions",
     description:
-      "Lists submissions, also called rows or records, for a specific form in the active workspace. This may expose customer-submitted data.",
+      "Lists form submissions (rows) with dashboard-parity filters: page/page_size, search, sort_by, status, created_by/updated_by/tags, submit_time/created_at/updated_at ranges (_gte/_lte), and dynamic {fieldSlug}/{fieldSlug}_{operator} field filters. RowQueryUtils supports contains/has/equal/exact/lt/lte/gt/gte and not_ variants; comma-separated bare field values become list filters. Response includes rows, count, and often top_fields for table columns.",
     parameterDescriptions: {
-      slug: "Form slug.",
+      slug: "Form slug whose submissions to list.",
+      page: "1-based page number.",
+      page_size: "Submissions per page.",
+      search: "Case-insensitive search across submission values.",
+      sort_by: "Comma-separated sort fields; prefix with - for descending.",
+      status: "Row status filter; use all (or omit) for every status.",
+      created_by: "Filter by creator first name or email.",
+      updated_by: "Filter by last updater first name or email.",
+      tags: "Comma-separated tag slugs.",
       submit_number: "Submission number filter.",
-      tracking_code: "Submission tracking code filter."
+      tracking_code: "Submission tracking code filter.",
+      created_at: "Created-at date filter (YYYY-MM-DD); also created_at_gte/lte.",
+      updated_at: "Updated-at date filter (YYYY-MM-DD); also updated_at_gte/lte.",
+      submit_time: "Submit-time timestamp filter; also submit_time_gte/lte.",
+      created_at_gte: "Created-at lower bound (inclusive).",
+      created_at_lte: "Created-at upper bound (inclusive).",
+      updated_at_gte: "Updated-at lower bound (inclusive).",
+      updated_at_lte: "Updated-at upper bound (inclusive).",
+      submit_time_gte: "Submit-time lower bound (inclusive).",
+      submit_time_lte: "Submit-time upper bound (inclusive)."
     },
     mcp: {
-      tool_name: "list_form_rows",
-      aliases: ["list_submissions", "show_submissions", "list_form_records"],
-      intent: "List submitted rows for a Formaloo form.",
+      tool_name: "list_form_submissions",
+      aliases: ["list_form_rows", "list_rows", "list_submissions", "show_submissions", "list_form_records"],
+      intent: "List submitted rows/submissions for a Formaloo form with filters.",
       requires_workspace: true,
       read_only: true,
       destructive: false,
@@ -809,6 +826,34 @@ const coreMcpOperations = {
       }
     }
   },
+  formsDestroy: {
+    summary: "Delete a form",
+    description:
+      "Deletes a form and its submission data from the active workspace. Use this only after confirming the exact form slug with the user; deleting a form is permanent and different from disconnecting it from an app or board.",
+    parameterDescriptions: {
+      slug: "Form slug to delete."
+    },
+    mcp: {
+      tool_name: "delete_form",
+      aliases: ["remove_form", "destroy_form", "delete_form_by_slug"],
+      intent: "Delete one Formaloo form and its submitted data.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: true,
+      requires_confirmation: true
+    },
+    responseExamples: {
+      "200": {
+        deleted_form: {
+          summary: "Deleted form",
+          value: {}
+        }
+      }
+    }
+  },
   formFieldsRetrieve: {
     summary: "Get editable form and fields",
     description:
@@ -1003,6 +1048,123 @@ const coreMcpOperations = {
       result_path: "data.data",
       user_data: false,
       requires_confirmation: true
+    }
+  },
+  fieldsRetrieve: {
+    summary: "Get one field by slug",
+    description:
+      "Retrieves one existing field by slug. Use this when the task is truly about one field. For form authoring, reshaping, ordering, logic-aware edits, or any change that depends on sibling fields and choices, start with the joint form-and-fields read (`formFieldsRetrieve`) because it returns the surrounding field list, ordering, choice slugs, aliases, and form settings needed for coordinated updates.",
+    parameterDescriptions: {
+      slug: "Field slug."
+    },
+    mcp: {
+      tool_name: "get_field",
+      aliases: ["show_field", "field_details", "get_form_field"],
+      intent: "Get one Formaloo field by slug when the task does not need full form-builder context.",
+      requires_workspace: true,
+      read_only: true,
+      destructive: false,
+      idempotent: true,
+      result_path: "data.data.field",
+      user_data: false,
+      requires_confirmation: false
+    },
+    responseExamples: {
+      "200": {
+        field: {
+          summary: "Field details",
+          value: {
+            slug: "short_text_abc123",
+            type: "short_text",
+            title: "Name",
+            alias: "name",
+            required: true
+          }
+        }
+      }
+    }
+  },
+  fieldsCreate: {
+    summary: "Create one field",
+    description:
+      "Creates one field on an existing form. This is appropriate for a simple single-field add. For normal form authoring, new forms, multi-field edits, ordering, removals, logic, or same-request field/choice references, start with the joint form-and-fields flow (`formFieldsRetrieve` then `formFieldsPartialUpdate`, or composed `create_form`/`update_form` tools) so the full form structure is updated together.",
+    mcp: {
+      tool_name: "create_field",
+      aliases: ["add_field", "create_form_field", "new_field"],
+      intent: "Create one Formaloo field on an existing form when a coordinated form-builder update is unnecessary.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: false,
+      idempotent: false,
+      result_path: "data.data.field",
+      user_data: false,
+      requires_confirmation: true
+    },
+    requestExamples: {
+      create_short_text_field: {
+        summary: "Create a short text field",
+        value: {
+          form: "customer-feedback",
+          type: "short_text",
+          title: "Name",
+          alias: "name",
+          required: true
+        }
+      },
+      create_choice_field: {
+        summary: "Create a choice field",
+        value: {
+          form: "customer-feedback",
+          type: "choice",
+          title: "How satisfied are you?",
+          choice_items: [
+            { title: "Happy" },
+            { title: "Needs help" }
+          ]
+        }
+      }
+    },
+    responseExamples: {
+      "201": {
+        created_field: {
+          summary: "Created field",
+          value: {
+            slug: "short_text_abc123",
+            type: "short_text",
+            title: "Name",
+            alias: "name",
+            required: true
+          }
+        }
+      }
+    }
+  },
+  fieldsDestroy: {
+    summary: "Delete one field",
+    description:
+      "Deletes one existing field. This is appropriate for a confirmed single-field deletion. For coordinated removals, reordering, or updates that must preserve the rest of the form structure, start with the joint form-and-fields update (`formFieldsPartialUpdate`). Confirm the exact field slug with the user before deleting; deleting a field may affect existing logic or integrations.",
+    parameterDescriptions: {
+      slug: "Field slug to delete."
+    },
+    mcp: {
+      tool_name: "delete_field",
+      aliases: ["remove_field", "destroy_field", "delete_form_field"],
+      intent: "Delete one Formaloo field when a coordinated form-builder update is unnecessary.",
+      requires_workspace: true,
+      read_only: false,
+      destructive: true,
+      idempotent: false,
+      result_path: "data.data",
+      user_data: false,
+      requires_confirmation: true
+    },
+    responseExamples: {
+      "200": {
+        deleted_field: {
+          summary: "Deleted field",
+          value: {}
+        }
+      }
     }
   },
   formsRowsCreate: {
@@ -1353,6 +1515,321 @@ const mcpWorkspaceHeaderDescription = [
 ].join(" ");
 const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
+const mcpEnvelopeResponseDescription =
+  "Wire response is the Formaloo API envelope: `{ status, errors, data }`. The `data` property contains the operation-specific success payload documented by this response schema.";
+const formalooLogicConditionOperations = [
+  "equal",
+  "not_equal",
+  "gt",
+  "lt",
+  "gte",
+  "lte",
+  "greatest",
+  "smallest",
+  "is",
+  "is_not",
+  "on",
+  "not_on",
+  "before",
+  "after",
+  "before_or_on",
+  "after_or_on",
+  "is_answered",
+  "contains",
+  "not_contains",
+  "starts_with",
+  "ends_with",
+  "has_changed_to",
+  "and",
+  "or",
+  "always",
+  "otherwise"
+];
+
+function cloneJson(value) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return JSON.parse(JSON.stringify(value));
+}
+
+function pascalCase(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "Operation";
+  }
+
+  return normalized
+    .split(/\s+/)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join("");
+}
+
+function ensureResponseEnvelopeBaseSchemas(openapiSpec) {
+  openapiSpec.components = openapiSpec.components ?? {};
+  openapiSpec.components.schemas = openapiSpec.components.schemas ?? {};
+
+  openapiSpec.components.schemas.FormalooResponseErrors = {
+    type: "object",
+    description:
+      "Formaloo error container. Successful responses usually return an empty object. Validation failures may include field-specific keys, form_errors, non_field_errors, or general_errors depending on the endpoint.",
+    properties: {
+      general_errors: {
+        type: "array",
+        items: { type: "string" },
+        description: "General non-field errors."
+      },
+      non_field_errors: {
+        type: "array",
+        items: { type: "string" },
+        description: "Validation errors that are not attached to one field."
+      },
+      form_errors: {
+        type: "object",
+        additionalProperties: true,
+        description: "Form-level validation errors keyed by API field name."
+      },
+      field_errors: {
+        type: "object",
+        additionalProperties: true,
+        description: "Field-level validation errors keyed by field slug, alias, or API field name."
+      }
+    },
+    additionalProperties: true
+  };
+
+  openapiSpec.components.schemas.FormalooEmptyData = {
+    type: "object",
+    description: "Empty Formaloo response data object.",
+    additionalProperties: true
+  };
+
+  openapiSpec.components.schemas.FormalooResponseEnvelope = {
+    type: "object",
+    required: ["status", "errors", "data"],
+    description:
+      "Base Formaloo API JSON response envelope. Operation-specific response schemas refine the `data` property.",
+    properties: {
+      status: {
+        type: "integer",
+        description: "HTTP-style status code echoed by the Formaloo API.",
+        example: 200
+      },
+      errors: {
+        $ref: "#/components/schemas/FormalooResponseErrors"
+      },
+      data: {
+        type: "object",
+        additionalProperties: true,
+        description: "Operation-specific success payload."
+      }
+    },
+    additionalProperties: true
+  };
+}
+
+function looksLikeResponseEnvelopeSchema(openapiSpec, schema) {
+  if (!schema || typeof schema !== "object") {
+    return false;
+  }
+
+  const target = typeof schema.$ref === "string" ? getRefTarget(openapiSpec, schema.$ref) : schema;
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+
+  const properties = target.properties;
+  return Boolean(
+    properties &&
+      typeof properties === "object" &&
+      properties.status &&
+      properties.errors &&
+      properties.data
+  );
+}
+
+function wrapResponseExampleValue(value, statusCode) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      status: Number(statusCode) || 200,
+      errors: {},
+      data: value ?? {}
+    };
+  }
+
+  if ("status" in value && "errors" in value && "data" in value) {
+    return value;
+  }
+
+  return {
+    status: Number(statusCode) || 200,
+    errors: {},
+    data: value
+  };
+}
+
+function wrapResponseExamples(media, statusCode) {
+  if (!media || typeof media !== "object") {
+    return;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(media, "example")) {
+    media.example = wrapResponseExampleValue(media.example, statusCode);
+  }
+
+  for (const example of Object.values(media.examples ?? {})) {
+    if (!example || typeof example !== "object" || !Object.prototype.hasOwnProperty.call(example, "value")) {
+      continue;
+    }
+
+    example.value = wrapResponseExampleValue(example.value, statusCode);
+  }
+}
+
+function annotateResponseEnvelopes(openapiSpec) {
+  ensureResponseEnvelopeBaseSchemas(openapiSpec);
+
+  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+
+      let hasEnvelopeResponse = false;
+
+      for (const [statusCode, response] of Object.entries(operation.responses ?? {})) {
+        if (!String(statusCode).startsWith("2") || !response || typeof response !== "object") {
+          continue;
+        }
+
+        const media = response.content?.["application/json"];
+        if (!media) {
+          continue;
+        }
+
+        const schema = media.schema;
+        if (!schema) {
+          media.schema = {
+            $ref: "#/components/schemas/FormalooResponseEnvelope"
+          };
+          response.description = [response.description, mcpEnvelopeResponseDescription]
+            .filter((part) => typeof part === "string" && part.trim().length > 0)
+            .join(" ");
+          wrapResponseExamples(media, statusCode);
+          hasEnvelopeResponse = true;
+          continue;
+        }
+
+        if (looksLikeResponseEnvelopeSchema(openapiSpec, schema)) {
+          response.description = [response.description, mcpEnvelopeResponseDescription]
+            .filter((part) => typeof part === "string" && part.trim().length > 0)
+            .join(" ");
+          wrapResponseExamples(media, statusCode);
+          hasEnvelopeResponse = true;
+          continue;
+        }
+
+        const componentName = `Formaloo${pascalCase(operation.operationId)}${statusCode}Response`;
+        const dataSchema = cloneJson(schema) ?? { $ref: "#/components/schemas/FormalooEmptyData" };
+        openapiSpec.components.schemas[componentName] = {
+          type: "object",
+          required: ["status", "errors", "data"],
+          description: `Formaloo response envelope for ${operation.operationId} ${statusCode}.`,
+          properties: {
+            status: {
+              type: "integer",
+              description: "HTTP-style status code echoed by the Formaloo API.",
+              example: Number(statusCode) || 200
+            },
+            errors: {
+              $ref: "#/components/schemas/FormalooResponseErrors"
+            },
+            data: dataSchema
+          },
+          additionalProperties: true
+        };
+
+        media.schema = { $ref: `#/components/schemas/${componentName}` };
+        wrapResponseExamples(media, statusCode);
+        response.description = [response.description, mcpEnvelopeResponseDescription]
+          .filter((part) => typeof part === "string" && part.trim().length > 0)
+          .join(" ");
+        hasEnvelopeResponse = true;
+      }
+
+      if (hasEnvelopeResponse) {
+        operation["x-formaloo-response-envelope"] = {
+          envelope: true,
+          status_path: "status",
+          errors_path: "errors",
+          data_path: "data",
+          base_schema: { $ref: "#/components/schemas/FormalooResponseEnvelope" },
+          data_schema:
+            "Each successful application/json response schema is a Formaloo envelope whose data property contains the operation-specific payload."
+        };
+      }
+    }
+  }
+}
+
+function enforceBoundedLogicHelperSchemas(openapiSpec) {
+  const schemas = openapiSpec.components?.schemas;
+  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicArgument) {
+    return;
+  }
+
+  const operationProperty = {
+    type: "string",
+    description: "Nested condition operation.",
+    enum: formalooLogicConditionOperations
+  };
+
+  schemas.FormalooLogicShallowCondition = {
+    type: "object",
+    description:
+      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
+    properties: {
+      operation: operationProperty,
+      args: {
+        type: "array",
+        description:
+          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
+        items: {
+          type: "object",
+          additionalProperties: true
+        }
+      }
+    },
+    required: ["operation", "args"]
+  };
+
+  schemas.FormalooLogicCondition.properties.operation = {
+    ...(schemas.FormalooLogicCondition.properties.operation ?? {}),
+    enum: formalooLogicConditionOperations
+  };
+  schemas.FormalooLogicCondition.properties.args = {
+    ...(schemas.FormalooLogicCondition.properties.args ?? {}),
+    type: "array",
+    items: {
+      anyOf: [
+        { $ref: "#/components/schemas/FormalooLogicArgument" },
+        { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
+      ],
+      description:
+        "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+    }
+  };
+}
 
 function buildMcpAuthMetadata(operation) {
   return {
@@ -1673,6 +2150,8 @@ spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && u
 enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
 enrichMcpOperations(spec);
+annotateResponseEnvelopes(spec);
+enforceBoundedLogicHelperSchemas(spec);
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");

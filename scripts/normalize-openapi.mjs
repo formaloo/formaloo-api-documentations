@@ -103,6 +103,34 @@ const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
 const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
+const formalooLogicConditionOperations = [
+  "equal",
+  "not_equal",
+  "gt",
+  "lt",
+  "gte",
+  "lte",
+  "greatest",
+  "smallest",
+  "is",
+  "is_not",
+  "on",
+  "not_on",
+  "before",
+  "after",
+  "before_or_on",
+  "after_or_on",
+  "is_answered",
+  "contains",
+  "not_contains",
+  "starts_with",
+  "ends_with",
+  "has_changed_to",
+  "and",
+  "or",
+  "always",
+  "otherwise"
+];
 
 function titleizeTag(slug) {
   const overrides = {
@@ -441,13 +469,13 @@ function ensureFormalooLogicSchemas() {
         description: "Argument kind.",
         enum: [
           "field",
-          "choice",
-          "variable",
-          "constant",
           "matrix",
           "table",
+          "choice",
           "user",
           "row",
+          "constant",
+          "variable",
           "success_page",
           "link",
           "send_email_template",
@@ -472,6 +500,29 @@ function ensureFormalooLogicSchemas() {
     required: ["type"]
   };
 
+  spec.components.schemas.FormalooLogicShallowCondition = {
+    type: "object",
+    description:
+      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
+    properties: {
+      operation: {
+        type: "string",
+        description: "Nested condition operation.",
+        enum: formalooLogicConditionOperations
+      },
+      args: {
+        type: "array",
+        description:
+          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
+        items: {
+          type: "object",
+          additionalProperties: true
+        }
+      }
+    },
+    required: ["operation", "args"]
+  };
+
   spec.components.schemas.FormalooLogicCondition = {
     type: "object",
     description:
@@ -481,44 +532,19 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Condition operation. Common operations include comparison, choice, state, and boolean-composition operations.",
-        enum: [
-          "is",
-          "is_not",
-          "equal",
-          "not_equal",
-          "gt",
-          "gte",
-          "lt",
-          "lte",
-          "on",
-          "not_on",
-          "before",
-          "after",
-          "before_or_on",
-          "after_or_on",
-          "contains",
-          "not_contains",
-          "starts_with",
-          "ends_with",
-          "is_answered",
-          "smallest",
-          "greatest",
-          "has_changed_to",
-          "and",
-          "or",
-          "always",
-          "otherwise"
-        ]
+        enum: formalooLogicConditionOperations
       },
       args: {
         type: "array",
         description:
           "Operation arguments. Condition args use `value`, not `identifier`. For `is`, use field ref plus choice/value ref. For comparisons, use field ref plus constant/value ref. For `and`/`or`, args are nested condition objects with their own `operation` and `args`. For `always` and `otherwise`, use an empty array. This intentionally stays non-recursive for MCP/tool-schema compatibility.",
         items: {
-          type: "object",
-          additionalProperties: true,
+          anyOf: [
+            { $ref: "#/components/schemas/FormalooLogicArgument" },
+            { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
+          ],
           description:
-            "Either a FormalooLogicArgument or a nested condition object for `and`/`or`."
+            "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
         }
       }
     },
@@ -538,24 +564,26 @@ function ensureFormalooLogicSchemas() {
     properties: {
       action: {
         type: "string",
-        description: "Action type to execute.",
+        description:
+          "Action type to execute. `disable` is accepted by the backend for legacy logic payloads, but the current form logic analyzer treats it as a no-op and the dashboard UI does not expose it; avoid `disable` for new rules.",
         enum: [
-          "show",
-          "hide",
           "jump",
           "jump_to_success_page",
-          "submit",
+          "hide",
+          "show",
+          "disable",
           "set",
+          "submit",
+          "redirect",
           "add",
-          "subtract",
           "multiply",
+          "subtract",
           "divide",
           "send_email",
           "send_webhook",
           "send_slack",
           "generate_pdf",
-          "set_related",
-          "redirect"
+          "set_related"
         ]
       },
       args: {
@@ -725,8 +753,9 @@ function ensureFormalooThemeSchemas() {
       font_size: {
         type: "string",
         nullable: true,
-        description: "Base font-size preset.",
-        enum: ["small", "large"]
+        description:
+          "Base font-size preset. Allowed values are `small`, `medium`, and `large`. Default in the form renderer is `medium` when omitted.",
+        enum: ["small", "medium", "large"]
       },
       background_image: {
         type: "object",
@@ -858,7 +887,7 @@ function enrichThemeSchemas() {
 
     if (schema.properties.form_type) {
       schema.properties.form_type.description =
-        "Form presentation type for this theme. Valid API values are `simple` and `multi_step`.";
+        "Canonical form presentation type for this theme. Valid API values are `simple` and `multi_step`. Prefer this over legacy form-level `form_type`.";
     }
 
     if (schema.properties.logo_position) {
@@ -866,6 +895,8 @@ function enrichThemeSchemas() {
         "Logo position. Common values include `left`, `center`, `right`, or null.";
     }
   }
+
+  deprecateLegacyFormFields();
 
   for (const schemaName of ["FormUpdateRequest", "PatchedFormUpdateRequest"]) {
     const schema = spec.components.schemas[schemaName];
@@ -936,6 +967,73 @@ function upsertJsonResponse(operation, statusCode, schemaRef, description) {
   operation.responses[statusCode].content["application/json"] = {
     schema: { $ref: schemaRef }
   };
+}
+
+function deprecateLegacyFormFields() {
+  const formSchemaNames = [
+    "CreateForm",
+    "CreateFormRequest",
+    "FormUpdate",
+    "FormUpdateRequest",
+    "PatchedFormUpdateRequest",
+    "ShowForm",
+    "ShowFormSummary",
+    "FormShort",
+    "FormSummary",
+    "BoardFormBatch",
+    "BoardFormBatchRequest"
+  ];
+
+  for (const schemaName of formSchemaNames) {
+    const schema = spec.components.schemas[schemaName];
+    if (!schema?.properties || typeof schema.properties !== "object") {
+      continue;
+    }
+
+    if (schema.properties.needs_login) {
+      schema.properties.needs_login = {
+        ...schema.properties.needs_login,
+        deprecated: true,
+        description:
+          "Deprecated. Legacy flag previously used to require login before submitting. Ignore for new integrations; prefer current public-submit and portal auth flows."
+      };
+    }
+
+    if (schema.properties.form_type) {
+      schema.properties.form_type = {
+        ...schema.properties.form_type,
+        deprecated: true,
+        description:
+          "Deprecated legacy form-level presentation type. Prefer theme.form_type (`simple` or `multi_step`); runtime reads prefer the assigned theme when present."
+      };
+    }
+  }
+}
+
+function enrichFormDisplaySubmitContract() {
+  const submitPath = spec.paths?.["/v3.0/form-displays/slug/{slug}/submit/"];
+  const operation = submitPath?.post;
+  if (!operation) {
+    return;
+  }
+
+  setOperationDescription(
+    operation,
+    [
+      "Submit uses the form **display slug** path parameter (`/v3.0/form-displays/slug/{slug}/submit/`), not the public form address.",
+      "Resolve address to display slug via `GET /v3.0/form-displays/address/{address}/` when you only have an address.",
+      "By default, request body field keys must be **field slugs**. To submit by field aliases instead, set `submit_by_alias: true` and use aliases as keys (do not mix aliases and slugs)."
+    ].join(" ")
+  );
+
+  const submitSchema = spec.components.schemas.SubmitFormRequest;
+  if (submitSchema?.properties?.submit_by_alias) {
+    submitSchema.properties.submit_by_alias = {
+      ...submitSchema.properties.submit_by_alias,
+      description:
+        "When true, treat additional request-body keys as field aliases instead of field slugs. Default is false (slug keys). Do not mix aliases and slugs in one request."
+    };
+  }
 }
 
 function enrichThemeOperations() {
@@ -1071,6 +1169,17 @@ function enrichFormBuilderSchemasAndOperations() {
         items: { $ref: "#/components/schemas/FormalooBuilderChoiceInput" }
       },
       bulk_choices: {
+        oneOf: [
+          {
+            type: "array",
+            items: { type: "string" },
+            description: "List of choice labels to add."
+          },
+          {
+            type: "string",
+            description: "Newline-separated choice labels to add."
+          }
+        ],
         description:
           "Convenience input for appending choices on choice-like fields. May be a list of labels or a newline-separated string. Do not send with `choice_items`."
       },
@@ -1163,6 +1272,20 @@ function createTypedFieldSchema({ schemaName, type, description, subType, notes 
       }
     ]
   };
+}
+
+function resolveFieldRequestSchemaName(schemaName) {
+  if (!schemaName) {
+    return null;
+  }
+  if (spec.components.schemas[schemaName]) {
+    return schemaName;
+  }
+  const prefixedName = `FormBuilder${schemaName}`;
+  if (spec.components.schemas[prefixedName]) {
+    return prefixedName;
+  }
+  return null;
 }
 
 function createManualTypedFieldSchema({ type, description }) {
@@ -1269,7 +1392,7 @@ function enrichFieldCreateSchemasAndOperations() {
     },
     {
       componentName: "FormalooRegexFieldCreate",
-      schemaName: "CharFieldRequest",
+      schemaName: "RegexFieldRequest",
       type: "regex",
       description: "Creates a custom-validation text field. Include regex settings accepted by the field API."
     },
@@ -1510,7 +1633,14 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "success_page",
       description: "Creates a success-page field."
     }
-  ].filter(({ schemaName, manualSchema }) => manualSchema || spec.components.schemas[schemaName]);
+  ]
+    .map((variant) => ({
+      ...variant,
+      schemaName: variant.manualSchema
+        ? variant.schemaName
+        : resolveFieldRequestSchemaName(variant.schemaName)
+    }))
+    .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
@@ -1903,6 +2033,216 @@ function enrichRowSchemas() {
   }
 }
 
+function upsertQueryParameter(operation, parameter) {
+  if (!operation || !parameter?.name) {
+    return;
+  }
+  operation.parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+  const index = operation.parameters.findIndex(
+    (item) => item?.in === "query" && item?.name === parameter.name
+  );
+  if (index >= 0) {
+    operation.parameters[index] = {
+      ...operation.parameters[index],
+      ...parameter,
+      schema: {
+        ...(operation.parameters[index].schema || {}),
+        ...(parameter.schema || {})
+      },
+      description: parameter.description || operation.parameters[index].description
+    };
+    return;
+  }
+  operation.parameters.push(parameter);
+}
+
+function enrichFormsRowsListOperation() {
+  const listRows = spec.paths["/v3.0/forms/{slug}/rows/"]?.get;
+  if (!listRows) {
+    return;
+  }
+
+  listRows.summary = listRows.summary || "List form submissions";
+  const existingDescription = String(listRows.description || "").trim();
+  const filterNotice =
+    "Supports dashboard-parity filters: pagination (`page`, `page_size`), `search`, `sort_by`, `status`, meta (`created_by`, `updated_by`, `tags`, `tracking_code`, `submit_number`), timestamp/date ranges (`submit_time`/`created_at`/`updated_at` plus `_gte`/`_lte`/`_gt`/`_lt`), and dynamic `{fieldSlug}` / `{fieldSlug}_{operator}` field filters. `RowQueryUtils` supports contains/has/equal/exact/lt/lte/gt/gte and `not_` variants; comma-separated bare field values become list filters. Response includes `rows`, `count`, and often `top_fields` for table columns.";
+  if (!existingDescription.includes("dashboard-parity filters")) {
+    listRows.description = existingDescription
+      ? `${existingDescription}\n\n${filterNotice}`
+      : filterNotice;
+  }
+
+  const queryParams = [
+    {
+      in: "query",
+      name: "page",
+      required: false,
+      schema: { type: "integer" },
+      description: "A page number within the paginated result set."
+    },
+    {
+      in: "query",
+      name: "page_size",
+      required: false,
+      schema: { type: "integer" },
+      description: "Number of results to return per page."
+    },
+    {
+      in: "query",
+      name: "pagination",
+      required: false,
+      schema: { type: "string" },
+      description: "Set to `0` to disable pagination for this list."
+    },
+    {
+      in: "query",
+      name: "search",
+      required: false,
+      schema: { type: "string" },
+      description: "Case-insensitive search across submission values."
+    },
+    {
+      in: "query",
+      name: "sort_by",
+      required: false,
+      schema: { type: "string" },
+      description:
+        "Comma-separated sort fields. Prefix with `-` for descending (for example `-submit_time`, `-created_at`, or a field slug)."
+    },
+    {
+      in: "query",
+      name: "status",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by row status. Use `all` (or omit) for every status."
+    },
+    {
+      in: "query",
+      name: "tags",
+      required: false,
+      schema: { type: "string" },
+      description: "Comma-separated list of tag slugs."
+    },
+    {
+      in: "query",
+      name: "tracking_code",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by tracking code."
+    },
+    {
+      in: "query",
+      name: "submit_number",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by submit number."
+    },
+    {
+      in: "query",
+      name: "created_by",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by creator first name or email (icontains)."
+    },
+    {
+      in: "query",
+      name: "updated_by",
+      required: false,
+      schema: { type: "string" },
+      description: "Filter by last updater first name or email (icontains)."
+    },
+    {
+      in: "query",
+      name: "created_at",
+      required: false,
+      schema: { type: "string", format: "date" },
+      description:
+        "Date filter for created_at (`YYYY-MM-DD`). Range variants: `created_at_gte`, `created_at_lte`, `created_at_gt`, `created_at_lt`."
+    },
+    {
+      in: "query",
+      name: "created_at_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Created-at lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "created_at_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Created-at upper bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "updated_at",
+      required: false,
+      schema: { type: "string", format: "date" },
+      description:
+        "Date filter for updated_at (`YYYY-MM-DD`). Range variants: `updated_at_gte`, `updated_at_lte`, `updated_at_gt`, `updated_at_lt`."
+    },
+    {
+      in: "query",
+      name: "updated_at_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Updated-at lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "updated_at_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Updated-at upper bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "submit_time",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description:
+        "Timestamp filter for submit time (maps to row created_at). Also accepts `submit_time_gte`, `submit_time_lte`, `submit_time_gt`, `submit_time_lt`."
+    },
+    {
+      in: "query",
+      name: "submit_time_gte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Submit-time lower bound (inclusive)."
+    },
+    {
+      in: "query",
+      name: "submit_time_lte",
+      required: false,
+      schema: { type: "string", format: "date-time" },
+      description: "Submit-time upper bound (inclusive)."
+    }
+  ];
+
+  for (const parameter of queryParams) {
+    upsertQueryParameter(listRows, parameter);
+  }
+
+  const paginated = spec.components?.schemas?.PaginatedRowList;
+  if (paginated?.properties && !paginated.properties.top_fields) {
+    paginated.properties.top_fields = {
+      type: "array",
+      description:
+        "Optional column hints for table UIs. Typically form field references (slug/title/type). Table columns are the form’s fields; when present, prefer this order.",
+      items: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          slug: { type: "string" },
+          title: { type: "string" },
+          type: { type: "string" },
+          alias: { type: "string" }
+        }
+      }
+    };
+  }
+}
+
 function enrichBlockSchemas() {
   spec.components.schemas.FormalooAccessSettings = {
     type: "object",
@@ -1923,14 +2263,97 @@ function enrichBlockSchemas() {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Block-specific configuration. Shape varies by block type (form_result, kanban, stats, content, menu, etc.)."
+    description:
+      "Dashboard block UI configuration. Shape varies by block type; retrieve the block first and preserve existing keys when changing one nested setting."
   };
 
   spec.components.schemas.FormalooBlockFilters = {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Data filter configuration applied to this block. Defines which rows or records are displayed."
+    description:
+      "Saved dashboard filters for result, kanban, gallery, chart, and AI data blocks. Send the complete intended filter snapshot when saving filters on a block.",
+    properties: {
+      fields_filters: {
+        type: "object",
+        additionalProperties: true,
+        description:
+          "Per-field predicates keyed by saved field slug or dashboard filter key. Use an empty object to intentionally clear field filters."
+      },
+      search: {
+        type: "string",
+        nullable: true,
+        description: "Saved search term. Omit or set null to clear it."
+      },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved tag filters. Omit or use an empty array when the intended saved filter has no tags."
+      },
+      status: {
+        type: "string",
+        nullable: true,
+        description: "Saved row status filter."
+      },
+      sort_by: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved dashboard sort expressions in dashboard order. Use an empty array to clear sorting."
+      },
+      meta_data_fields: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved table metadata column settings.",
+        properties: {
+          exclude: {
+            type: "array",
+            items: { type: "string" },
+            description: "Metadata column keys hidden in result/table views."
+          }
+        }
+      },
+      user_field: {
+        type: "string",
+        nullable: true,
+        description:
+          "Saved end-user ownership/access field slug for My Data style portal filtering. Set null to clear a sticky dashboard value."
+      },
+      assignee_field: {
+        type: "string",
+        nullable: true,
+        description: "Saved assignee field slug. Set null to clear a sticky dashboard value."
+      }
+    }
+  };
+
+  spec.components.schemas.FormalooBlockSettings = {
+    type: "object",
+    additionalProperties: true,
+    nullable: true,
+    description:
+      "Dashboard block presentation settings. Retrieve the block first and preserve existing keys when changing one nested setting.",
+    properties: {
+      columns_count: {
+        type: "string",
+        minLength: 1,
+        description: "Gallery/grid card column count. Send a string for direct settings writes."
+      },
+      card_fields: {
+        type: "array",
+        items: { type: "string" },
+        description: "Saved field slugs shown on gallery/grid cards."
+      },
+      columns_width: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved table column widths keyed by field or metadata key."
+      },
+      color: {
+        type: "object",
+        additionalProperties: true,
+        description: "Saved chart/block color settings keyed by field, choice, or chart setting."
+      }
+    }
   };
 
   const blockSchemas = [
@@ -1994,10 +2417,9 @@ function enrichBlockSchemas() {
 
     if (schema.properties.settings && schema.properties.settings.type === "object" && JSON.stringify(schema.properties.settings.additionalProperties) === "{}") {
       schema.properties.settings = {
-        type: "object",
-        additionalProperties: true,
+        allOf: [{ $ref: "#/components/schemas/FormalooBlockSettings" }],
         nullable: true,
-        description: "Additional settings for this block."
+        type: "object"
       };
     }
 
@@ -2046,6 +2468,91 @@ function enrichBlockSchemas() {
         description: "Child blocks for this menu item."
       };
     }
+  }
+
+  const updateBlockRequest = spec.components.schemas.PatchedUpdateBlockRequest;
+  if (updateBlockRequest?.properties) {
+    updateBlockRequest.description =
+      "Patch an existing board/app block. The API uses one PATCH endpoint across block types, so send fields that match the existing block type unless intentionally changing type.";
+    updateBlockRequest.properties.fields = updateBlockRequest.properties.fields ?? {
+      type: "array",
+      items: { type: "string" },
+      description: "Ordered saved field slugs shown by form_result, form_charts, kanban, and gallery blocks."
+    };
+    updateBlockRequest.properties.filters = updateBlockRequest.properties.filters ?? {
+      allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
+      nullable: true,
+      type: "object"
+    };
+    updateBlockRequest.properties.settings = updateBlockRequest.properties.settings ?? {
+      allOf: [{ $ref: "#/components/schemas/FormalooBlockSettings" }],
+      nullable: true,
+      type: "object"
+    };
+    updateBlockRequest.properties.columns_field = updateBlockRequest.properties.columns_field ?? {
+      type: "string",
+      nullable: true,
+      description: "Choice-like field slug used as kanban columns. Use choice, dropdown, rating, or yes_no fields."
+    };
+    updateBlockRequest.properties.items_field = updateBlockRequest.properties.items_field ?? {
+      type: "string",
+      description: "Non-file field slug used as the primary card/item label in kanban or gallery views."
+    };
+    updateBlockRequest.properties.featured_image_field = updateBlockRequest.properties.featured_image_field ?? {
+      type: "string",
+      nullable: true,
+      description: "File field slug used as the gallery/card image."
+    };
+    updateBlockRequest.properties.display_type = updateBlockRequest.properties.display_type ?? {
+      type: "string",
+      enum: ["open_web", "display_single_page", "display_multi_page", "kanban", "grid_view"],
+      description:
+        "Dashboard display mode. For form_display blocks use open_web, display_single_page, or display_multi_page. For kanban/gallery blocks use kanban or grid_view."
+    };
+    updateBlockRequest.properties.style_type = updateBlockRequest.properties.style_type ?? {
+      type: "string",
+      enum: ["card", "embed"],
+      description: "Form display style."
+    };
+    updateBlockRequest.properties.mode = updateBlockRequest.properties.mode ?? {
+      type: "string",
+      enum: ["editable", "read_only"],
+      description: "Kanban edit mode."
+    };
+    updateBlockRequest.properties.user_can_edit = updateBlockRequest.properties.user_can_edit ?? {
+      type: "boolean",
+      description: "Allows the end user/row owner to edit matching rows when access settings permit it."
+    };
+    updateBlockRequest.properties.assignee_can_edit = updateBlockRequest.properties.assignee_can_edit ?? {
+      type: "boolean",
+      description: "Allows the assigned user to edit matching rows when access settings permit it."
+    };
+    updateBlockRequest.properties.voting_status = updateBlockRequest.properties.voting_status ?? {
+      type: "string",
+      enum: ["disabled", "for_internal_users", "for_external_users"],
+      description: "Saved voting behavior for result/kanban-style blocks."
+    };
+    updateBlockRequest.properties.export_info = updateBlockRequest.properties.export_info ?? {
+      type: "object",
+      additionalProperties: true,
+      nullable: true,
+      description: "Saved export configuration for result/kanban-style blocks."
+    };
+    updateBlockRequest.properties.user_questions = updateBlockRequest.properties.user_questions ?? {
+      type: "string",
+      nullable: true,
+      description: "AI summary prompt/questions for the block to answer from the selected form data."
+    };
+    updateBlockRequest.properties.length = updateBlockRequest.properties.length ?? {
+      type: "string",
+      enum: ["short", "medium", "long"],
+      description: "AI summary length."
+    };
+    updateBlockRequest.properties.ai_engine_id = updateBlockRequest.properties.ai_engine_id ?? {
+      type: "string",
+      nullable: true,
+      description: "Optional AI engine id used by dashboard AI summary blocks."
+    };
   }
 }
 
@@ -2127,6 +2634,43 @@ function enrichFormSummarySchemas() {
   for (const schemaName of formSchemas) {
     const schema = spec.components.schemas[schemaName];
     if (!schema?.properties) continue;
+
+    for (const [propertyName, description] of [
+      ["success_message", "Message shown after a successful form submission."],
+      ["error_message", "Message shown when a form submission fails."]
+    ]) {
+      if (!schema.properties[propertyName]) {
+        schema.properties[propertyName] = {
+          type: "string",
+          nullable: true,
+          description
+        };
+      }
+    }
+
+    if (!schema.properties.ai_mode) {
+      schema.properties.ai_mode = {
+        type: "boolean",
+        nullable: true,
+        description: "Enables Formaloo AI-assisted form behavior when supported for the form."
+      };
+    }
+
+    if (!schema.properties.public_stats) {
+      schema.properties.public_stats = {
+        type: "boolean",
+        nullable: true,
+        description: "Whether form statistics are publicly visible."
+      };
+    }
+
+    if (!schema.properties.public_rows) {
+      schema.properties.public_rows = {
+        type: "boolean",
+        nullable: true,
+        description: "Whether form submission rows are publicly visible."
+      };
+    }
 
     if (schema.properties.localized_content && schema.properties.localized_content.type === "object" && JSON.stringify(schema.properties.localized_content.additionalProperties) === "{}") {
       schema.properties.localized_content = { $ref: "#/components/schemas/FormalooLocalizedContent" };
@@ -2227,6 +2771,14 @@ function enrichFieldConfigSchemas() {
       };
     }
 
+    if (!schema.properties.answer_description && /Field(Request)?$/.test(schemaName)) {
+      schema.properties.answer_description = {
+        type: "string",
+        nullable: true,
+        description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
+      };
+    }
+
     if (schema.properties.acceptable_answers && schema.properties.acceptable_answers.type === "object" && JSON.stringify(schema.properties.acceptable_answers.additionalProperties) === "{}") {
       schema.properties.acceptable_answers = { $ref: "#/components/schemas/FormalooAcceptableAnswers" };
     }
@@ -2238,6 +2790,15 @@ function enrichFieldConfigSchemas() {
         nullable: true,
         description: "Blocked/unacceptable answer patterns for field validation."
       };
+    }
+
+    if (schemaName === "FormBuilderRegexFieldRequest") {
+      const charSchema = spec.components.schemas.FormBuilderCharFieldRequest;
+      for (const propertyName of ["max_length", "acceptable_answers", "unacceptable_answers"]) {
+        if (!schema.properties[propertyName] && charSchema?.properties?.[propertyName]) {
+          schema.properties[propertyName] = JSON.parse(JSON.stringify(charSchema.properties[propertyName]));
+        }
+      }
     }
 
     if (schema.properties.images && schema.properties.images.type === "object" && JSON.stringify(schema.properties.images.additionalProperties) === "{}") {
@@ -2476,9 +3037,11 @@ enrichThemeSchemas();
 enrichThemeOperations();
 enrichFormBuilderSchemasAndOperations();
 enrichFieldCreateSchemasAndOperations();
+enrichFormDisplaySubmitContract();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 enrichRowSchemas();
+enrichFormsRowsListOperation();
 enrichBlockSchemas();
 enrichBoardSchemas();
 enrichFormSummarySchemas();
