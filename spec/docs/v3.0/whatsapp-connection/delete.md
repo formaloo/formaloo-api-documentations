@@ -1,3 +1,3 @@
-Disconnects the WhatsApp Business connection for the workspace selected by `active_business`.
+**Work in progress:** this destructive WhatsApp connection operation is not stable enough for API automation. The current generated schema and dashboard implementation do not yet agree on workspace selection or response envelopes.
 
-This is a destructive provider-level action, not merely an app uninstall. It removes the workspace connection used by WhatsApp templates and campaigns; confirm the workspace and user intent before calling it.
+Do not call this endpoint, infer its workspace header, or treat it as equivalent to uninstalling the Send WhatsApp catalog app until the deployed contract is finalized. Disconnect through the dashboard/provider flow when explicitly requested, and verify the result there.

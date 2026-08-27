@@ -136,6 +136,18 @@ function hasUsable2xxSchema(operation) {
 }
 
 function validateIntegrationContracts() {
+  const expectedIntegrationAppTypes = [
+    "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
+    "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
+    "active_campaign", "webhook", "email_template", "email_campaign",
+    "pdf_generator", "make", "calendly", "recurring_submission",
+    "lead_enrichment", "send_whatsapp"
+  ];
+  const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
+  if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
+    errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+  }
+
   const mappingRefs = {
     FormHubspotIntegrationRequest: "#/components/schemas/FormalooHubspotMappedFields",
     FormMailchimpIntegrationRequest: "#/components/schemas/FormalooMailchimpMappedFields",

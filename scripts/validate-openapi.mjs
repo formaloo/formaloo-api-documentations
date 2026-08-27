@@ -64,6 +64,39 @@ for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) 
   }
 }
 
+const expectedIntegrationAppTypes = [
+  "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
+  "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
+  "active_campaign", "webhook", "email_template", "email_campaign",
+  "pdf_generator", "make", "calendly", "recurring_submission",
+  "lead_enrichment", "send_whatsapp"
+];
+const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
+if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
+  errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+}
+
+const whatsappConnectionWipOperations = new Set([
+  "whatsappConnectionRetrieve",
+  "whatsappConnectionDestroy",
+  "whatsappConnectionRedirectUrlRetrieve"
+]);
+const foundWhatsappConnectionWipOperations = new Set();
+for (const pathItem of Object.values(spec.paths ?? {})) {
+  for (const operation of Object.values(pathItem ?? {})) {
+    if (!whatsappConnectionWipOperations.has(operation?.operationId)) continue;
+    foundWhatsappConnectionWipOperations.add(operation.operationId);
+    if (!operation.description?.includes("Work in progress")) {
+      errors.push(`${operation.operationId} must clearly identify its unstable WhatsApp connection contract.`);
+    }
+  }
+}
+for (const operationId of whatsappConnectionWipOperations) {
+  if (!foundWhatsappConnectionWipOperations.has(operationId)) {
+    errors.push(`Work-in-progress WhatsApp connection operation ${operationId} is missing from the public contract.`);
+  }
+}
+
 const integrationDiscoveryOperationIds = new Set([
   "hubspotIntegrationsPropertiesRetrieve",
   "mailchimpIntegrationsListsRetrieve",

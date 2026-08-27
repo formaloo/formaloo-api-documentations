@@ -221,7 +221,7 @@
   },
   "whatsapp-connection": {
     "displayName": "WhatsApp Connection",
-    "description": "Start embedded signup, inspect connection readiness, troubleshoot provider status, and disconnect a workspace's WhatsApp Business account."
+    "description": "Work-in-progress connection surface. Use the dashboard/provider onboarding flow until workspace selection and response contracts are finalized; do not automate these endpoints."
   },
   "whatsapp-templates": {
     "displayName": "WhatsApp Templates",
