@@ -72,6 +72,8 @@ const methodExceptions = new Map(
     new Set(asStringArray(operationIds))
   ])
 );
+const requiredOperationIds = new Set(asStringArray(settings.requiredOperationIds));
+const includedOperationIds = new Set(asStringArray(settings.includeOperationIds));
 
 function asStringArray(value) {
   if (!Array.isArray(value)) {
@@ -570,12 +572,29 @@ for (const operationId of requiredMcpReadyOperationIds) {
   validateRequiredOperation(operationId, "Required MCP-ready operation");
 }
 
+for (const operationId of requiredOperationIds) {
+  validateRequiredOperation(operationId, "Required policy compatibility operation", {
+    requireExamples: false,
+    requireMcpMetadata: false
+  });
+}
+
+for (const operationId of includedOperationIds) {
+  validateRequiredOperation(operationId, "Explicitly included MCP operation", {
+    requireExamples: false
+  });
+}
+
 validateMethodExclusions();
 validatePutSettings();
 validatePatchFirstUpdates();
 validatePaymentMethodPutException();
 
-function validateRequiredOperation(operationId, label) {
+function validateRequiredOperation(
+  operationId,
+  label,
+  { requireExamples = true, requireMcpMetadata = true } = {}
+) {
   const record = operations.get(operationId);
   if (!record) {
     errors.push(`${label} ${operationId} is not present.`);
@@ -591,19 +610,23 @@ function validateRequiredOperation(operationId, label) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a description.`);
   }
 
-  if (!hasUsable2xxSchema(operation)) {
+  // Successful deletes intentionally return only the standard empty-data
+  // envelope, so the status contract is validated separately below.
+  if (method !== "delete" && !hasUsable2xxSchema(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a usable 2xx response schema.`);
   }
 
-  if (!hasResponseExample(operation)) {
+  if (requireExamples && !hasResponseExample(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a response example.`);
   }
 
-  if (["post", "put", "patch"].includes(method) && !hasRequestExample(operation)) {
+  if (requireExamples && ["post", "put", "patch"].includes(method) && !hasRequestExample(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a request example.`);
   }
 
-  validateMcpMetadata(operationId, operation);
+  if (requireMcpMetadata) {
+    validateMcpMetadata(operationId, operation);
+  }
 }
 
 function validateMethodExclusions() {
@@ -643,6 +666,12 @@ function validateMethodExclusions() {
 }
 
 function validatePutSettings() {
+  if (settings.requiredOperationIds !== undefined && !Array.isArray(settings.requiredOperationIds)) {
+    errors.push("requiredOperationIds must be an array.");
+  }
+  if (settings.includeOperationIds !== undefined && !Array.isArray(settings.includeOperationIds)) {
+    errors.push("includeOperationIds must be an array.");
+  }
   if (!Array.isArray(settings.approvedExcludedPutOperationIds)) {
     errors.push("approvedExcludedPutOperationIds must be an array.");
   }

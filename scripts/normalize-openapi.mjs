@@ -1642,10 +1642,28 @@ function enrichFieldCreateSchemasAndOperations() {
     }))
     .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
+  // Stable consumer-facing enum retained across upstream serializer naming
+  // changes. The form builder's generated enum may have a hash-derived name,
+  // which is unsuitable for MCP clients and documentation links.
+  spec.components.schemas.RatingFieldSubTypeEnum = {
+    type: "string",
+    enum: ["embeded", "like_dislike", "nps", "score"],
+    description:
+      "Rating subtype. `embeded` is the legacy API spelling for Star Rating / CSAT; use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
+  };
+
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
       ? createManualTypedFieldSchema(variant)
       : createTypedFieldSchema(variant);
+  }
+
+  const ratingSubType = spec.components.schemas.FormalooRatingFieldCreate
+    ?.allOf?.[1]?.properties?.sub_type;
+  if (ratingSubType) {
+    delete ratingSubType.type;
+    delete ratingSubType.enum;
+    ratingSubType.allOf = [{ $ref: "#/components/schemas/RatingFieldSubTypeEnum" }];
   }
 
   spec.components.schemas.FormalooFieldCreateRequest = {

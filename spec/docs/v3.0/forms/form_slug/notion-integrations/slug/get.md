@@ -1,1 +1,1 @@
-Retrieves the specified form notion integration.
+Retrieves one form-level Notion database mapping by integration slug.

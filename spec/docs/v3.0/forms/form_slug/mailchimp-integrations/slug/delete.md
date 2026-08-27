@@ -1,4 +1,4 @@
-Deletes the specified form mailchimp integration.
+Deletes the form-level Mailchimp mapping. This does not uninstall the catalog app, revoke Mailchimp authorization, or delete the Mailchimp audience.
 
 ## Behavior
 

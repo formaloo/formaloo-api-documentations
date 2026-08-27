@@ -153,6 +153,9 @@ try {
 }
 
 const excludeSettings = settings.exclude ?? settings;
+const requiredOperationIds = new Set(asStringArray(settings.requiredOperationIds));
+const includedOperationIds = new Set(asStringArray(settings.includeOperationIds));
+const retainedOperationIds = new Set([...requiredOperationIds, ...includedOperationIds]);
 const excludedServices = asStringArray(excludeSettings.services);
 const excludedServiceTokens = new Set(excludedServices.map(normalizeServiceToken));
 const excludedTagTokens = new Set(asStringArray(excludeSettings.tags).map(normalizeServiceToken));
@@ -284,6 +287,12 @@ function shouldExcludeByHttpMethod(method, operation) {
 }
 
 const unsupportedSettingsErrors = [];
+if (settings.requiredOperationIds !== undefined && !Array.isArray(settings.requiredOperationIds)) {
+  unsupportedSettingsErrors.push("requiredOperationIds must be an array.");
+}
+if (settings.includeOperationIds !== undefined && !Array.isArray(settings.includeOperationIds)) {
+  unsupportedSettingsErrors.push("includeOperationIds must be an array.");
+}
 if (settings.approvedExcludedPutOperationIds !== undefined && !Array.isArray(settings.approvedExcludedPutOperationIds)) {
   unsupportedSettingsErrors.push("approvedExcludedPutOperationIds must be an array.");
 }
@@ -1849,6 +1858,155 @@ function buildMcpAuthMetadata(operation) {
   };
 }
 
+const integrationCatalogToolNames = {
+  integrationAppsList: "list_integration_apps",
+  integrationAppsRetrieve: "get_integration_app",
+  integrationAppsInstallAppCreate: "install_integration_app",
+  integrationAppsInstalledAppRetrieve: "get_installed_integration_app",
+  integrationAppsInstalledAppDestroy: "uninstall_integration_app",
+  integrationTagsList: "list_integration_tags",
+  whatsappConnectionRetrieve: "get_whatsapp_connection",
+  whatsappConnectionDestroy: "disconnect_whatsapp_connection",
+  whatsappConnectionRedirectUrlRetrieve: "get_whatsapp_connection_redirect_url"
+};
+
+const integrationActionNames = {
+  List: "list",
+  Create: "create",
+  Retrieve: "get",
+  PartialUpdate: "update",
+  Destroy: "delete"
+};
+
+function camelToSnake(value) {
+  return String(value ?? "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function integrationToolName(operationId) {
+  if (integrationCatalogToolNames[operationId]) {
+    return integrationCatalogToolNames[operationId];
+  }
+
+  const formProviderMatch = operationId.match(
+    /^forms(Hubspot|Mailchimp|Netsuite|Notion|Sendinblue)Integrations(List|Create|Retrieve|PartialUpdate|Destroy)$/
+  );
+  if (formProviderMatch) {
+    const [, rawProvider, suffix] = formProviderMatch;
+    const provider = rawProvider === "Sendinblue" ? "brevo" : rawProvider.toLowerCase();
+    return `${integrationActionNames[suffix]}_form_${provider}_integration${suffix === "List" ? "s" : ""}`;
+  }
+
+  const leadMatch = operationId.match(
+    /^leadEnrichments(List|Create|Retrieve|PartialUpdate|Destroy)$/
+  );
+  if (leadMatch) {
+    const action = integrationActionNames[leadMatch[1]];
+    return `${action}_lead_enrichment${leadMatch[1] === "List" ? "s" : ""}`;
+  }
+  if (operationId === "leadEnrichmentsEnrichableFieldsList") {
+    return "list_lead_enrichment_fields";
+  }
+
+  const whatsappMatch = operationId.match(
+    /^whatsapp(Campaigns|Templates)(List|Create|Retrieve|PartialUpdate|Destroy)$/
+  );
+  if (whatsappMatch) {
+    const [, resource, suffix] = whatsappMatch;
+    const action = integrationActionNames[suffix];
+    const noun = resource === "Campaigns" ? "whatsapp_campaign" : "whatsapp_template";
+    return `${action}_${noun}${suffix === "List" ? "s" : ""}`;
+  }
+  if (operationId === "whatsappTemplatesApprovalRetrieve") {
+    return "get_whatsapp_template_approval";
+  }
+  if (operationId === "whatsappTemplatesApprovalCreate") {
+    return "submit_whatsapp_template_approval";
+  }
+
+  return camelToSnake(operationId);
+}
+
+function buildIncludedOperationMcpMetadata(operation, method) {
+  const methodToken = method.toLowerCase();
+  const readOnly = methodToken === "get";
+  const destructive = methodToken === "delete";
+  const toolName = integrationToolName(operation.operationId);
+  return {
+    tool_name: toolName,
+    aliases: [operation.operationId, camelToSnake(operation.operationId)],
+    intent: operation.summary || `Use the Formaloo ${toolName} integration operation.`,
+    requires_workspace: hasHeaderParameter(operation, "x-workspace"),
+    read_only: readOnly,
+    destructive,
+    idempotent: readOnly || destructive || methodToken === "patch",
+    result_path: "data",
+    user_data: false,
+    requires_confirmation: !readOnly,
+    auth: buildMcpAuthMetadata(operation)
+  };
+}
+
+// The deployed v3 contract can lag behind formz_core annotations while the MCP
+// backfill is still needed. Keep this narrow compatibility repair until the
+// upstream operation publishes its serializer-backed response schema.
+function repairIncludedOperationContract(openapiSpec, operation) {
+  if (operation.operationId !== "leadEnrichmentsEnrichableFieldsList") {
+    return;
+  }
+
+  const response = operation.responses?.["200"];
+  const hasSchema = Object.values(response?.content ?? {}).some((media) => media?.schema);
+  if (hasSchema) {
+    return;
+  }
+
+  operation.responses = {
+    ...(operation.responses ?? {}),
+    "200": {
+      ...(response ?? {}),
+      description: "Provider field catalog for lead-enrichment mappings.",
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              company: {
+                type: "array",
+                items: { $ref: "#/components/schemas/LeadEnrichmentEnrichableField" }
+              },
+              people: {
+                type: "array",
+                items: { $ref: "#/components/schemas/LeadEnrichmentEnrichableField" }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  openapiSpec.components ??= {};
+  openapiSpec.components.schemas ??= {};
+  openapiSpec.components.schemas.LeadEnrichmentEnrichableField ??= {
+    type: "object",
+    properties: {
+      key: {
+        type: "string",
+        description: "Canonical provider key to store as a mapped_fields value."
+      },
+      display_name: {
+        type: "string",
+        description: "Human-readable label for the enrichment destination."
+      }
+    },
+    required: ["key", "display_name"]
+  };
+}
+
 function setResponseExamples(operation, examplesByStatus) {
   for (const [statusCode, examples] of Object.entries(examplesByStatus ?? {})) {
     const response = operation.responses?.[statusCode];
@@ -2017,6 +2175,11 @@ function enrichMcpOperations(openapiSpec) {
         continue;
       }
 
+      if (includedOperationIds.has(operation.operationId)) {
+        repairIncludedOperationContract(openapiSpec, operation);
+        operation["x-formaloo-mcp"] = buildIncludedOperationMcpMetadata(operation, method);
+      }
+
       const descriptionFix = localDescriptionFixes[operation.operationId];
       if (descriptionFix) {
         operation.summary = descriptionFix.summary;
@@ -2065,9 +2228,11 @@ for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
     }
 
     const methodToken = method.toLowerCase();
-    const excludedByMcpScope =
-      pathExcluded || shouldExcludeByService(pathKey, method, operation) || operationHasExcludedTag(operation);
     const operationId = getOperationId(operation);
+    const explicitlyRetained = operationId !== null && retainedOperationIds.has(operationId);
+    const excludedByMcpScope =
+      !explicitlyRetained &&
+      (pathExcluded || shouldExcludeByService(pathKey, method, operation) || operationHasExcludedTag(operation));
 
     if (methodToken === "patch" && !excludedByMcpScope) {
       mcpScopedPatchRecords.push({ operationId, pathKey });

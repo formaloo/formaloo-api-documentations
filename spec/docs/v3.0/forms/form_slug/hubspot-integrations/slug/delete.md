@@ -1,4 +1,4 @@
-Deletes the specified form hubspot integration.
+Deletes the form-level HubSpot mapping. This does not uninstall the HubSpot catalog app or revoke the user's HubSpot connection.
 
 ## Behavior
 

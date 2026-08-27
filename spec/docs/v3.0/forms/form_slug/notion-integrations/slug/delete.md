@@ -1,4 +1,4 @@
-Deletes the specified form notion integration.
+Deletes the form-level Notion mapping. This does not uninstall the catalog app, disconnect the Notion workspace, or delete the Notion database.
 
 ## Behavior
 

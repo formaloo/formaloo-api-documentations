@@ -1,4 +1,6 @@
-Deletes the specified user installed integration app retrieve.
+Uninstalls the requested integration app for the authenticated profile.
+
+Uninstalling removes the catalog installation record. Do not assume it revokes credentials at the external provider or removes every provider-specific configuration; inspect those resources separately when performing a full disconnect.
 
 ## Behavior
 
