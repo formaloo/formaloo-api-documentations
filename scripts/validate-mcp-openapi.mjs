@@ -135,6 +135,65 @@ function hasUsable2xxSchema(operation) {
   return false;
 }
 
+function validateIntegrationContracts() {
+  const mappingRefs = {
+    FormHubspotIntegrationRequest: "#/components/schemas/FormalooHubspotMappedFields",
+    FormMailchimpIntegrationRequest: "#/components/schemas/FormalooMailchimpMappedFields",
+    FormNetsuiteIntegrationRequest: "#/components/schemas/FormalooNetsuiteMappedFields",
+    FormNotionIntegrationRequest: "#/components/schemas/FormalooNotionMappedFields",
+    FormSendinblueIntegrationRequest: "#/components/schemas/FormalooBrevoMappedFields",
+    LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
+  };
+  for (const [schemaName, expectedRef] of Object.entries(mappingRefs)) {
+    const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+    if (actualRef !== expectedRef) {
+      errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}; found ${actualRef || "no provider-specific schema"}.`);
+    }
+  }
+  for (const schemaName of [
+    "FormMailchimpIntegrationRequest",
+    "PatchedFormMailchimpIntegrationRequest",
+    "LeadEnrichmentIntegrationRequest"
+  ]) {
+    if (!spec.components?.schemas?.[schemaName]?.required?.includes("mapped_fields")) {
+      errors.push(`${schemaName} must require mapped_fields to match backend validation.`);
+    }
+  }
+
+  const discoveryTools = {
+    hubspotIntegrationsPropertiesRetrieve: "list_hubspot_properties",
+    mailchimpIntegrationsListsRetrieve: "list_mailchimp_audiences",
+    mailchimpIntegrationsListsMergeFieldsRetrieve: "list_mailchimp_merge_fields",
+    netsuiteIntegrationsMetadataRetrieve: "list_netsuite_metadata",
+    notionWorkspacesNotionDatabasesRetrieve: "list_notion_databases",
+    sendinblueIntegrationsAttributesRetrieve: "list_brevo_attributes",
+    sendinblueIntegrationsListsRetrieve: "list_brevo_lists"
+  };
+  for (const [operationId, toolName] of Object.entries(discoveryTools)) {
+    const operation = operations.get(operationId)?.operation;
+    if (!operation) {
+      errors.push(`Integration discovery operation ${operationId} is missing.`);
+      continue;
+    }
+    if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
+      errors.push(`${operationId} must expose deterministic tool name ${toolName}.`);
+    }
+    if (!hasUsable2xxSchema(operation)) {
+      errors.push(`${operationId} must expose a typed 2xx provider-metadata response.`);
+    }
+  }
+
+  for (const operationId of [
+    "whatsappConnectionRetrieve",
+    "whatsappConnectionDestroy",
+    "whatsappConnectionRedirectUrlRetrieve"
+  ]) {
+    if (operations.has(operationId)) {
+      errors.push(`${operationId} must remain excluded until its active_business vs x-workspace wire contract is reconciled.`);
+    }
+  }
+}
+
 function hasResponseExample(operation) {
   for (const response of Object.values(operation.responses ?? {})) {
     if (!response || typeof response !== "object") {
@@ -563,6 +622,7 @@ validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
 validateTypedHelperSchemas();
+validateIntegrationContracts();
 
 for (const operationId of coreOperationIds) {
   validateRequiredOperation(operationId, "Required MCP core operation");

@@ -49,6 +49,49 @@ for (const pattern of introDisallowedPatterns) {
   }
 }
 
+const integrationMappingRefs = {
+  FormHubspotIntegrationRequest: "#/components/schemas/FormalooHubspotMappedFields",
+  FormMailchimpIntegrationRequest: "#/components/schemas/FormalooMailchimpMappedFields",
+  FormNetsuiteIntegrationRequest: "#/components/schemas/FormalooNetsuiteMappedFields",
+  FormNotionIntegrationRequest: "#/components/schemas/FormalooNotionMappedFields",
+  FormSendinblueIntegrationRequest: "#/components/schemas/FormalooBrevoMappedFields",
+  LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
+};
+for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) {
+  const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+  if (actualRef !== expectedRef) {
+    errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}.`);
+  }
+}
+
+const integrationDiscoveryOperationIds = new Set([
+  "hubspotIntegrationsPropertiesRetrieve",
+  "mailchimpIntegrationsListsRetrieve",
+  "mailchimpIntegrationsListsMergeFieldsRetrieve",
+  "netsuiteIntegrationsMetadataRetrieve",
+  "notionWorkspacesNotionDatabasesRetrieve",
+  "sendinblueIntegrationsAttributesRetrieve",
+  "sendinblueIntegrationsListsRetrieve"
+]);
+const foundIntegrationDiscoveryOperations = new Set();
+for (const pathItem of Object.values(spec.paths ?? {})) {
+  for (const operation of Object.values(pathItem ?? {})) {
+    if (!integrationDiscoveryOperationIds.has(operation?.operationId)) continue;
+    foundIntegrationDiscoveryOperations.add(operation.operationId);
+    const hasTypedSuccess = Object.entries(operation.responses ?? {}).some(([statusCode, response]) =>
+      /^2/u.test(statusCode) && Object.values(response?.content ?? {}).some((media) => media?.schema)
+    );
+    if (!hasTypedSuccess) {
+      errors.push(`${operation.operationId} must expose a typed provider-metadata response.`);
+    }
+  }
+}
+for (const operationId of integrationDiscoveryOperationIds) {
+  if (!foundIntegrationDiscoveryOperations.has(operationId)) {
+    errors.push(`Integration discovery operation ${operationId} is missing from the public contract.`);
+  }
+}
+
 const logicArgumentTypeEnum =
   spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
 const expectedLogicArgumentTypes = [

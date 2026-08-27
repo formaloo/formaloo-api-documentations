@@ -1865,9 +1865,13 @@ const integrationCatalogToolNames = {
   integrationAppsInstalledAppRetrieve: "get_installed_integration_app",
   integrationAppsInstalledAppDestroy: "uninstall_integration_app",
   integrationTagsList: "list_integration_tags",
-  whatsappConnectionRetrieve: "get_whatsapp_connection",
-  whatsappConnectionDestroy: "disconnect_whatsapp_connection",
-  whatsappConnectionRedirectUrlRetrieve: "get_whatsapp_connection_redirect_url"
+  hubspotIntegrationsPropertiesRetrieve: "list_hubspot_properties",
+  mailchimpIntegrationsListsRetrieve: "list_mailchimp_audiences",
+  mailchimpIntegrationsListsMergeFieldsRetrieve: "list_mailchimp_merge_fields",
+  netsuiteIntegrationsMetadataRetrieve: "list_netsuite_metadata",
+  notionWorkspacesNotionDatabasesRetrieve: "list_notion_databases",
+  sendinblueIntegrationsAttributesRetrieve: "list_brevo_attributes",
+  sendinblueIntegrationsListsRetrieve: "list_brevo_lists",
 };
 
 const integrationActionNames = {
