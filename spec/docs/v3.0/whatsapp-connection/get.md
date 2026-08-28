@@ -1,3 +1,3 @@
-**Work in progress:** the WhatsApp connection contract is not stable enough for API automation. The current generated schema and the dashboard implementation do not yet agree on workspace selection or response envelopes.
+Retrieves the WhatsApp Business connection for the workspace selected by `active_business`. Workspace administrator access is required. The response payload is under `data.whatsapp_connection`; a workspace without a connection returns `404`.
 
-Do not infer whether this endpoint should use `active_business` or `x-workspace`, and do not use it as an MCP setup or troubleshooting step until the deployed contract is finalized. Verify connection readiness through the dashboard/provider onboarding flow. Stable WhatsApp template, approval, and campaign operations are documented separately.
+Use `status` and `status_detail` to troubleshoot setup: `active` means the sender connection is ready; `connecting` or `pending` means provider onboarding has not completed; `error` includes a human-readable reason. Campaigns additionally require an approved template and verified recipients. This connection is separate from installing the Send WhatsApp catalog app.

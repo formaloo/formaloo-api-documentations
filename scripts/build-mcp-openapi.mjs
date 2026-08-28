@@ -1872,6 +1872,9 @@ const integrationCatalogToolNames = {
   notionWorkspacesNotionDatabasesRetrieve: "list_notion_databases",
   sendinblueIntegrationsAttributesRetrieve: "list_brevo_attributes",
   sendinblueIntegrationsListsRetrieve: "list_brevo_lists",
+  whatsappConnectionRetrieve: "get_whatsapp_connection",
+  whatsappConnectionDestroy: "disconnect_whatsapp_connection",
+  whatsappConnectionRedirectUrlRetrieve: "get_whatsapp_signup_url",
 };
 
 const integrationActionNames = {
@@ -1939,6 +1942,10 @@ function buildIncludedOperationMcpMetadata(operation, method) {
   const readOnly = methodToken === "get";
   const destructive = methodToken === "delete";
   const toolName = integrationToolName(operation.operationId);
+  const resultPaths = {
+    whatsappConnectionRetrieve: "data.data.whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "data.data.whatsapp_redirect"
+  };
   return {
     tool_name: toolName,
     aliases: [operation.operationId, camelToSnake(operation.operationId)],
@@ -1947,7 +1954,7 @@ function buildIncludedOperationMcpMetadata(operation, method) {
     read_only: readOnly,
     destructive,
     idempotent: readOnly || destructive || methodToken === "patch",
-    result_path: "data",
+    result_path: resultPaths[operation.operationId] ?? "data",
     user_data: false,
     requires_confirmation: !readOnly,
     auth: buildMcpAuthMetadata(operation)

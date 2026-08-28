@@ -53,6 +53,9 @@
     "leadEnrichmentsRetrieve",
     "leadEnrichmentsPartialUpdate",
     "leadEnrichmentsDestroy",
+    "whatsappConnectionRetrieve",
+    "whatsappConnectionDestroy",
+    "whatsappConnectionRedirectUrlRetrieve",
     "whatsappCampaignsList",
     "whatsappCampaignsCreate",
     "whatsappCampaignsRetrieve",
@@ -117,9 +120,7 @@
       "/profiles/{type}/login/",
       "/profiles/{type}/request-login/",
       "/prompt-categories/{tagSlug}/examples/",
-      "/usage/",
-      "/whatsapp-connection/",
-      "/whatsapp-connection/redirect-url/"
+      "/usage/"
     ]
   },
   "approvedExcludedPutOperationIds": [],

@@ -2049,6 +2049,97 @@ function enrichRowSchemas() {
       };
     }
   }
+
+  spec.components.schemas.FormalooWhatsAppConnectionData = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      whatsapp_connection: { $ref: "#/components/schemas/BusinessWhatsAppConnection" }
+    },
+    required: ["whatsapp_connection"]
+  };
+  if (spec.components.schemas.BusinessWhatsAppConnection?.properties?.status) {
+    spec.components.schemas.BusinessWhatsAppConnection.properties.status = {
+      ...spec.components.schemas.BusinessWhatsAppConnection.properties.status,
+      type: "string",
+      enum: ["connecting", "pending", "active", "error"],
+      description: "Backend-reported sender connection readiness. Active means the sender connection is ready; campaign template and recipient prerequisites are checked separately."
+    };
+  }
+  spec.components.schemas.FormalooWhatsAppRedirectData = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      whatsapp_redirect: { $ref: "#/components/schemas/WhatsAppRedirectUrl" }
+    },
+    required: ["whatsapp_redirect"]
+  };
+
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    for (const operation of Object.values(pathItem ?? {})) {
+      if (!operation?.operationId?.startsWith("whatsappConnection")) continue;
+
+      operation.responses ??= {};
+      operation.responses["403"] ??= {
+        description: "The caller does not have administrator access to the selected workspace."
+      };
+
+      if (operation.operationId === "whatsappConnectionRetrieve") {
+        operation.responses["404"] ??= { $ref: "#/components/responses/NotFound" };
+        operation.responses["200"] = {
+          description: "Returns the current connection under whatsapp_connection. A missing connection returns 404.",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FormalooWhatsAppConnectionData" }
+            }
+          }
+        };
+      }
+
+      if (operation.operationId === "whatsappConnectionRedirectUrlRetrieve") {
+        const queryParameters = [
+          {
+            in: "query",
+            name: "next",
+            required: true,
+            schema: { type: "string", format: "uri" },
+            description: "Absolute HTTP(S) return URL on a host allowed by the Formaloo WhatsApp connection service."
+          },
+          {
+            in: "query",
+            name: "phone_number",
+            required: true,
+            schema: { type: "string", pattern: "^\\+[0-9]{8,15}$" },
+            description: "WhatsApp sender phone number in E.164 format, for example +15017122661."
+          }
+        ];
+        operation.parameters ??= [];
+        for (const parameter of queryParameters) {
+          const index = operation.parameters.findIndex(
+            (candidate) => candidate?.in === "query" && candidate?.name === parameter.name
+          );
+          if (index >= 0) operation.parameters[index] = parameter;
+          else operation.parameters.push(parameter);
+        }
+        operation.responses["200"] = {
+          description: "Returns the hosted signup URL under whatsapp_redirect.redirect_url.",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FormalooWhatsAppRedirectData" }
+            }
+          }
+        };
+      }
+
+      if (operation.operationId === "whatsappConnectionDestroy") {
+        operation.responses["404"] ??= { $ref: "#/components/responses/NotFound" };
+        operation.responses["200"] = {
+          description: "Connection disconnected successfully."
+        };
+        delete operation.responses["204"];
+      }
+    }
+  }
 }
 
 function upsertQueryParameter(operation, parameter) {

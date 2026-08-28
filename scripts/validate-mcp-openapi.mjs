@@ -195,14 +195,70 @@ function validateIntegrationContracts() {
     }
   }
 
-  for (const operationId of [
-    "whatsappConnectionRetrieve",
-    "whatsappConnectionDestroy",
-    "whatsappConnectionRedirectUrlRetrieve"
-  ]) {
-    if (operations.has(operationId)) {
-      errors.push(`${operationId} must remain excluded until its active_business vs x-workspace wire contract is reconciled.`);
+  const whatsappConnectionTools = {
+    whatsappConnectionRetrieve: "get_whatsapp_connection",
+    whatsappConnectionDestroy: "disconnect_whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "get_whatsapp_signup_url"
+  };
+  for (const [operationId, toolName] of Object.entries(whatsappConnectionTools)) {
+    const operation = operations.get(operationId)?.operation;
+    if (!operation) {
+      errors.push(`WhatsApp connection operation ${operationId} is missing.`);
+      continue;
     }
+    if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
+      errors.push(`${operationId} must expose deterministic tool name ${toolName}.`);
+    }
+    if (operationId !== "whatsappConnectionDestroy" && !hasUsable2xxSchema(operation)) {
+      errors.push(`${operationId} must expose a typed 2xx response.`);
+    }
+  }
+
+  const redirectOperation = operations.get("whatsappConnectionRedirectUrlRetrieve")?.operation;
+  for (const parameterName of ["active_business", "next", "phone_number"]) {
+    const parameter = redirectOperation?.parameters?.find(
+      (candidate) => candidate?.in === "query" && candidate?.name === parameterName
+    );
+    if (!parameter?.required) {
+      errors.push(`whatsappConnectionRedirectUrlRetrieve must require query parameter ${parameterName}.`);
+    }
+  }
+
+  const expectedPayloadProperties = {
+    whatsappConnectionRetrieve: "whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "whatsapp_redirect"
+  };
+  for (const [operationId, propertyName] of Object.entries(expectedPayloadProperties)) {
+    const operation = operations.get(operationId)?.operation;
+    const responseSchema = operation?.responses?.["200"]?.content?.["application/json"]?.schema;
+    const envelope = resolveSchema(responseSchema);
+    const payload = resolveSchema(envelope?.properties?.data);
+    if (!payload?.properties?.[propertyName]) {
+      errors.push(`${operationId} must preserve deployed data.${propertyName} response nesting.`);
+    }
+  }
+
+  const destroyOperation = operations.get("whatsappConnectionDestroy")?.operation;
+  if (!destroyOperation?.responses?.["200"] || destroyOperation?.responses?.["204"]) {
+    errors.push("whatsappConnectionDestroy must expose the deployed 200 success response, not 204.");
+  }
+  if (!operations.get("whatsappConnectionRetrieve")?.operation?.responses?.["404"] || !destroyOperation?.responses?.["404"]) {
+    errors.push("WhatsApp connection retrieve and disconnect operations must expose 404 missing-connection semantics.");
+  }
+  const expectedResultPaths = {
+    whatsappConnectionRetrieve: "data.data.whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "data.data.whatsapp_redirect"
+  };
+  for (const [operationId, resultPath] of Object.entries(expectedResultPaths)) {
+    if (operations.get(operationId)?.operation?.["x-formaloo-mcp"]?.result_path !== resultPath) {
+      errors.push(`${operationId} must expose deterministic result_path ${resultPath}.`);
+    }
+  }
+  if (!sameMembers(
+    spec.components?.schemas?.BusinessWhatsAppConnection?.properties?.status?.enum,
+    ["connecting", "pending", "active", "error"]
+  )) {
+    errors.push("BusinessWhatsAppConnection.status must exactly enumerate connecting, pending, active, and error.");
   }
 }
 
