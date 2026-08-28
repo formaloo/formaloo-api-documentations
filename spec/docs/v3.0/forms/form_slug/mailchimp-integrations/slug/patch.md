@@ -1,1 +1,1 @@
-Partially updates an existing edit form mailchimp integration.
+Updates a form-level Mailchimp mapping. Every PATCH must resend `mapped_fields` with a complete email-field mapping, including list-only changes; omitting it fails validation. Retrieve the current integration and the audience's merge fields first because the submitted mapping replaces the saved mapping object.

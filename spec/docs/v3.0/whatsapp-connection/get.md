@@ -1,0 +1,3 @@
+Retrieves the WhatsApp Business connection for the workspace selected by `active_business`. Workspace administrator access is required. The response payload is under `data.whatsapp_connection`; a workspace without a connection returns `404`.
+
+Use `status` and `status_detail` to troubleshoot setup: `active` means the sender connection is ready; `connecting` or `pending` means provider onboarding has not completed; `error` includes a human-readable reason. Campaigns additionally require an approved template and verified recipients. This connection is separate from installing the Send WhatsApp catalog app.

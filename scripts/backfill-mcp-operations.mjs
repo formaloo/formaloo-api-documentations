@@ -7,10 +7,12 @@ import path from "node:path";
 // v3.0 bundle. Every backfilled operation is logged; when the upstream
 // mcp-1.0 contract exposes them, this script becomes a no-op.
 //
-// Keep this list in sync with the required operation lists in
+// Keep this built-in list in sync with the required operation lists in
 // scripts/validate-mcp-openapi.mjs (coreOperationIds,
-// requiredMcpReadyOperationIds, requiredPatchUpdateOperationIds).
-const requiredOperationIds = new Set([
+// requiredMcpReadyOperationIds, requiredPatchUpdateOperationIds). Additional
+// policy compatibility operations live in spec/mcp-openapi-settings.json so
+// backfill, filtering, and validation share one source of truth.
+const baseRequiredOperationIds = [
   "profileRetrieve",
   "businessesList",
   "businessesRetrieve",
@@ -31,11 +33,25 @@ const requiredOperationIds = new Set([
   "themesPartialUpdate",
   "fieldsPartialUpdate",
   "formFieldsPartialUpdate"
-]);
+];
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const mergedSpecPath = path.join(rootDir, "artifacts", "intermediate", "openapi-merged.mcp.raw.json");
 const fallbackBundlePath = path.join(rootDir, "spec", "formz-bundled.json");
+const settingsPath = path.join(rootDir, "spec", "mcp-openapi-settings.json");
+
+const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
+const configuredRequiredOperationIds = Array.isArray(settings.requiredOperationIds)
+  ? settings.requiredOperationIds.map((value) => String(value).trim()).filter(Boolean)
+  : [];
+const includedOperationIds = Array.isArray(settings.includeOperationIds)
+  ? settings.includeOperationIds.map((value) => String(value).trim()).filter(Boolean)
+  : [];
+const requiredOperationIds = new Set([
+  ...baseRequiredOperationIds,
+  ...configuredRequiredOperationIds,
+  ...includedOperationIds
+]);
 
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
 

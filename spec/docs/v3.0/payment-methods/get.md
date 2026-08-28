@@ -1,1 +1,1 @@
-Retrieves a list of payment method.
+Lists saved Formaloo payment methods. Use this to identify an existing method and verify its `gateway` and `active` state before creating or updating provider configuration. Treat returned credential fields as secrets and do not echo them.

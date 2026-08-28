@@ -49,6 +49,120 @@ for (const pattern of introDisallowedPatterns) {
   }
 }
 
+const integrationMappingRefs = {
+  FormHubspotIntegrationRequest: "#/components/schemas/FormalooHubspotMappedFields",
+  FormMailchimpIntegrationRequest: "#/components/schemas/FormalooMailchimpMappedFields",
+  FormNetsuiteIntegrationRequest: "#/components/schemas/FormalooNetsuiteMappedFields",
+  FormNotionIntegrationRequest: "#/components/schemas/FormalooNotionMappedFields",
+  FormSendinblueIntegrationRequest: "#/components/schemas/FormalooBrevoMappedFields",
+  LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
+};
+for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) {
+  const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+  if (actualRef !== expectedRef) {
+    errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}.`);
+  }
+}
+
+const expectedIntegrationAppTypes = [
+  "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
+  "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
+  "active_campaign", "webhook", "email_template", "email_campaign",
+  "pdf_generator", "make", "calendly", "recurring_submission",
+  "lead_enrichment", "send_whatsapp"
+];
+const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
+if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
+  errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+}
+
+const whatsappConnectionOperations = new Set([
+  "whatsappConnectionRetrieve",
+  "whatsappConnectionDestroy",
+  "whatsappConnectionRedirectUrlRetrieve"
+]);
+const foundWhatsappConnectionOperations = new Map();
+for (const pathItem of Object.values(spec.paths ?? {})) {
+  for (const operation of Object.values(pathItem ?? {})) {
+    if (!whatsappConnectionOperations.has(operation?.operationId)) continue;
+    foundWhatsappConnectionOperations.set(operation.operationId, operation);
+    if (/work[ -]?in[ -]?progress|\bWIP\b/i.test(operation.description ?? "")) {
+      errors.push(`${operation.operationId} must not be documented as work in progress.`);
+    }
+  }
+}
+for (const operationId of whatsappConnectionOperations) {
+  if (!foundWhatsappConnectionOperations.has(operationId)) {
+    errors.push(`WhatsApp connection operation ${operationId} is missing from the public contract.`);
+  }
+}
+const whatsappRedirectOperation = foundWhatsappConnectionOperations.get("whatsappConnectionRedirectUrlRetrieve");
+for (const parameterName of ["active_business", "next", "phone_number"]) {
+  const parameter = whatsappRedirectOperation?.parameters?.find(
+    (candidate) => candidate?.in === "query" && candidate?.name === parameterName
+  );
+  if (!parameter?.required) {
+    errors.push(`whatsappConnectionRedirectUrlRetrieve must require query parameter ${parameterName}.`);
+  }
+}
+if (
+  whatsappRedirectOperation?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref !==
+  "#/components/schemas/FormalooWhatsAppRedirectData"
+) {
+  errors.push("whatsappConnectionRedirectUrlRetrieve must document data.whatsapp_redirect.redirect_url.");
+}
+const whatsappRetrieveOperation = foundWhatsappConnectionOperations.get("whatsappConnectionRetrieve");
+if (
+  whatsappRetrieveOperation?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref !==
+  "#/components/schemas/FormalooWhatsAppConnectionData"
+) {
+  errors.push("whatsappConnectionRetrieve must document data.whatsapp_connection.");
+}
+if (!whatsappRetrieveOperation?.responses?.["404"]) {
+  errors.push("whatsappConnectionRetrieve must document 404 when no connection exists.");
+}
+if (!sameMembers(
+  spec.components?.schemas?.BusinessWhatsAppConnection?.properties?.status?.enum,
+  ["connecting", "pending", "active", "error"]
+)) {
+  errors.push("BusinessWhatsAppConnection.status must exactly enumerate connecting, pending, active, and error.");
+}
+const whatsappDestroyOperation = foundWhatsappConnectionOperations.get("whatsappConnectionDestroy");
+if (!whatsappDestroyOperation?.responses?.["200"] || whatsappDestroyOperation?.responses?.["204"]) {
+  errors.push("whatsappConnectionDestroy must document the deployed 200 success response, not 204.");
+}
+if (!whatsappDestroyOperation?.responses?.["404"]) {
+  errors.push("whatsappConnectionDestroy must document 404 when no connection exists.");
+}
+
+const integrationDiscoveryOperationIds = new Set([
+  "hubspotIntegrationsPropertiesRetrieve",
+  "mailchimpIntegrationsListsRetrieve",
+  "mailchimpIntegrationsListsMergeFieldsRetrieve",
+  "netsuiteIntegrationsMetadataRetrieve",
+  "notionWorkspacesNotionDatabasesRetrieve",
+  "sendinblueIntegrationsAttributesRetrieve",
+  "sendinblueIntegrationsListsRetrieve"
+]);
+const foundIntegrationDiscoveryOperations = new Set();
+for (const pathItem of Object.values(spec.paths ?? {})) {
+  for (const operation of Object.values(pathItem ?? {})) {
+    if (!integrationDiscoveryOperationIds.has(operation?.operationId)) continue;
+    foundIntegrationDiscoveryOperations.add(operation.operationId);
+    const hasTypedSuccess = Object.entries(operation.responses ?? {}).some(([statusCode, response]) =>
+      /^2/u.test(statusCode) && Object.values(response?.content ?? {}).some((media) => media?.schema)
+    );
+    if (!hasTypedSuccess) {
+      errors.push(`${operation.operationId} must expose a typed provider-metadata response.`);
+    }
+  }
+}
+for (const operationId of integrationDiscoveryOperationIds) {
+  if (!foundIntegrationDiscoveryOperations.has(operationId)) {
+    errors.push(`Integration discovery operation ${operationId} is missing from the public contract.`);
+  }
+}
+
 const logicArgumentTypeEnum =
   spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
 const expectedLogicArgumentTypes = [

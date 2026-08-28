@@ -72,6 +72,8 @@ const methodExceptions = new Map(
     new Set(asStringArray(operationIds))
   ])
 );
+const requiredOperationIds = new Set(asStringArray(settings.requiredOperationIds));
+const includedOperationIds = new Set(asStringArray(settings.includeOperationIds));
 
 function asStringArray(value) {
   if (!Array.isArray(value)) {
@@ -131,6 +133,133 @@ function hasUsable2xxSchema(operation) {
   }
 
   return false;
+}
+
+function validateIntegrationContracts() {
+  const expectedIntegrationAppTypes = [
+    "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
+    "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
+    "active_campaign", "webhook", "email_template", "email_campaign",
+    "pdf_generator", "make", "calendly", "recurring_submission",
+    "lead_enrichment", "send_whatsapp"
+  ];
+  const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
+  if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
+    errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+  }
+
+  const mappingRefs = {
+    FormHubspotIntegrationRequest: "#/components/schemas/FormalooHubspotMappedFields",
+    FormMailchimpIntegrationRequest: "#/components/schemas/FormalooMailchimpMappedFields",
+    FormNetsuiteIntegrationRequest: "#/components/schemas/FormalooNetsuiteMappedFields",
+    FormNotionIntegrationRequest: "#/components/schemas/FormalooNotionMappedFields",
+    FormSendinblueIntegrationRequest: "#/components/schemas/FormalooBrevoMappedFields",
+    LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
+  };
+  for (const [schemaName, expectedRef] of Object.entries(mappingRefs)) {
+    const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+    if (actualRef !== expectedRef) {
+      errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}; found ${actualRef || "no provider-specific schema"}.`);
+    }
+  }
+  for (const schemaName of [
+    "FormMailchimpIntegrationRequest",
+    "PatchedFormMailchimpIntegrationRequest",
+    "LeadEnrichmentIntegrationRequest"
+  ]) {
+    if (!spec.components?.schemas?.[schemaName]?.required?.includes("mapped_fields")) {
+      errors.push(`${schemaName} must require mapped_fields to match backend validation.`);
+    }
+  }
+
+  const discoveryTools = {
+    hubspotIntegrationsPropertiesRetrieve: "list_hubspot_properties",
+    mailchimpIntegrationsListsRetrieve: "list_mailchimp_audiences",
+    mailchimpIntegrationsListsMergeFieldsRetrieve: "list_mailchimp_merge_fields",
+    netsuiteIntegrationsMetadataRetrieve: "list_netsuite_metadata",
+    notionWorkspacesNotionDatabasesRetrieve: "list_notion_databases",
+    sendinblueIntegrationsAttributesRetrieve: "list_brevo_attributes",
+    sendinblueIntegrationsListsRetrieve: "list_brevo_lists"
+  };
+  for (const [operationId, toolName] of Object.entries(discoveryTools)) {
+    const operation = operations.get(operationId)?.operation;
+    if (!operation) {
+      errors.push(`Integration discovery operation ${operationId} is missing.`);
+      continue;
+    }
+    if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
+      errors.push(`${operationId} must expose deterministic tool name ${toolName}.`);
+    }
+    if (!hasUsable2xxSchema(operation)) {
+      errors.push(`${operationId} must expose a typed 2xx provider-metadata response.`);
+    }
+  }
+
+  const whatsappConnectionTools = {
+    whatsappConnectionRetrieve: "get_whatsapp_connection",
+    whatsappConnectionDestroy: "disconnect_whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "get_whatsapp_signup_url"
+  };
+  for (const [operationId, toolName] of Object.entries(whatsappConnectionTools)) {
+    const operation = operations.get(operationId)?.operation;
+    if (!operation) {
+      errors.push(`WhatsApp connection operation ${operationId} is missing.`);
+      continue;
+    }
+    if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
+      errors.push(`${operationId} must expose deterministic tool name ${toolName}.`);
+    }
+    if (operationId !== "whatsappConnectionDestroy" && !hasUsable2xxSchema(operation)) {
+      errors.push(`${operationId} must expose a typed 2xx response.`);
+    }
+  }
+
+  const redirectOperation = operations.get("whatsappConnectionRedirectUrlRetrieve")?.operation;
+  for (const parameterName of ["active_business", "next", "phone_number"]) {
+    const parameter = redirectOperation?.parameters?.find(
+      (candidate) => candidate?.in === "query" && candidate?.name === parameterName
+    );
+    if (!parameter?.required) {
+      errors.push(`whatsappConnectionRedirectUrlRetrieve must require query parameter ${parameterName}.`);
+    }
+  }
+
+  const expectedPayloadProperties = {
+    whatsappConnectionRetrieve: "whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "whatsapp_redirect"
+  };
+  for (const [operationId, propertyName] of Object.entries(expectedPayloadProperties)) {
+    const operation = operations.get(operationId)?.operation;
+    const responseSchema = operation?.responses?.["200"]?.content?.["application/json"]?.schema;
+    const envelope = resolveSchema(responseSchema);
+    const payload = resolveSchema(envelope?.properties?.data);
+    if (!payload?.properties?.[propertyName]) {
+      errors.push(`${operationId} must preserve deployed data.${propertyName} response nesting.`);
+    }
+  }
+
+  const destroyOperation = operations.get("whatsappConnectionDestroy")?.operation;
+  if (!destroyOperation?.responses?.["200"] || destroyOperation?.responses?.["204"]) {
+    errors.push("whatsappConnectionDestroy must expose the deployed 200 success response, not 204.");
+  }
+  if (!operations.get("whatsappConnectionRetrieve")?.operation?.responses?.["404"] || !destroyOperation?.responses?.["404"]) {
+    errors.push("WhatsApp connection retrieve and disconnect operations must expose 404 missing-connection semantics.");
+  }
+  const expectedResultPaths = {
+    whatsappConnectionRetrieve: "data.data.whatsapp_connection",
+    whatsappConnectionRedirectUrlRetrieve: "data.data.whatsapp_redirect"
+  };
+  for (const [operationId, resultPath] of Object.entries(expectedResultPaths)) {
+    if (operations.get(operationId)?.operation?.["x-formaloo-mcp"]?.result_path !== resultPath) {
+      errors.push(`${operationId} must expose deterministic result_path ${resultPath}.`);
+    }
+  }
+  if (!sameMembers(
+    spec.components?.schemas?.BusinessWhatsAppConnection?.properties?.status?.enum,
+    ["connecting", "pending", "active", "error"]
+  )) {
+    errors.push("BusinessWhatsAppConnection.status must exactly enumerate connecting, pending, active, and error.");
+  }
 }
 
 function hasResponseExample(operation) {
@@ -561,6 +690,7 @@ validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
 validateTypedHelperSchemas();
+validateIntegrationContracts();
 
 for (const operationId of coreOperationIds) {
   validateRequiredOperation(operationId, "Required MCP core operation");
@@ -570,12 +700,29 @@ for (const operationId of requiredMcpReadyOperationIds) {
   validateRequiredOperation(operationId, "Required MCP-ready operation");
 }
 
+for (const operationId of requiredOperationIds) {
+  validateRequiredOperation(operationId, "Required policy compatibility operation", {
+    requireExamples: false,
+    requireMcpMetadata: false
+  });
+}
+
+for (const operationId of includedOperationIds) {
+  validateRequiredOperation(operationId, "Explicitly included MCP operation", {
+    requireExamples: false
+  });
+}
+
 validateMethodExclusions();
 validatePutSettings();
 validatePatchFirstUpdates();
 validatePaymentMethodPutException();
 
-function validateRequiredOperation(operationId, label) {
+function validateRequiredOperation(
+  operationId,
+  label,
+  { requireExamples = true, requireMcpMetadata = true } = {}
+) {
   const record = operations.get(operationId);
   if (!record) {
     errors.push(`${label} ${operationId} is not present.`);
@@ -591,19 +738,23 @@ function validateRequiredOperation(operationId, label) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a description.`);
   }
 
-  if (!hasUsable2xxSchema(operation)) {
+  // Successful deletes intentionally return only the standard empty-data
+  // envelope, so the status contract is validated separately below.
+  if (method !== "delete" && !hasUsable2xxSchema(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a usable 2xx response schema.`);
   }
 
-  if (!hasResponseExample(operation)) {
+  if (requireExamples && !hasResponseExample(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a response example.`);
   }
 
-  if (["post", "put", "patch"].includes(method) && !hasRequestExample(operation)) {
+  if (requireExamples && ["post", "put", "patch"].includes(method) && !hasRequestExample(operation)) {
     errors.push(`${operationId} ${method.toUpperCase()} ${pathKey} must have a request example.`);
   }
 
-  validateMcpMetadata(operationId, operation);
+  if (requireMcpMetadata) {
+    validateMcpMetadata(operationId, operation);
+  }
 }
 
 function validateMethodExclusions() {
@@ -643,6 +794,12 @@ function validateMethodExclusions() {
 }
 
 function validatePutSettings() {
+  if (settings.requiredOperationIds !== undefined && !Array.isArray(settings.requiredOperationIds)) {
+    errors.push("requiredOperationIds must be an array.");
+  }
+  if (settings.includeOperationIds !== undefined && !Array.isArray(settings.includeOperationIds)) {
+    errors.push("includeOperationIds must be an array.");
+  }
   if (!Array.isArray(settings.approvedExcludedPutOperationIds)) {
     errors.push("approvedExcludedPutOperationIds must be an array.");
   }

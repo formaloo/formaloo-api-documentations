@@ -1,1 +1,3 @@
-Partially updates an existing edit form hubspot integration.
+Partially updates a form-level HubSpot mapping.
+
+Use saved Formaloo field slugs and current HubSpot property metadata. Retrieve both the integration and provider schema first rather than guessing identifiers. Historical-response sync is chosen when the integration is created and is not editable here.

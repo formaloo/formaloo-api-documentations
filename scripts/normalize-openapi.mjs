@@ -1642,10 +1642,28 @@ function enrichFieldCreateSchemasAndOperations() {
     }))
     .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
+  // Stable consumer-facing enum retained across upstream serializer naming
+  // changes. The form builder's generated enum may have a hash-derived name,
+  // which is unsuitable for MCP clients and documentation links.
+  spec.components.schemas.RatingFieldSubTypeEnum = {
+    type: "string",
+    enum: ["embeded", "like_dislike", "nps", "score"],
+    description:
+      "Rating subtype. `embeded` is the legacy API spelling for Star Rating / CSAT; use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
+  };
+
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
       ? createManualTypedFieldSchema(variant)
       : createTypedFieldSchema(variant);
+  }
+
+  const ratingSubType = spec.components.schemas.FormalooRatingFieldCreate
+    ?.allOf?.[1]?.properties?.sub_type;
+  if (ratingSubType) {
+    delete ratingSubType.type;
+    delete ratingSubType.enum;
+    ratingSubType.allOf = [{ $ref: "#/components/schemas/RatingFieldSubTypeEnum" }];
   }
 
   spec.components.schemas.FormalooFieldCreateRequest = {
@@ -2029,6 +2047,97 @@ function enrichRowSchemas() {
         nullable: true,
         description: "Additional response metadata returned with the row, such as integration results or computed values."
       };
+    }
+  }
+
+  spec.components.schemas.FormalooWhatsAppConnectionData = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      whatsapp_connection: { $ref: "#/components/schemas/BusinessWhatsAppConnection" }
+    },
+    required: ["whatsapp_connection"]
+  };
+  if (spec.components.schemas.BusinessWhatsAppConnection?.properties?.status) {
+    spec.components.schemas.BusinessWhatsAppConnection.properties.status = {
+      ...spec.components.schemas.BusinessWhatsAppConnection.properties.status,
+      type: "string",
+      enum: ["connecting", "pending", "active", "error"],
+      description: "Backend-reported sender connection readiness. Active means the sender connection is ready; campaign template and recipient prerequisites are checked separately."
+    };
+  }
+  spec.components.schemas.FormalooWhatsAppRedirectData = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      whatsapp_redirect: { $ref: "#/components/schemas/WhatsAppRedirectUrl" }
+    },
+    required: ["whatsapp_redirect"]
+  };
+
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    for (const operation of Object.values(pathItem ?? {})) {
+      if (!operation?.operationId?.startsWith("whatsappConnection")) continue;
+
+      operation.responses ??= {};
+      operation.responses["403"] ??= {
+        description: "The caller does not have administrator access to the selected workspace."
+      };
+
+      if (operation.operationId === "whatsappConnectionRetrieve") {
+        operation.responses["404"] ??= { $ref: "#/components/responses/NotFound" };
+        operation.responses["200"] = {
+          description: "Returns the current connection under whatsapp_connection. A missing connection returns 404.",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FormalooWhatsAppConnectionData" }
+            }
+          }
+        };
+      }
+
+      if (operation.operationId === "whatsappConnectionRedirectUrlRetrieve") {
+        const queryParameters = [
+          {
+            in: "query",
+            name: "next",
+            required: true,
+            schema: { type: "string", format: "uri" },
+            description: "Absolute HTTP(S) return URL on a host allowed by the Formaloo WhatsApp connection service."
+          },
+          {
+            in: "query",
+            name: "phone_number",
+            required: true,
+            schema: { type: "string", pattern: "^\\+[0-9]{8,15}$" },
+            description: "WhatsApp sender phone number in E.164 format, for example +15017122661."
+          }
+        ];
+        operation.parameters ??= [];
+        for (const parameter of queryParameters) {
+          const index = operation.parameters.findIndex(
+            (candidate) => candidate?.in === "query" && candidate?.name === parameter.name
+          );
+          if (index >= 0) operation.parameters[index] = parameter;
+          else operation.parameters.push(parameter);
+        }
+        operation.responses["200"] = {
+          description: "Returns the hosted signup URL under whatsapp_redirect.redirect_url.",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FormalooWhatsAppRedirectData" }
+            }
+          }
+        };
+      }
+
+      if (operation.operationId === "whatsappConnectionDestroy") {
+        operation.responses["404"] ??= { $ref: "#/components/responses/NotFound" };
+        operation.responses["200"] = {
+          description: "Connection disconnected successfully."
+        };
+        delete operation.responses["204"];
+      }
     }
   }
 }
@@ -2829,21 +2938,251 @@ function enrichFieldConfigSchemas() {
       };
     }
   }
+  for (const schemaName of [
+    "FormMailchimpIntegrationRequest",
+    "PatchedFormMailchimpIntegrationRequest",
+    "LeadEnrichmentIntegrationRequest"
+  ]) {
+    const schema = spec.components.schemas[schemaName];
+    if (schema?.properties?.mapped_fields) {
+      schema.required = [...new Set([...(schema.required ?? []), "mapped_fields"])];
+    }
+  }
 }
 
 function enrichIntegrationSchemas() {
-  spec.components.schemas.FormalooIntegrationMappedFields = {
+  const providerField = {
     type: "object",
     additionalProperties: true,
-    nullable: true,
-    description: "Field mapping configuration between Formaloo form fields and the external integration service fields. Keys are external field identifiers; values are Formaloo field slugs or mapping objects."
+    properties: {
+      name: { type: "string", description: "Provider field/property identifier returned by the corresponding discovery operation." },
+      type: { type: "string", description: "Provider field type returned by discovery. Do not infer it from the Formaloo field type." }
+    },
+    required: ["name", "type"]
   };
+
+  spec.components.schemas.FormalooProviderField = providerField;
+  spec.components.schemas.FormalooSourceDestinationFieldMapping = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      source_field: { type: "string", description: "Saved Formaloo form-field slug." },
+      destination_field: { $ref: "#/components/schemas/FormalooProviderField" }
+    },
+    required: ["source_field", "destination_field"]
+  };
+  spec.components.schemas.FormalooHubspotMappedFields = {
+    type: "object",
+    additionalProperties: false,
+    nullable: true,
+    description: "HubSpot mappings grouped by the supported object keys contacts, companies, and deals.",
+    properties: Object.fromEntries(["contacts", "companies", "deals"].map((name) => [name, {
+      type: "array",
+      items: { $ref: "#/components/schemas/FormalooSourceDestinationFieldMapping" }
+    }]))
+  };
+  spec.components.schemas.FormalooNetsuiteDestinationField = {
+    ...providerField,
+    properties: {
+      ...providerField.properties,
+      value_mappings: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description: "Optional Formaloo-to-NetSuite select value mapping."
+      }
+    }
+  };
+  spec.components.schemas.FormalooNetsuiteFieldMapping = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      source_field: { type: "string", description: "Saved Formaloo form-field slug." },
+      destination_field: { $ref: "#/components/schemas/FormalooNetsuiteDestinationField" }
+    },
+    required: ["source_field", "destination_field"]
+  };
+  spec.components.schemas.FormalooNetsuiteMappedFields = {
+    type: "object",
+    additionalProperties: false,
+    nullable: true,
+    description: "NetSuite mappings grouped by the supported record keys customer and vendor.",
+    properties: Object.fromEntries(["customer", "vendor"].map((name) => [name, {
+      type: "array",
+      items: { $ref: "#/components/schemas/FormalooNetsuiteFieldMapping" }
+    }]))
+  };
+  for (const [schemaName, description] of [
+    ["FormalooNotionMappedFields", "Keys are saved Formaloo field slugs; values are discovered Notion property name/type objects."],
+    ["FormalooBrevoMappedFields", "Keys are saved Formaloo field slugs; values are discovered Brevo attribute name/type objects."]
+  ]) {
+    spec.components.schemas[schemaName] = {
+      type: "object",
+      additionalProperties: { $ref: "#/components/schemas/FormalooProviderField" },
+      nullable: true,
+      description
+    };
+  }
+  spec.components.schemas.FormalooMailchimpField = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      tag: { type: "string", description: "Mailchimp merge-field tag returned by discovery." },
+      type: { type: "string", description: "Mailchimp merge-field type. At least one mapping must use email_address." }
+    },
+    required: ["tag", "type"]
+  };
+  spec.components.schemas.FormalooMailchimpMappedFields = {
+    type: "object",
+    additionalProperties: { $ref: "#/components/schemas/FormalooMailchimpField" },
+    nullable: true,
+    description: "Keys are saved Formaloo field slugs; values are discovered Mailchimp merge-field tag/type objects."
+  };
+  spec.components.schemas.FormalooLeadEnrichmentMappedFields = {
+    type: "object",
+    additionalProperties: { type: "string" },
+    nullable: true,
+    description: "Keys are saved Formaloo destination-field slugs; values are provider keys returned by the enrichable-fields operation."
+  };
+  spec.components.schemas.FormalooHubspotProperty = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      name: { type: "string" },
+      label: { type: "string" },
+      type: { type: "string", description: "HubSpot storage type; mapping writes use fieldType for destination_field.type." },
+      fieldType: { type: "string", description: "HubSpot UI field type to preserve in destination_field.type." },
+      groupName: { type: "string" },
+      options: { type: "array", items: { type: "object", additionalProperties: true } }
+    },
+    required: ["name", "fieldType"]
+  };
+  spec.components.schemas.FormalooMailchimpAudience = {
+    type: "object",
+    additionalProperties: true,
+    properties: { id: { type: "string" }, name: { type: "string" } },
+    required: ["id", "name"]
+  };
+  spec.components.schemas.FormalooMailchimpMergeField = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      tag: { type: "string" }, name: { type: "string" }, type: { type: "string" },
+      required: { type: "boolean" }, options: { type: "object", additionalProperties: true }
+    },
+    required: ["tag", "type"]
+  };
+  spec.components.schemas.FormalooBrevoList = {
+    type: "object",
+    additionalProperties: true,
+    properties: { id: { type: "integer" }, name: { type: "string" } },
+    required: ["id", "name"]
+  };
+  spec.components.schemas.FormalooBrevoAttribute = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      name: { type: "string" }, type: { type: "string" }, category: { type: "string" },
+      field_key: { type: "string", nullable: true },
+      enumeration: { type: "array", items: { type: "object", additionalProperties: true } }
+    },
+    required: ["name", "type"]
+  };
+  spec.components.schemas.FormalooNetsuiteRecordMetadata = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      name: { type: "string", enum: ["customer", "vendor"] },
+      fields: { type: "array", items: { type: "object", additionalProperties: true } }
+    },
+    required: ["name", "fields"]
+  };
+  spec.components.schemas.FormalooNotionDatabase = {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      id: { type: "string" },
+      title: { type: "array", items: { type: "object", additionalProperties: true } },
+      properties: { type: "object", additionalProperties: { type: "object", additionalProperties: true } }
+    },
+    required: ["id", "properties"]
+  };
+
+  const mappedFieldSchemas = new Map([
+    ["FormHubspot", "FormalooHubspotMappedFields"],
+    ["FormNetsuite", "FormalooNetsuiteMappedFields"],
+    ["FormNotion", "FormalooNotionMappedFields"],
+    ["FormMailchimp", "FormalooMailchimpMappedFields"],
+    ["FormSendinblue", "FormalooBrevoMappedFields"],
+    ["LeadEnrichment", "FormalooLeadEnrichmentMappedFields"]
+  ]);
 
   for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
     if (!schema?.properties) continue;
 
     if (schema.properties.mapped_fields && schema.properties.mapped_fields.type === "object" && JSON.stringify(schema.properties.mapped_fields.additionalProperties) === "{}") {
-      schema.properties.mapped_fields = { $ref: "#/components/schemas/FormalooIntegrationMappedFields" };
+      const mappedSchema = [...mappedFieldSchemas].find(([prefix]) => schemaName.includes(prefix))?.[1];
+      if (mappedSchema) {
+        schema.properties.mapped_fields = { $ref: `#/components/schemas/${mappedSchema}` };
+      }
+    }
+  }
+
+  const discoveryContracts = {
+    hubspotIntegrationsPropertiesRetrieve: {
+      description: "Lists properties for contacts, companies, or deals. Use returned name and fieldType in HubSpot destination_field mappings.",
+      schema: { type: "object", properties: { properties: { type: "array", items: { $ref: "#/components/schemas/FormalooHubspotProperty" } } }, required: ["properties"] }
+    },
+    mailchimpIntegrationsListsRetrieve: {
+      description: "Lists connected Mailchimp audiences. Use an audience id as list_id.",
+      schema: { type: "object", properties: { lists: { type: "array", items: { $ref: "#/components/schemas/FormalooMailchimpAudience" } } }, required: ["lists"] }
+    },
+    mailchimpIntegrationsListsMergeFieldsRetrieve: {
+      description: "Lists merge fields for one Mailchimp audience. Store returned tag and type values in mapped_fields.",
+      schema: { type: "object", properties: { merge_fields: { type: "array", items: { $ref: "#/components/schemas/FormalooMailchimpMergeField" } } }, required: ["merge_fields"] }
+    },
+    sendinblueIntegrationsListsRetrieve: {
+      description: "Lists connected Brevo lists. The API path retains the former Sendinblue name.",
+      schema: { type: "object", properties: { lists: { type: "array", items: { $ref: "#/components/schemas/FormalooBrevoList" } } }, required: ["lists"] }
+    },
+    sendinblueIntegrationsAttributesRetrieve: {
+      description: "Lists Brevo contact attributes. Store returned name and type values in mapped_fields.",
+      schema: { type: "object", properties: { attributes: { type: "array", items: { $ref: "#/components/schemas/FormalooBrevoAttribute" } } }, required: ["attributes"] }
+    },
+    netsuiteIntegrationsMetadataRetrieve: {
+      description: "Returns NetSuite metadata for customer, vendor, or all supported records. Use returned field name/type metadata in destination_field.",
+      schema: {
+        oneOf: [
+          { $ref: "#/components/schemas/FormalooNetsuiteRecordMetadata" },
+          { type: "object", properties: { customer: { $ref: "#/components/schemas/FormalooNetsuiteRecordMetadata" }, vendor: { $ref: "#/components/schemas/FormalooNetsuiteRecordMetadata" } }, required: ["customer", "vendor"] }
+        ]
+      }
+    },
+    notionWorkspacesNotionDatabasesRetrieve: {
+      description: "Lists databases accessible through one connected Notion workspace. Use database id and discovered property name/type metadata; do not guess them.",
+      schema: { type: "object", properties: { notion_databases: { type: "array", items: { $ref: "#/components/schemas/FormalooNotionDatabase" } } }, required: ["notion_databases"] }
+    }
+  };
+  const discoveryParameterEnums = {
+    hubspotIntegrationsPropertiesRetrieve: { objectType: ["contacts", "companies", "deals"] },
+    netsuiteIntegrationsMetadataRetrieve: { recordType: ["customer", "vendor", "all"] }
+  };
+  for (const pathItem of Object.values(spec.paths ?? {})) {
+    for (const operation of Object.values(pathItem ?? {})) {
+      const contract = discoveryContracts[operation?.operationId];
+      if (!contract) continue;
+      operation.description = contract.description;
+      for (const parameter of operation.parameters ?? []) {
+        const values = discoveryParameterEnums[operation.operationId]?.[parameter.name];
+        if (values) {
+          parameter.schema = { ...(parameter.schema ?? {}), type: "string", enum: values };
+        }
+      }
+      operation.responses ??= {};
+      operation.responses["200"] = {
+        ...(operation.responses["200"] ?? {}),
+        description: "Successful provider metadata response.",
+        content: { "application/json": { schema: contract.schema } }
+      };
     }
   }
 }
