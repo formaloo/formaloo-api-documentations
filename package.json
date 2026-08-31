@@ -9,6 +9,7 @@
     "normalize-spec": "node ./scripts/normalize-openapi.mjs",
     "build:mcp-spec": "node ./scripts/build-mcp-openapi.mjs",
     "validate-spec": "node ./scripts/validate-openapi.mjs",
+    "validate:integration-mappings": "node ./scripts/validate-integration-mappings.mjs",
     "validate:mcp-spec": "node ./scripts/validate-mcp-openapi.mjs"
   },
   "dependencies": {
