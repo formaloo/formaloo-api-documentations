@@ -36,9 +36,9 @@ generated consumers alone is not independent evidence of backend correctness.
 Backend regression coverage exercises real authenticated create/PATCH/readback
 operations for cross-form field rejection, Mailchimp replacement requirements,
 NetSuite nested validation and choice-value conversion, and emitted OpenAPI.
-The integration suite (184 tests) and field suite (332 tests) pass in isolated
+The integration suite (186 tests) and field suite (332 tests) pass in isolated
 Docker databases with pinned submodules. NetSuite tests cover select IDs,
-partial/blank override fallback, and boolean conversion.
+partial/blank override fallback, untitled/deleted choices, and boolean conversion.
 
 MCP integration evals cover all 22 catalog entries, connection/setup decisions,
 discovery operations and provider-specific guidance. Loopback HTTP tests exercise
