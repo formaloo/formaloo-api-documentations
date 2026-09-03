@@ -47,8 +47,8 @@ Each logic item is a JSON object:
 
 ```json
 {
-  "type": "field | submit | update",
-  "identifier": "field_slug",
+  "type": "field | submit | update | schedule",
+  "identifier": "field_slug_or_schedule_key",
   "actions": [
     {
       "action": "action_type",
@@ -62,8 +62,8 @@ Each logic item is a JSON object:
 }
 ```
 
-* **type**: scope of the logic (`field` = reacts to a field’s value, `submit` = on submission, `update` = variable manipulation).
-* **identifier**: the field slug this logic is tied to.
+* **type**: scope of the logic (`field` = reacts to a field’s value, `submit` = on submission, `update` = on row edit, `schedule` = when a `wait` comes due).
+* **identifier**: required for `field` (the field slug) and `schedule` (the key a `wait` action targets). Omit for `submit` and `update`.
 * **actions**: what happens if conditions are met.
 * **when**: defines the condition(s).
 
@@ -101,6 +101,7 @@ Each logic item is a JSON object:
 | `generate_pdf` | Generate documents        |
 | `redirect`     | Send user to external URL |
 | `set_related`  | Set related record data   |
+| `wait`         | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
 
 ---
 
@@ -154,6 +155,76 @@ If the `run_field_logics_on_update` setting on the form is `true`, the `field` l
 
 * So if `run_field_logics_on_update` is `false`, none if the `field` logic will be checked and applied on row update.
 * If `run_field_logics_on_update` is `true`, the `field` logic will be checked and applied, but only for the fields that are being updated.
+
+### Schedule logic
+
+Scheduled follow-ups are configured in the same `logic` array. There is no separate scheduling endpoint.
+
+A `wait` action on `submit`, `update`, or another `schedule` section binds a follow-up to the current row. When that time arrives, Formaloo re-evaluates the matching `type: "schedule"` section against the row as it stands then — not as it was when the wait was created.
+
+A form may hold several schedule sections. Each `identifier` must be unique. Every `wait` must name an existing schedule identifier; otherwise the payload is rejected.
+
+`wait` arguments, in order:
+
+1. **Schedule key** — constant whose `value` is the `identifier` of the `schedule` section to run.
+2. **Base** — `now`, `created_at`, `updated_at`, or a date/datetime field.
+3. **Expression** — a relative date string. Offsets combine signed amounts with a unit: `min` (minutes), `h` (hours), `d` (days), `w` (weeks), `m` (months), `y` (years). Examples: `+30min`, `+2h +15min`, `+7d`, `-1w`, `+5m`. Note `m` is months, so minutes are spelled `min`. Keywords: `today`, `tomorrow`, `this_week`, `next_week`, `this_month`, `next_month`, `this_year`, `next_year`. Use `custom` with a fourth argument for an absolute datetime.
+4. **Custom target** — only when the expression is `custom`. An ISO datetime string.
+
+```json
+{
+  "action": "wait",
+  "args": [
+    {"type": "constant", "value": "approval_chase"},
+    {"type": "constant", "value": "now"},
+    {"type": "constant", "value": "+2d"}
+  ],
+  "when": {
+    "operation": "is",
+    "args": [
+      {"type": "field", "value": "status_slug"},
+      {"type": "choice", "value": "pending_choice_slug"}
+    ]
+  }
+}
+```
+
+From a date or datetime field:
+
+```json
+{"type": "field", "identifier": "appointment_slug"}
+```
+
+A `custom` wait:
+
+```json
+{
+  "action": "wait",
+  "args": [
+    {"type": "constant", "value": "reminder"},
+    {"type": "constant", "value": "now"},
+    {"type": "constant", "value": "custom"},
+    {"type": "constant", "value": "2026-08-05T09:00:00Z"}
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+Resolution rules:
+
+* Offset expressions keep the time of day of the base. A datetime field at `14:30` plus `+2d` runs at `14:30` two days later, and `+30min` runs at `15:00` the same day.
+* A date-only field has no time of day, so it runs at `23:59:59` of the resolved day. Minute and hour offsets are measured from that instant.
+* Keyword expressions (`tomorrow`, `next_month`, …) and `custom` are anchored on the current clock. Their base must be `now`. Keywords resolve to the end of that day in the workspace timezone.
+* If the base field is empty or unparsable when the wait is saved, the follow-up is recorded as unresolved and never fires.
+* `wait` cannot be used in `field` logic: field logic has no row to bind to.
+* Conditions on a `wait` are evaluated when the wait is scheduled. If a submit payload omits the guarded field, `is` / `is_not` fail and no task is created. Put `when: always` on the submit `wait` and gate the email on the schedule section instead.
+
+At fire time:
+
+* Conditions on the schedule section run against current row data. If nothing matches, the step is skipped and any `wait` in that section is not scheduled.
+* A matching `wait` inside a schedule section chains the next step. Removing or renaming a schedule `identifier` cancels pending follow-ups that targeted it. Sending `logic` still replaces the whole array.
+
+Create the form and its fields first, then `PATCH /v3.0/forms/{slug}/` with the full `logic` array so `wait` and `schedule` identifiers can use returned field and choice slugs.
 
 ---
 
@@ -319,6 +390,67 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 }
 ```
 
+### Scheduled follow-up on submission
+
+Send a chase email two days after submit if the row is still pending. If it is still pending then, wait two more days and escalate.
+
+```json
+{
+  "type": "submit",
+  "actions": [
+    {
+      "action": "wait",
+      "args": [
+        {"type": "constant", "value": "approval_chase"},
+        {"type": "constant", "value": "now"},
+        {"type": "constant", "value": "+2d"}
+      ],
+      "when": {"operation": "always", "args": []}
+    }
+  ]
+}
+```
+
+```json
+{
+  "type": "schedule",
+  "identifier": "approval_chase",
+  "actions": [
+    {
+      "action": "send_email",
+      "args": [
+        {"type": "send_email_template", "identifier": "chase_template_slug"},
+        {"type": "field", "identifier": "email_slug"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "status_slug"},
+          {"type": "choice", "value": "pending_choice_slug"}
+        ]
+      }
+    },
+    {
+      "action": "wait",
+      "args": [
+        {"type": "constant", "value": "approval_escalate"},
+        {"type": "constant", "value": "now"},
+        {"type": "constant", "value": "+2d"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "status_slug"},
+          {"type": "choice", "value": "pending_choice_slug"}
+        ]
+      }
+    }
+  ]
+}
+```
+
+Both items belong in the same `logic` array, together with the `schedule` section whose `identifier` is `approval_escalate`. Prefer `PATCH /v3.0/forms/{slug}/` for this payload after the form and fields exist.
+
 ---
 
 ## 8. Best Practices
@@ -328,6 +460,8 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 * Use variables for all price, score, or computed values.
 * Avoid circular logic (a field showing/hiding itself).
 * Test with fallback conditions (`otherwise`) to ensure graceful behavior.
+* Put every `schedule` section in the same `logic` array as the `wait` that targets it. Removing a schedule key cancels that follow-up.
+* Do not put `wait` in `field` logic.
 
 ---
 
