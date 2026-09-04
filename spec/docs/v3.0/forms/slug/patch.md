@@ -94,15 +94,16 @@ Each logic item is a JSON object:
 
 ### Workflow & Integrations
 
-| Action         | Description               |
-| -------------- | ------------------------- |
-| `send_email`   | Send custom email         |
-| `send_webhook` | Trigger API webhook       |
-| `send_slack`   | Slack notification        |
-| `generate_pdf` | Generate documents        |
-| `redirect`     | Send user to external URL |
-| `set_related`  | Set related record data   |
-| `wait`         | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
+| Action          | Description               |
+| --------------- | ------------------------- |
+| `send_email`    | Send custom email         |
+| `send_webhook`  | Trigger API webhook       |
+| `send_whatsapp` | Send an approved WhatsApp template. Not allowed in `field` logic. Requires template, receiver, variables, and agent |
+| `send_slack`    | Slack notification        |
+| `generate_pdf`  | Generate documents        |
+| `redirect`      | Send user to external URL |
+| `set_related`   | Set related record data   |
+| `wait`          | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
 
 ---
 
@@ -227,6 +228,50 @@ At fire time:
 
 ---
 
+### WhatsApp send
+
+`send_whatsapp` sends an approved WhatsApp template when a `submit`, `update`, or `schedule` section matches. It cannot be used in `field` logic: there is no stored row yet.
+
+The workspace must have a ready WhatsApp Business connection. All four arguments are required, in this order:
+
+1. **Template** — `whatsapp_template` whose `identifier` is the template ContentSid (`HX` followed by 32 hex characters). The template must already exist and be approved.
+2. **Receiver** — a `whatsapp_receiver` identifying a phone or text field, or a `constant` E.164 number such as `+15551234567`.
+3. **Variables** — `whatsapp_variables` whose `value` is an object of numbered keys (`"1"`, `"2"`, …). Each entry is a typed mapping: `constant`, `field`, or `variable`.
+4. **Agent** — `agent` whose `identifier` is the Agent Builder agent that sends the message. A payload with only three arguments is rejected.
+
+```json
+{
+  "action": "send_whatsapp",
+  "args": [
+    {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"},
+    {"type": "whatsapp_receiver", "identifier": "phone_slug"},
+    {
+      "type": "whatsapp_variables",
+      "value": {
+        "1": {"type": "field", "identifier": "name_slug"},
+        "2": {"type": "constant", "value": "Acme"}
+      }
+    },
+    {"type": "agent", "identifier": "agent-1"}
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+A constant receiver:
+
+```json
+{"type": "constant", "value": "+15551234567"}
+```
+
+Resolution rules:
+
+* Field and variable mappings are resolved from the row at send time. Missing values become empty strings.
+* The agent is validated against the workspace when the message is sent. An invalid agent skips the send; the row is left unchanged.
+* `send_whatsapp` cannot be used in `field` logic.
+
+---
+
 ## 5. Argument Types
 
 * **Field Reference**:
@@ -264,6 +309,19 @@ At fire time:
   ```json
   {"type": "formula", "value": "CONCAT({first_name}, ' ', {last_name})"}
   {"type": "link", "value": "https://example.com/thanks"}
+  ```
+* **WhatsApp template, receiver, variables, and agent**:
+
+  ```json
+  {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"}
+  {"type": "whatsapp_receiver", "identifier": "phone_slug"}
+  {
+    "type": "whatsapp_variables",
+    "value": {
+      "1": {"type": "field", "identifier": "name_slug"}
+    }
+  }
+  {"type": "agent", "identifier": "agent-1"}
   ```
 
 ---
@@ -389,6 +447,32 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 }
 ```
 
+### WhatsApp on submission
+
+```json
+{
+  "type": "submit",
+  "actions": [
+    {
+      "action": "send_whatsapp",
+      "args": [
+        {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"},
+        {"type": "whatsapp_receiver", "identifier": "phone_slug"},
+        {
+          "type": "whatsapp_variables",
+          "value": {
+            "1": {"type": "field", "identifier": "name_slug"},
+            "2": {"type": "constant", "value": "Acme"}
+          }
+        },
+        {"type": "agent", "identifier": "agent-1"}
+      ],
+      "when": {"operation": "always", "args": []}
+    }
+  ]
+}
+```
+
 ### Scheduled follow-up on submission
 
 Send a chase email two days after submit if the row is still pending. If it is still pending then, wait two more days and escalate.
@@ -461,6 +545,7 @@ Both items belong in the same `logic` array, together with the `schedule` sectio
 * Test with fallback conditions (`otherwise`) to ensure graceful behavior.
 * Put every `schedule` section in the same `logic` array as the `wait` that targets it. Removing a schedule key cancels that follow-up.
 * Do not put `wait` in `field` logic.
+* Do not put `send_whatsapp` in `field` logic. Include all four arguments; the `agent` identifier is required.
 
 ---
 
@@ -623,3 +708,36 @@ Retrieve the form first. Sending `logic` replaces the entire saved logic array, 
 ```
 
 If the status is no longer pending when the wait comes due, the email is not sent.
+
+## Example request: send WhatsApp on submit
+
+Retrieve the form first. Sending `logic` replaces the entire saved logic array, so include every rule that should remain. The workspace needs a ready WhatsApp connection and an approved template. The fourth argument (`agent`) is required.
+
+```json
+{
+  "logic": [
+    {
+      "type": "submit",
+      "actions": [
+        {
+          "action": "send_whatsapp",
+          "args": [
+            { "type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef" },
+            { "type": "whatsapp_receiver", "identifier": "phone_slug" },
+            {
+              "type": "whatsapp_variables",
+              "value": {
+                "1": { "type": "field", "identifier": "name_slug" },
+                "2": { "type": "constant", "value": "Acme" }
+              }
+            },
+            { "type": "agent", "identifier": "agent-1" }
+          ],
+          "when": { "operation": "always", "args": [] }
+        }
+      ]
+    }
+  ]
+}
+```
+
