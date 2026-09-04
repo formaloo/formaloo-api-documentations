@@ -2,6 +2,9 @@ Uninstalls the requested integration app for the authenticated profile.
 
 Uninstalling removes the catalog installation record. It does not revoke credentials at the external provider.
 
+When multiple catalog entries share the requested type, pass the catalog entry
+slug in the optional `app_slug` query parameter.
+
 Important type-specific effects:
 
 - Slack clears Slack access from all forms owned by the user.
