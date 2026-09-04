@@ -96,6 +96,7 @@ node "$ROOT_DIR/scripts/validate-mcp-openapi.mjs" "$INTERMEDIATE_DIR/openapi-mcp
 
 echo "Validating generated public contract..."
 node "$ROOT_DIR/scripts/validate-openapi.mjs"
+node "$ROOT_DIR/scripts/validate-integration-mappings.mjs"
 if ! "$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.yaml" > "$VALIDATION_DIR/redocly-lint.txt" 2>&1; then
   echo "Redocly lint reported issues. Report saved to artifacts/validation/redocly-lint.txt"
 fi

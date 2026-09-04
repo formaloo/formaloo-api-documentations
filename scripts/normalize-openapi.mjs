@@ -26,6 +26,9 @@ const endUserSessionAuthorizationDescription =
 
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
+const integrationMappingSchemas = JSON.parse(await fs.readFile(
+  path.join(rootDir, "spec", "integration-mapping-schemas.json"), "utf8"
+));
 
 let metadata = null;
 try {
@@ -2951,98 +2954,15 @@ function enrichFieldConfigSchemas() {
 }
 
 function enrichIntegrationSchemas() {
-  const providerField = {
-    type: "object",
-    additionalProperties: true,
-    properties: {
-      name: { type: "string", description: "Provider field/property identifier returned by the corresponding discovery operation." },
-      type: { type: "string", description: "Provider field type returned by discovery. Do not infer it from the Formaloo field type." }
-    },
-    required: ["name", "type"]
-  };
-
-  spec.components.schemas.FormalooProviderField = providerField;
-  spec.components.schemas.FormalooSourceDestinationFieldMapping = {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      source_field: { type: "string", description: "Saved Formaloo form-field slug." },
-      destination_field: { $ref: "#/components/schemas/FormalooProviderField" }
-    },
-    required: ["source_field", "destination_field"]
-  };
-  spec.components.schemas.FormalooHubspotMappedFields = {
-    type: "object",
-    additionalProperties: false,
-    nullable: true,
-    description: "HubSpot mappings grouped by the supported object keys contacts, companies, and deals.",
-    properties: Object.fromEntries(["contacts", "companies", "deals"].map((name) => [name, {
-      type: "array",
-      items: { $ref: "#/components/schemas/FormalooSourceDestinationFieldMapping" }
-    }]))
-  };
-  spec.components.schemas.FormalooNetsuiteDestinationField = {
-    ...providerField,
-    properties: {
-      ...providerField.properties,
-      value_mappings: {
-        type: "object",
-        additionalProperties: { type: "string" },
-        description: "Optional Formaloo-to-NetSuite select value mapping."
-      }
+  for (const pathItem of Object.values(spec.paths)) {
+    const patch = pathItem.patch;
+    if (patch?.operationId === "formsMailchimpIntegrationsPartialUpdate" && patch.requestBody) {
+      patch.requestBody.required = true;
     }
-  };
-  spec.components.schemas.FormalooNetsuiteFieldMapping = {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      source_field: { type: "string", description: "Saved Formaloo form-field slug." },
-      destination_field: { $ref: "#/components/schemas/FormalooNetsuiteDestinationField" }
-    },
-    required: ["source_field", "destination_field"]
-  };
-  spec.components.schemas.FormalooNetsuiteMappedFields = {
-    type: "object",
-    additionalProperties: false,
-    nullable: true,
-    description: "NetSuite mappings grouped by the supported record keys customer and vendor.",
-    properties: Object.fromEntries(["customer", "vendor"].map((name) => [name, {
-      type: "array",
-      items: { $ref: "#/components/schemas/FormalooNetsuiteFieldMapping" }
-    }]))
-  };
-  for (const [schemaName, description] of [
-    ["FormalooNotionMappedFields", "Keys are saved Formaloo field slugs; values are discovered Notion property name/type objects."],
-    ["FormalooBrevoMappedFields", "Keys are saved Formaloo field slugs; values are discovered Brevo attribute name/type objects."]
-  ]) {
-    spec.components.schemas[schemaName] = {
-      type: "object",
-      additionalProperties: { $ref: "#/components/schemas/FormalooProviderField" },
-      nullable: true,
-      description
-    };
   }
-  spec.components.schemas.FormalooMailchimpField = {
-    type: "object",
-    additionalProperties: true,
-    properties: {
-      tag: { type: "string", description: "Mailchimp merge-field tag returned by discovery." },
-      type: { type: "string", description: "Mailchimp merge-field type. At least one mapping must use email_address." }
-    },
-    required: ["tag", "type"]
-  };
-  spec.components.schemas.FormalooMailchimpMappedFields = {
-    type: "object",
-    additionalProperties: { $ref: "#/components/schemas/FormalooMailchimpField" },
-    nullable: true,
-    description: "Keys are saved Formaloo field slugs; values are discovered Mailchimp merge-field tag/type objects."
-  };
-  spec.components.schemas.FormalooLeadEnrichmentMappedFields = {
-    type: "object",
-    additionalProperties: { type: "string" },
-    nullable: true,
-    description: "Keys are saved Formaloo destination-field slugs; values are provider keys returned by the enrichable-fields operation."
-  };
+  // Pinned from the backend's emitted contract; validate with the parity check
+  // before updating this snapshot. Avoid hand-maintained provider type unions.
+  Object.assign(spec.components.schemas, structuredClone(integrationMappingSchemas));
   spec.components.schemas.FormalooHubspotProperty = {
     type: "object",
     additionalProperties: true,
