@@ -103,6 +103,8 @@ Each logic item is a JSON object:
 | `generate_pdf`  | Generate documents        |
 | `redirect`      | Send user to external URL |
 | `set_related`   | Set related record data   |
+| `add_row`       | Create one row in another accessible form in the same workspace. Not allowed in `field` or `schedule` logic |
+| `edit_row`      | Update matching rows in another accessible form. Not allowed in `field` or `schedule` logic |
 | `wait`          | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
 
 ---
@@ -124,6 +126,7 @@ Compound grouping uses `and` or `or` with nested condition objects in `args`.
 {"operation": "lte", "args": [field_ref, const]}
 {"operation": "equal", "args": [field_ref, const]}
 {"operation": "not_equal", "args": [field_ref, const]}
+{"operation": "lt", "args": [row_count_ref, const]}
 ```
 
 ### Choice Checks
@@ -270,6 +273,104 @@ Resolution rules:
 * The agent is validated against the workspace when the message is sent. An invalid agent skips the send; the row is left unchanged.
 * `send_whatsapp` cannot be used in `field` logic.
 
+### Add row
+
+`add_row` creates one row in another accessible form in the same workspace. It cannot be used in `field` or `schedule` logic.
+
+Arguments, in order:
+
+1. **Form** — `form` whose `identifier` is the destination form slug. The configuring user must have edit access. User forms are rejected.
+2. **Row data** — `row_data` whose `value` maps destination field slugs to typed values (`constant`, `field`, `variable`, or `choice`). At least one mapping is required. Read-only destination fields are rejected.
+
+```json
+{
+  "action": "add_row",
+  "args": [
+    {"type": "form", "identifier": "contacts_form_slug"},
+    {
+      "type": "row_data",
+      "value": {
+        "name_slug": {"type": "field", "identifier": "attendee_name_slug"},
+        "source_slug": {"type": "constant", "value": "registration"},
+        "status_slug": {"type": "choice", "identifier": "new_choice_slug"}
+      }
+    }
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+The created row goes through the destination form's normal create path, including that form's submit logic.
+
+### Edit row
+
+`edit_row` updates matching rows in another accessible form in the same workspace. It cannot be used in `field` or `schedule` logic.
+
+Required arguments:
+
+1. **Form** — `form` whose `identifier` is the destination form slug.
+2. **Row filter** — `row_filter` whose `value` is a non-empty object of destination-field query keys to typed mappings. Row `status` filters are rejected.
+3. **Row data** — `row_data` whose `value` maps destination field slugs to typed values, same contract as `add_row`.
+
+Optional arguments, each at most once:
+
+4. **Sort** — `row_sort` whose `value` is `{ "field": "<slug|created_at|updated_at>", "direction": "asc"|"desc" }`.
+5. **Limit** — `limit` whose `value` is a positive integer. A limit requires an explicit sort. Without a limit, every match is updated.
+
+Filter keys are destination field slugs, optionally with a lookup suffix such as `_contains`. Each entry is a `constant`, `field`, `variable`, or `choice` mapping resolved from the triggering row at run time.
+
+```json
+{
+  "action": "edit_row",
+  "args": [
+    {"type": "form", "identifier": "registration_form_slug"},
+    {
+      "type": "row_filter",
+      "value": {
+        "session_slug": {"type": "field", "identifier": "session_slug"},
+        "status_slug": {"type": "choice", "identifier": "waitlisted_choice_slug"}
+      }
+    },
+    {
+      "type": "row_data",
+      "value": {
+        "status_slug": {"type": "choice", "identifier": "confirmed_choice_slug"}
+      }
+    },
+    {"type": "row_sort", "value": {"field": "created_at", "direction": "asc"}},
+    {"type": "limit", "value": 1}
+  ],
+  "when": {
+    "operation": "is",
+    "args": [
+      {"type": "field", "value": "status_slug"},
+      {"type": "choice", "value": "cancelled_choice_slug"}
+    ]
+  }
+}
+```
+
+Updated rows go through the destination form's normal update path, including that form's update logic.
+
+### Row count
+
+`row_count` is a condition argument, not an action. Use it as the left-hand side of a numeric comparison (`lt`, `lte`, `gt`, `gte`, `equal`) in `submit` or `update` logic. It cannot be used in `field` or `schedule` logic.
+
+```json
+{
+  "type": "row_count",
+  "value": {
+    "form": "registration_form_slug",
+    "filters": {
+      "session_slug": {"type": "field", "identifier": "session_slug"},
+      "status_slug": {"type": "choice", "identifier": "confirmed_choice_slug"}
+    }
+  }
+}
+```
+
+`form` is required. `filters` is optional and uses the same mapping contract as `edit_row` filters. Read access to the destination form is enough. Occupancy checks should count only the rows that consume a seat, for example confirmed registrations, not waitlisted or cancelled ones.
+
 ---
 
 ## 5. Argument Types
@@ -322,6 +423,29 @@ Resolution rules:
     }
   }
   {"type": "agent", "identifier": "agent-1"}
+  ```
+* **Form, row data, row filter, row sort, limit, and row count**:
+
+  ```json
+  {"type": "form", "identifier": "destination_form_slug"}
+  {
+    "type": "row_data",
+    "value": {
+      "name_slug": {"type": "field", "identifier": "source_name_slug"}
+    }
+  }
+  {
+    "type": "row_filter",
+    "value": {
+      "status_slug": {"type": "choice", "identifier": "waitlisted_choice_slug"}
+    }
+  }
+  {"type": "row_sort", "value": {"field": "created_at", "direction": "asc"}}
+  {"type": "limit", "value": 1}
+  {
+    "type": "row_count",
+    "value": {"form": "destination_form_slug"}
+  }
   ```
 
 ---
@@ -546,6 +670,8 @@ Both items belong in the same `logic` array, together with the `schedule` sectio
 * Put every `schedule` section in the same `logic` array as the `wait` that targets it. Removing a schedule key cancels that follow-up.
 * Do not put `wait` in `field` logic.
 * Do not put `send_whatsapp` in `field` logic. Include all four arguments; the `agent` identifier is required.
+* Do not put `add_row`, `edit_row`, or `row_count` in `field` or `schedule` logic.
+* An `edit_row` limit requires an explicit sort. Row `status` is not a valid filter key.
 
 ---
 
