@@ -313,6 +313,29 @@ function getRefTarget(ref) {
   return current;
 }
 
+function mappedFieldsRef(mapped) {
+  if (!mapped || typeof mapped !== "object") {
+    return undefined;
+  }
+  if (typeof mapped.$ref === "string") {
+    return mapped.$ref;
+  }
+  return mapped.allOf?.find((item) => typeof item?.$ref === "string")?.$ref;
+}
+
+function assignMappedFieldsRef(schema, expectedRef) {
+  if (!schema?.properties?.mapped_fields) {
+    return;
+  }
+  if (mappedFieldsRef(schema.properties.mapped_fields) === expectedRef) {
+    return;
+  }
+  const description = schema.properties.mapped_fields.description;
+  schema.properties.mapped_fields = description
+    ? { allOf: [{ $ref: expectedRef }], description }
+    : { $ref: expectedRef };
+}
+
 function inferSchemaType(schema, seenRefs = new Set()) {
   if (!schema || typeof schema !== "object") {
     return null;
@@ -2956,8 +2979,19 @@ function enrichFieldConfigSchemas() {
 function enrichIntegrationSchemas() {
   for (const pathItem of Object.values(spec.paths)) {
     const patch = pathItem.patch;
-    if (patch?.operationId === "formsMailchimpIntegrationsPartialUpdate" && patch.requestBody) {
-      patch.requestBody.required = true;
+    if (patch?.operationId !== "formsMailchimpIntegrationsPartialUpdate" || !patch.requestBody) {
+      continue;
+    }
+    patch.requestBody.required = true;
+    for (const media of Object.values(patch.requestBody.content ?? {})) {
+      const schema = media?.schema;
+      if (!schema || schema.$ref) {
+        continue;
+      }
+      assignMappedFieldsRef(schema, "#/components/schemas/FormalooMailchimpMappedFields");
+      if (schema.properties?.mapped_fields) {
+        schema.required = [...new Set([...(schema.required ?? []), "mapped_fields"])];
+      }
     }
   }
   // Pinned from the backend's emitted contract; validate with the parity check

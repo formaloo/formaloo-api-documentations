@@ -54,6 +54,32 @@ const requiredOperationIds = new Set([
 ]);
 
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
+const includeOperationIdAliases = settings.includeOperationIdAliases ?? {};
+
+function asStringArray(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean);
+}
+
+function operationIdGroup(operationId) {
+  const extras = includeOperationIdAliases[operationId];
+  if (Array.isArray(extras)) {
+    return [operationId, ...asStringArray(extras)];
+  }
+
+  for (const [primary, ids] of Object.entries(includeOperationIdAliases)) {
+    if (asStringArray(ids).includes(operationId)) {
+      return [primary, ...asStringArray(ids)];
+    }
+  }
+
+  return [operationId];
+}
 
 const mergedSpec = JSON.parse(await fs.readFile(mergedSpecPath, "utf8"));
 
@@ -157,11 +183,20 @@ const backfilled = [];
 const unavailable = [];
 
 for (const operationId of requiredOperationIds) {
-  if (mergedOperations.has(operationId)) {
+  const group = operationIdGroup(operationId);
+  if (group.some((candidateId) => mergedOperations.has(candidateId))) {
     continue;
   }
 
-  const fallbackRecord = fallbackOperations.get(operationId);
+  let fallbackId = null;
+  let fallbackRecord = null;
+  for (const candidateId of group) {
+    fallbackRecord = fallbackOperations.get(candidateId);
+    if (fallbackRecord) {
+      fallbackId = candidateId;
+      break;
+    }
+  }
   if (!fallbackRecord) {
     unavailable.push(operationId);
     continue;
@@ -172,7 +207,7 @@ for (const operationId of requiredOperationIds) {
   mergedSpec.paths[pathKey] = mergedSpec.paths[pathKey] ?? {};
   mergedSpec.paths[pathKey][method] = operation;
   const copiedComponents = copyMissingComponents(operation);
-  backfilled.push(`${operationId} ${method.toUpperCase()} ${pathKey} (+${copiedComponents} component(s))`);
+  backfilled.push(`${fallbackId} ${method.toUpperCase()} ${pathKey} (+${copiedComponents} component(s))`);
 }
 
 if (backfilled.length > 0) {

@@ -21,6 +21,26 @@ function asStringArray(value) {
     .filter(Boolean);
 }
 
+function expandOperationIdAliases(operationIds, aliases) {
+  const expanded = new Set(operationIds);
+  for (const [primary, extras] of Object.entries(aliases ?? {})) {
+    if (!expanded.has(primary)) {
+      continue;
+    }
+    for (const extra of asStringArray(extras)) {
+      expanded.add(extra);
+    }
+  }
+  return expanded;
+}
+
+function isEnrichableFieldsOperation(operationId) {
+  return (
+    operationId === "leadEnrichmentsEnrichableFieldsList" ||
+    operationId === "leadEnrichmentsEnrichableFieldsRetrieve"
+  );
+}
+
 function normalizeServiceToken(value) {
   return String(value ?? "")
     .toLowerCase()
@@ -154,7 +174,10 @@ try {
 
 const excludeSettings = settings.exclude ?? settings;
 const requiredOperationIds = new Set(asStringArray(settings.requiredOperationIds));
-const includedOperationIds = new Set(asStringArray(settings.includeOperationIds));
+const includedOperationIds = expandOperationIdAliases(
+  asStringArray(settings.includeOperationIds),
+  settings.includeOperationIdAliases
+);
 const retainedOperationIds = new Set([...requiredOperationIds, ...includedOperationIds]);
 const excludedServices = asStringArray(excludeSettings.services);
 const excludedServiceTokens = new Set(excludedServices.map(normalizeServiceToken));
@@ -1914,7 +1937,7 @@ function integrationToolName(operationId) {
     const action = integrationActionNames[leadMatch[1]];
     return `${action}_lead_enrichment${leadMatch[1] === "List" ? "s" : ""}`;
   }
-  if (operationId === "leadEnrichmentsEnrichableFieldsList") {
+  if (isEnrichableFieldsOperation(operationId)) {
     return "list_lead_enrichment_fields";
   }
 
@@ -1965,7 +1988,7 @@ function buildIncludedOperationMcpMetadata(operation, method) {
 // backfill is still needed. Keep this narrow compatibility repair until the
 // upstream operation publishes its serializer-backed response schema.
 function repairIncludedOperationContract(openapiSpec, operation) {
-  if (operation.operationId !== "leadEnrichmentsEnrichableFieldsList") {
+  if (!isEnrichableFieldsOperation(operation.operationId)) {
     return;
   }
 

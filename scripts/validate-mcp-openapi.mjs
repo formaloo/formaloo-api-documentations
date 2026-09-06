@@ -85,6 +85,29 @@ function asStringArray(value) {
     .filter(Boolean);
 }
 
+function mappedFieldsRef(schema) {
+  const mapped = schema?.properties?.mapped_fields;
+  if (!mapped || typeof mapped !== "object") {
+    return undefined;
+  }
+  if (typeof mapped.$ref === "string") {
+    return mapped.$ref;
+  }
+  return mapped.allOf?.find((item) => typeof item?.$ref === "string")?.$ref;
+}
+
+function resolveIncludedOperationId(operationId) {
+  if (operations.has(operationId)) {
+    return operationId;
+  }
+  for (const extra of asStringArray(settings.includeOperationIdAliases?.[operationId])) {
+    if (operations.has(extra)) {
+      return extra;
+    }
+  }
+  return null;
+}
+
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -157,18 +180,27 @@ function validateIntegrationContracts() {
     LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
   };
   for (const [schemaName, expectedRef] of Object.entries(mappingRefs)) {
-    const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+    const actualRef = mappedFieldsRef(spec.components?.schemas?.[schemaName]);
     if (actualRef !== expectedRef) {
       errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}; found ${actualRef || "no provider-specific schema"}.`);
     }
   }
-  for (const schemaName of [
-    "FormMailchimpIntegrationRequest",
-    "PatchedFormMailchimpIntegrationRequest",
-    "LeadEnrichmentIntegrationRequest"
-  ]) {
+  for (const schemaName of ["FormMailchimpIntegrationRequest", "LeadEnrichmentIntegrationRequest"]) {
     if (!spec.components?.schemas?.[schemaName]?.required?.includes("mapped_fields")) {
       errors.push(`${schemaName} must require mapped_fields to match backend validation.`);
+    }
+  }
+  const patchedMailchimp = spec.components?.schemas?.PatchedFormMailchimpIntegrationRequest;
+  if (patchedMailchimp) {
+    if (!patchedMailchimp.required?.includes("mapped_fields")) {
+      errors.push("PatchedFormMailchimpIntegrationRequest must require mapped_fields to match backend validation.");
+    }
+  } else {
+    const patchBody = resolveSchema(
+      operations.get("formsMailchimpIntegrationsPartialUpdate")?.operation?.requestBody?.content?.["application/json"]?.schema
+    );
+    if (!patchBody?.required?.includes("mapped_fields")) {
+      errors.push("formsMailchimpIntegrationsPartialUpdate must require mapped_fields to match backend validation.");
     }
   }
 
@@ -708,7 +740,12 @@ for (const operationId of requiredOperationIds) {
 }
 
 for (const operationId of includedOperationIds) {
-  validateRequiredOperation(operationId, "Explicitly included MCP operation", {
+  const resolvedOperationId = resolveIncludedOperationId(operationId);
+  if (!resolvedOperationId) {
+    errors.push(`Explicitly included MCP operation ${operationId} is not present.`);
+    continue;
+  }
+  validateRequiredOperation(resolvedOperationId, "Explicitly included MCP operation", {
     requireExamples: false
   });
 }

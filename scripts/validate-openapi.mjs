@@ -36,6 +36,17 @@ function sameMembers(actual, expected) {
   );
 }
 
+function mappedFieldsRef(schema) {
+  const mapped = schema?.properties?.mapped_fields;
+  if (!mapped || typeof mapped !== "object") {
+    return undefined;
+  }
+  if (typeof mapped.$ref === "string") {
+    return mapped.$ref;
+  }
+  return mapped.allOf?.find((item) => typeof item?.$ref === "string")?.$ref;
+}
+
 const introDisallowedPatterns = [
   /https:\/\/api\.formaloo\.me\/v1\.0\//,
   /https:\/\/api\.formaloo\.me\/v2\.0\//,
@@ -58,7 +69,7 @@ const integrationMappingRefs = {
   LeadEnrichmentIntegrationRequest: "#/components/schemas/FormalooLeadEnrichmentMappedFields"
 };
 for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) {
-  const actualRef = spec.components?.schemas?.[schemaName]?.properties?.mapped_fields?.$ref;
+  const actualRef = mappedFieldsRef(spec.components?.schemas?.[schemaName]);
   if (actualRef !== expectedRef) {
     errors.push(`${schemaName}.mapped_fields must reference ${expectedRef}.`);
   }
