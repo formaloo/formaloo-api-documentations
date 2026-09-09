@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || (github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name) }}
+      # secrets are not available to step-level `if`, so surface it as env.
+      MCP_DISPATCH_TOKEN: ${{ secrets.MCP_DISPATCH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,3 +88,18 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy html --project-name=${{ env.DEPLOY_BRANCH == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ env.DEPLOY_BRANCH }}
+
+      # Production docs are the contract FormalooMCP pins. Tell it to resync as
+      # soon as a master deploy publishes, rather than leaving it to discover
+      # the change on its own. Skipped on dev deploys and when no token is
+      # configured, so staging publishes and forks stay inert.
+      - name: Notify FormalooMCP of the published contract
+        if: env.DEPLOY_BRANCH == 'master' && env.MCP_DISPATCH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ env.MCP_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/formaloo/FormalooMCP/dispatches \
+            --method POST \
+            --field event_type=api-spec-updated \
+            --field 'client_payload[reason]=docs master deploy' \
+            --field "client_payload[docs_sha]=${{ github.sha }}"
