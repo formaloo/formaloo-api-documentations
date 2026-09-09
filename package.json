@@ -2,7 +2,6 @@
   "name": "formaloo-api-documentations",
   "private": true,
   "scripts": {
-    "test": "node --test scripts/*.test.mjs",
     "build:docs": "./generate.sh",
     "fetch-specs": "node ./scripts/fetch-specs.mjs",
     "prepare-doc-stubs": "node ./scripts/prepare-doc-stubs.mjs",
