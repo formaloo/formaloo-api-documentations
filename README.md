@@ -2,6 +2,8 @@
 
 Repository for generating the public Formaloo API reference from OpenAPI specifications across multiple services.
 
+Contributing, branch model, and the production publish are documented in [AGENTS.md](AGENTS.md).
+
 ## Running the Service
 
 Install the pinned tooling:
