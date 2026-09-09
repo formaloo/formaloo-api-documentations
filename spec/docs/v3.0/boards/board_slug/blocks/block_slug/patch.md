@@ -7,12 +7,14 @@ For data blocks connected to forms:
 
 - `form_result` uses `form`, `fields`, `filters`, `settings`, edit flags, voting, and export settings.
 - `form_charts` uses `form`, `fields`, `subtype`, `settings`, and `config`.
-- `kanban` uses `form`, `fields`, `columns_field`, `items_field`, `featured_image_field`, `filters`, `settings`, `mode`, and `display_type`.
+- `kanban` uses `form`, `fields`, `card_fields`, `columns_field`, `items_field`, `featured_image_field`, `filters`, `settings`, `mode`, and `display_type`.
 - `gallery` is a kanban block with `display_type: "grid_view"`.
 - `ai_summary` uses `form`, `user_questions`, `length`, and `ai_engine_id`.
 - `form_display` uses `form`, `display_type`, `style_type`, and optional `fields`.
 
 `filters` is saved block state. Send the complete intended filter snapshot when saving filters on the block. `settings` and `config` are dashboard metadata objects; retrieve the block first and preserve existing keys when changing one nested value.
+
+For kanban and gallery blocks, `fields` controls the fields available when opening a row. `card_fields` independently controls the values shown on cards and falls back to `fields` when empty.
 
 ## Example: update a result table
 
@@ -41,9 +43,10 @@ For data blocks connected to forms:
   "display_type": "grid_view",
   "items_field": "applicant_name",
   "featured_image_field": "photo",
+  "fields": ["applicant_name", "email", "status", "rating"],
+  "card_fields": ["status", "rating"],
   "settings": {
-    "columns_count": "3",
-    "card_fields": ["status", "rating"]
+    "columns_count": "3"
   }
 }
 ```
