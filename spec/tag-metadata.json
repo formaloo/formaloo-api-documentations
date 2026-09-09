@@ -107,6 +107,10 @@
     "displayName": "Folder Users",
     "description": "Manage folder user access and related membership resources."
   },
+  "access-invitations": {
+    "displayName": "Access Invitations",
+    "description": "Manage access granted to email addresses that have not joined the workspace yet."
+  },
   "plans": {
     "displayName": "Plans",
     "description": "List and inspect available plans and plan-related visibility rules."
