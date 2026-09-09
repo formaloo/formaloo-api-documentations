@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DEPLOY_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || (github.event_name == 'repository_dispatch' && github.event.client_payload.branch || github.ref_name) }}
+      # secrets are not available to step-level `if`, so surface it as env.
+      MCP_DISPATCH_APP_ID: ${{ secrets.MCP_DISPATCH_APP_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,3 +88,32 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy html --project-name=${{ env.DEPLOY_BRANCH == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ env.DEPLOY_BRANCH }}
+
+      # A GitHub App rather than a PAT: the credential is not tied to a person,
+      # so it survives offboarding, and the token minted here expires within
+      # the hour instead of sitting in secrets for a year.
+      - name: Mint a token for the FormalooMCP dispatch
+        id: mcp-token
+        if: env.MCP_DISPATCH_APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.MCP_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.MCP_DISPATCH_PRIVATE_KEY }}
+          repositories: FormalooMCP
+
+      # FormalooMCP pins this contract, so tell it whenever one publishes.
+      # `environment` selects what it does there: a master deploy makes it
+      # resync the pin, a dev deploy only makes it validate the contract that
+      # is about to be promoted. Inert until the App is configured, and on forks.
+      - name: Notify FormalooMCP of the published contract
+        if: env.MCP_DISPATCH_APP_ID != ''
+        env:
+          GH_TOKEN: ${{ steps.mcp-token.outputs.token }}
+          TARGET_ENVIRONMENT: ${{ env.DEPLOY_BRANCH == 'master' && 'prod' || 'staging' }}
+        run: |
+          gh api repos/formaloo/FormalooMCP/dispatches \
+            --method POST \
+            --field event_type=api-spec-updated \
+            --field "client_payload[environment]=$TARGET_ENVIRONMENT" \
+            --field "client_payload[docs_branch]=$DEPLOY_BRANCH" \
+            --field "client_payload[docs_sha]=${{ github.sha }}"
