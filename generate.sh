@@ -3,6 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")" && pwd)
+node --test "$ROOT_DIR"/scripts/*.test.mjs
 SPEC_DIR="$ROOT_DIR/spec"
 HTML_DIR="$ROOT_DIR/html"
 ARTIFACTS_DIR="$ROOT_DIR/artifacts"
