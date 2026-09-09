@@ -89,17 +89,19 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy html --project-name=${{ env.DEPLOY_BRANCH == 'master' && secrets.CLOUDFLARE_PROJECT_NAME || secrets.CLOUDFLARE_PROJECT_NAME_DEV }} --branch=${{ env.DEPLOY_BRANCH }}
 
-      # Production docs are the contract FormalooMCP pins. Tell it to resync as
-      # soon as a master deploy publishes, rather than leaving it to discover
-      # the change on its own. Skipped on dev deploys and when no token is
-      # configured, so staging publishes and forks stay inert.
+      # FormalooMCP pins this contract, so tell it whenever one publishes.
+      # `environment` selects what it does there: a master deploy makes it
+      # resync the pin, a dev deploy only makes it validate the contract that
+      # is about to be promoted. Inert without a token, and on forks.
       - name: Notify FormalooMCP of the published contract
-        if: env.DEPLOY_BRANCH == 'master' && env.MCP_DISPATCH_TOKEN != ''
+        if: env.MCP_DISPATCH_TOKEN != ''
         env:
           GH_TOKEN: ${{ env.MCP_DISPATCH_TOKEN }}
+          TARGET_ENVIRONMENT: ${{ env.DEPLOY_BRANCH == 'master' && 'prod' || 'staging' }}
         run: |
           gh api repos/formaloo/FormalooMCP/dispatches \
             --method POST \
             --field event_type=api-spec-updated \
-            --field 'client_payload[reason]=docs master deploy' \
+            --field "client_payload[environment]=$TARGET_ENVIRONMENT" \
+            --field "client_payload[docs_branch]=$DEPLOY_BRANCH" \
             --field "client_payload[docs_sha]=${{ github.sha }}"
