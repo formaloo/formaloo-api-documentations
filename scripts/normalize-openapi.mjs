@@ -2882,10 +2882,19 @@ function enrichFieldConfigSchemas() {
   };
 
   spec.components.schemas.FormalooAcceptableAnswers = {
-    type: "object",
-    additionalProperties: true,
-    nullable: true,
-    description: "Acceptable answer patterns or values for field validation. Used for quiz scoring and answer verification."
+    oneOf: [
+      { type: "array", nullable: true, items: { type: "string" } },
+      { type: "string" }
+    ],
+    description: "Allowed answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Exact values are trimmed and lowercased; slash-delimited regex entries are preserved and validated."
+  };
+
+  spec.components.schemas.FormalooUnacceptableAnswers = {
+    oneOf: [
+      { type: "array", nullable: true, items: { type: "string" } },
+      { type: "string" }
+    ],
+    description: "Blocked answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Values are trimmed and lowercased."
   };
 
   for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
@@ -2919,12 +2928,7 @@ function enrichFieldConfigSchemas() {
     }
 
     if (schema.properties.unacceptable_answers && schema.properties.unacceptable_answers.type === "object" && JSON.stringify(schema.properties.unacceptable_answers.additionalProperties) === "{}") {
-      schema.properties.unacceptable_answers = {
-        type: "object",
-        additionalProperties: true,
-        nullable: true,
-        description: "Blocked/unacceptable answer patterns for field validation."
-      };
+      schema.properties.unacceptable_answers = { $ref: "#/components/schemas/FormalooUnacceptableAnswers" };
     }
 
     if (schemaName === "FormBuilderRegexFieldRequest") {
