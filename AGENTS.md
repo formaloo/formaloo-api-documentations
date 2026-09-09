@@ -17,17 +17,9 @@ backend cannot express.
 Base PRs on `dev` and merge into `dev`. **`dev` → `master` is the production
 release** — a separate deliberate merge, never part of a feature PR.
 
-Do not let `dev` drift ahead of `master`. Downstream pins the *published*
-contract, so unmerged work is invisible to it and can silently break it.
-
-## Downstream
-
-FormalooMCP pins both published artifacts and validates them against its own
-operation policy. A deploy dispatches `api-spec-updated` to it: `master`
-triggers a resync, `dev` only a validation.
-
-Renaming an `operationId` breaks downstream pins even when the path is
-unchanged.
+What `master` publishes is a contract other repositories pin. So unmerged work
+on `dev` is invisible to them, and renaming an `operationId` breaks them even
+when the path is unchanged.
 
 ## Verifying a publish
 
