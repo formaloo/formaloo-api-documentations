@@ -48,8 +48,8 @@ Each logic item is a JSON object:
 
 ```json
 {
-  "type": "field | submit | update",
-  "identifier": "field_slug",
+  "type": "field | submit | update | schedule",
+  "identifier": "field_slug_or_schedule_key",
   "actions": [
     {
       "action": "action_type",
@@ -63,8 +63,8 @@ Each logic item is a JSON object:
 }
 ```
 
-* **type**: scope of the logic (`field` = reacts to a field’s value, `submit` = on submission, `update` = variable manipulation).
-* **identifier**: the field slug this logic is tied to.
+* **type**: scope of the logic (`field` = reacts to a field’s value, `submit` = on submission, `update` = on row edit, `schedule` = when a `wait` comes due).
+* **identifier**: required for `field` (the field slug) and `schedule` (the key a `wait` action targets). Omit for `submit` and `update`.
 * **actions**: what happens if conditions are met.
 * **when**: defines the condition(s).
 
@@ -94,14 +94,18 @@ Each logic item is a JSON object:
 
 ### Workflow & Integrations
 
-| Action         | Description               |
-| -------------- | ------------------------- |
-| `send_email`   | Send custom email         |
-| `send_webhook` | Trigger API webhook       |
-| `send_slack`   | Slack notification        |
-| `generate_pdf` | Generate documents        |
-| `redirect`     | Send user to external URL |
-| `set_related`  | Set related record data   |
+| Action          | Description               |
+| --------------- | ------------------------- |
+| `send_email`    | Send custom email         |
+| `send_webhook`  | Trigger API webhook       |
+| `send_whatsapp` | Send an approved WhatsApp template. Not allowed in `field` logic. Requires template, receiver, variables, and agent |
+| `send_slack`    | Slack notification        |
+| `generate_pdf`  | Generate documents        |
+| `redirect`      | Send user to external URL |
+| `set_related`   | Set related record data   |
+| `add_row`       | Create one row in another accessible form in the same workspace. Not allowed in `field` or `schedule` logic |
+| `edit_row`      | Update matching rows in another accessible form. Not allowed in `field` or `schedule` logic |
+| `wait`          | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
 
 ---
 
@@ -122,6 +126,7 @@ Compound grouping uses `and` or `or` with nested condition objects in `args`.
 {"operation": "lte", "args": [field_ref, const]}
 {"operation": "equal", "args": [field_ref, const]}
 {"operation": "not_equal", "args": [field_ref, const]}
+{"operation": "lt", "args": [row_count_ref, const]}
 ```
 
 ### Choice Checks
@@ -155,6 +160,216 @@ If the `run_field_logics_on_update` setting on the form is `true`, the `field` l
 
 * So if `run_field_logics_on_update` is `false`, none if the `field` logic will be checked and applied on row update.
 * If `run_field_logics_on_update` is `true`, the `field` logic will be checked and applied, but only for the fields that are being updated.
+
+### Schedule logic
+
+Scheduled follow-ups are configured in the same `logic` array. There is no separate scheduling endpoint.
+
+A `wait` action on `submit`, `update`, or another `schedule` section binds a follow-up to the current row. When that time arrives, Formaloo re-evaluates the matching `type: "schedule"` section against the row as it stands then — not as it was when the wait was created.
+
+A form may hold several schedule sections. Each `identifier` must be unique. Every `wait` must name an existing schedule identifier; otherwise the payload is rejected.
+
+`wait` arguments, in order:
+
+1. **Schedule key** — constant whose `value` is the `identifier` of the `schedule` section to run.
+2. **Base** — `now`, `created_at`, `updated_at`, or a date/datetime field.
+3. **Expression** — a relative date string. Offsets combine signed amounts with a unit: `min` (minutes), `h` (hours), `d` (days), `w` (weeks), `m` (months), `y` (years). Examples: `+30min`, `+2h +15min`, `+7d`, `-1w`, `+5m`. Note `m` is months, so minutes are spelled `min`. Keywords: `today`, `tomorrow`, `this_week`, `next_week`, `this_month`, `next_month`, `this_year`, `next_year`. Use `custom` with a fourth argument for an absolute datetime.
+4. **Custom target** — only when the expression is `custom`. An ISO datetime string.
+
+```json
+{
+  "action": "wait",
+  "args": [
+    {"type": "constant", "value": "approval_chase"},
+    {"type": "constant", "value": "now"},
+    {"type": "constant", "value": "+2d"}
+  ],
+  "when": {
+    "operation": "is",
+    "args": [
+      {"type": "field", "value": "status_slug"},
+      {"type": "choice", "value": "pending_choice_slug"}
+    ]
+  }
+}
+```
+
+From a date or datetime field:
+
+```json
+{"type": "field", "identifier": "appointment_slug"}
+```
+
+A `custom` wait:
+
+```json
+{
+  "action": "wait",
+  "args": [
+    {"type": "constant", "value": "reminder"},
+    {"type": "constant", "value": "now"},
+    {"type": "constant", "value": "custom"},
+    {"type": "constant", "value": "2026-08-05T09:00:00Z"}
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+Resolution rules:
+
+* Offset expressions keep the time of day of the base. A datetime field at `14:30` plus `+2d` runs at `14:30` two days later, and `+30min` runs at `15:00` the same day.
+* A date-only field has no time of day, so it runs at `23:59:59` of the resolved day. Minute and hour offsets are measured from that instant.
+* Keyword expressions (`tomorrow`, `next_month`, …) and `custom` are anchored on the current clock. Their base must be `now`. Keywords resolve to the end of that day in the workspace timezone.
+* If the base field is empty or unparsable when the wait is saved, the follow-up is recorded as unresolved and never fires.
+* `wait` cannot be used in `field` logic: field logic has no row to bind to.
+* Conditions on a `wait` are evaluated when the wait is scheduled. If a submit payload omits the guarded field, `is` / `is_not` fail and no task is created. Put `when: always` on the submit `wait` and gate the email on the schedule section instead.
+
+At fire time:
+
+* Conditions on the schedule section run against current row data. If nothing matches, the step is skipped and any `wait` in that section is not scheduled.
+* A matching `wait` inside a schedule section chains the next step. Removing or renaming a schedule `identifier` cancels pending follow-ups that targeted it. Sending `logic` still replaces the whole array.
+
+---
+
+### WhatsApp send
+
+`send_whatsapp` sends an approved WhatsApp template when a `submit`, `update`, or `schedule` section matches. It cannot be used in `field` logic: there is no stored row yet.
+
+The workspace must have a ready WhatsApp Business connection. All four arguments are required, in this order:
+
+1. **Template** — `whatsapp_template` whose `identifier` is the template ContentSid (`HX` followed by 32 hex characters). The template must already exist and be approved.
+2. **Receiver** — a `whatsapp_receiver` identifying a phone or text field, or a `constant` E.164 number such as `+15551234567`.
+3. **Variables** — `whatsapp_variables` whose `value` is an object of numbered keys (`"1"`, `"2"`, …). Each entry is a typed mapping: `constant`, `field`, or `variable`.
+4. **Agent** — `agent` whose `identifier` is the Agent Builder agent that sends the message. A payload with only three arguments is rejected.
+
+```json
+{
+  "action": "send_whatsapp",
+  "args": [
+    {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"},
+    {"type": "whatsapp_receiver", "identifier": "phone_slug"},
+    {
+      "type": "whatsapp_variables",
+      "value": {
+        "1": {"type": "field", "identifier": "name_slug"},
+        "2": {"type": "constant", "value": "Acme"}
+      }
+    },
+    {"type": "agent", "identifier": "agent-1"}
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+A constant receiver:
+
+```json
+{"type": "constant", "value": "+15551234567"}
+```
+
+Resolution rules:
+
+* Field and variable mappings are resolved from the row at send time. Missing values become empty strings.
+* The agent is validated against the workspace when the message is sent. An invalid agent skips the send; the row is left unchanged.
+* `send_whatsapp` cannot be used in `field` logic.
+
+### Add row
+
+`add_row` creates one row in another accessible form in the same workspace. It cannot be used in `field` or `schedule` logic.
+
+Arguments, in order:
+
+1. **Form** — `form` whose `identifier` is the destination form slug. The configuring user must have edit access. User forms are rejected.
+2. **Row data** — `row_data` whose `value` maps destination field slugs to typed values (`constant`, `field`, `variable`, or `choice`). At least one mapping is required. Read-only destination fields are rejected.
+
+```json
+{
+  "action": "add_row",
+  "args": [
+    {"type": "form", "identifier": "contacts_form_slug"},
+    {
+      "type": "row_data",
+      "value": {
+        "name_slug": {"type": "field", "identifier": "attendee_name_slug"},
+        "source_slug": {"type": "constant", "value": "registration"},
+        "status_slug": {"type": "choice", "identifier": "new_choice_slug"}
+      }
+    }
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+The created row goes through the destination form's normal create path, including that form's submit logic.
+
+### Edit row
+
+`edit_row` updates matching rows in another accessible form in the same workspace. It cannot be used in `field` or `schedule` logic.
+
+Required arguments:
+
+1. **Form** — `form` whose `identifier` is the destination form slug.
+2. **Row filter** — `row_filter` whose `value` is a non-empty object of destination-field query keys to typed mappings. Row `status` filters are rejected.
+3. **Row data** — `row_data` whose `value` maps destination field slugs to typed values, same contract as `add_row`.
+
+Optional arguments, each at most once:
+
+4. **Sort** — `row_sort` whose `value` is `{ "field": "<slug|created_at|updated_at>", "direction": "asc"|"desc" }`.
+5. **Limit** — `limit` whose `value` is a positive integer. A limit requires an explicit sort. Without a limit, every match is updated.
+
+Filter keys are destination field slugs, optionally with a lookup suffix such as `_contains`. Each entry is a `constant`, `field`, `variable`, or `choice` mapping resolved from the triggering row at run time.
+
+```json
+{
+  "action": "edit_row",
+  "args": [
+    {"type": "form", "identifier": "registration_form_slug"},
+    {
+      "type": "row_filter",
+      "value": {
+        "session_slug": {"type": "field", "identifier": "session_slug"},
+        "status_slug": {"type": "choice", "identifier": "waitlisted_choice_slug"}
+      }
+    },
+    {
+      "type": "row_data",
+      "value": {
+        "status_slug": {"type": "choice", "identifier": "confirmed_choice_slug"}
+      }
+    },
+    {"type": "row_sort", "value": {"field": "created_at", "direction": "asc"}},
+    {"type": "limit", "value": 1}
+  ],
+  "when": {
+    "operation": "is",
+    "args": [
+      {"type": "field", "value": "status_slug"},
+      {"type": "choice", "value": "cancelled_choice_slug"}
+    ]
+  }
+}
+```
+
+Updated rows go through the destination form's normal update path, including that form's update logic.
+
+### Row count
+
+`row_count` is a condition argument, not an action. Use it as the left-hand side of a numeric comparison (`lt`, `lte`, `gt`, `gte`, `equal`) in `submit` or `update` logic. It cannot be used in `field` or `schedule` logic.
+
+```json
+{
+  "type": "row_count",
+  "value": {
+    "form": "registration_form_slug",
+    "filters": {
+      "session_slug": {"type": "field", "identifier": "session_slug"},
+      "status_slug": {"type": "choice", "identifier": "confirmed_choice_slug"}
+    }
+  }
+}
+```
+
+`form` is required. `filters` is optional and uses the same mapping contract as `edit_row` filters. Read access to the destination form is enough. Occupancy checks should count only the rows that consume a seat, for example confirmed registrations, not waitlisted or cancelled ones.
 
 ---
 
@@ -195,6 +410,42 @@ If the `run_field_logics_on_update` setting on the form is `true`, the `field` l
   ```json
   {"type": "formula", "value": "CONCAT({first_name}, ' ', {last_name})"}
   {"type": "link", "value": "https://example.com/thanks"}
+  ```
+* **WhatsApp template, receiver, variables, and agent**:
+
+  ```json
+  {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"}
+  {"type": "whatsapp_receiver", "identifier": "phone_slug"}
+  {
+    "type": "whatsapp_variables",
+    "value": {
+      "1": {"type": "field", "identifier": "name_slug"}
+    }
+  }
+  {"type": "agent", "identifier": "agent-1"}
+  ```
+* **Form, row data, row filter, row sort, limit, and row count**:
+
+  ```json
+  {"type": "form", "identifier": "destination_form_slug"}
+  {
+    "type": "row_data",
+    "value": {
+      "name_slug": {"type": "field", "identifier": "source_name_slug"}
+    }
+  }
+  {
+    "type": "row_filter",
+    "value": {
+      "status_slug": {"type": "choice", "identifier": "waitlisted_choice_slug"}
+    }
+  }
+  {"type": "row_sort", "value": {"field": "created_at", "direction": "asc"}}
+  {"type": "limit", "value": 1}
+  {
+    "type": "row_count",
+    "value": {"form": "destination_form_slug"}
+  }
   ```
 
 ---
@@ -320,6 +571,93 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 }
 ```
 
+### WhatsApp on submission
+
+```json
+{
+  "type": "submit",
+  "actions": [
+    {
+      "action": "send_whatsapp",
+      "args": [
+        {"type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef"},
+        {"type": "whatsapp_receiver", "identifier": "phone_slug"},
+        {
+          "type": "whatsapp_variables",
+          "value": {
+            "1": {"type": "field", "identifier": "name_slug"},
+            "2": {"type": "constant", "value": "Acme"}
+          }
+        },
+        {"type": "agent", "identifier": "agent-1"}
+      ],
+      "when": {"operation": "always", "args": []}
+    }
+  ]
+}
+```
+
+### Scheduled follow-up on submission
+
+Send a chase email two days after submit if the row is still pending. If it is still pending then, wait two more days and escalate.
+
+```json
+{
+  "type": "submit",
+  "actions": [
+    {
+      "action": "wait",
+      "args": [
+        {"type": "constant", "value": "approval_chase"},
+        {"type": "constant", "value": "now"},
+        {"type": "constant", "value": "+2d"}
+      ],
+      "when": {"operation": "always", "args": []}
+    }
+  ]
+}
+```
+
+```json
+{
+  "type": "schedule",
+  "identifier": "approval_chase",
+  "actions": [
+    {
+      "action": "send_email",
+      "args": [
+        {"type": "send_email_template", "identifier": "chase_template_slug"},
+        {"type": "field", "identifier": "email_slug"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "status_slug"},
+          {"type": "choice", "value": "pending_choice_slug"}
+        ]
+      }
+    },
+    {
+      "action": "wait",
+      "args": [
+        {"type": "constant", "value": "approval_escalate"},
+        {"type": "constant", "value": "now"},
+        {"type": "constant", "value": "+2d"}
+      ],
+      "when": {
+        "operation": "is",
+        "args": [
+          {"type": "field", "value": "status_slug"},
+          {"type": "choice", "value": "pending_choice_slug"}
+        ]
+      }
+    }
+  ]
+}
+```
+
+Both items belong in the same `logic` array, together with the `schedule` section whose `identifier` is `approval_escalate`.
+
 ---
 
 ## 8. Best Practices
@@ -329,6 +667,11 @@ Note that when we conditionally show a field, it will be hidden by default. So w
 * Use variables for all price, score, or computed values.
 * Avoid circular logic (a field showing/hiding itself).
 * Test with fallback conditions (`otherwise`) to ensure graceful behavior.
+* Put every `schedule` section in the same `logic` array as the `wait` that targets it. Removing a schedule key cancels that follow-up.
+* Do not put `wait` in `field` logic.
+* Do not put `send_whatsapp` in `field` logic. Include all four arguments; the `agent` identifier is required.
+* Do not put `add_row`, `edit_row`, or `row_count` in `field` or `schedule` logic.
+* An `edit_row` limit requires an explicit sort. Row `status` is not a valid filter key.
 
 ---
 
@@ -444,3 +787,83 @@ Retrieve the form first and use exact field and choice slugs. Sending `logic` re
 ```
 
 `update` logic runs on field edit/update flows and is ignored on form submission. When `run_field_logics_on_update` is `true`, `field` logic also runs on row update for changed fields.
+
+## Example request: schedule a follow-up after submit
+
+Retrieve the form first. Sending `logic` replaces the entire saved logic array, so include every rule that should remain. There is no public endpoint to list or cancel individual follow-ups; change or remove the matching `schedule` section.
+
+```json
+{
+  "logic": [
+    {
+      "type": "submit",
+      "actions": [
+        {
+          "action": "wait",
+          "args": [
+            { "type": "constant", "value": "approval_chase" },
+            { "type": "constant", "value": "created_at" },
+            { "type": "constant", "value": "+2d" }
+          ],
+          "when": { "operation": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "type": "schedule",
+      "identifier": "approval_chase",
+      "actions": [
+        {
+          "action": "send_email",
+          "args": [
+            { "type": "send_email_template", "identifier": "chase_template_slug" },
+            { "type": "field", "identifier": "email_slug" }
+          ],
+          "when": {
+            "operation": "is",
+            "args": [
+              { "type": "field", "value": "status_slug" },
+              { "type": "choice", "value": "pending_choice_slug" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+If the status is no longer pending when the wait comes due, the email is not sent.
+
+## Example request: send WhatsApp on submit
+
+Retrieve the form first. Sending `logic` replaces the entire saved logic array, so include every rule that should remain. The workspace needs a ready WhatsApp connection and an approved template. The fourth argument (`agent`) is required.
+
+```json
+{
+  "logic": [
+    {
+      "type": "submit",
+      "actions": [
+        {
+          "action": "send_whatsapp",
+          "args": [
+            { "type": "whatsapp_template", "identifier": "HX0123456789abcdef0123456789abcdef" },
+            { "type": "whatsapp_receiver", "identifier": "phone_slug" },
+            {
+              "type": "whatsapp_variables",
+              "value": {
+                "1": { "type": "field", "identifier": "name_slug" },
+                "2": { "type": "constant", "value": "Acme" }
+              }
+            },
+            { "type": "agent", "identifier": "agent-1" }
+          ],
+          "when": { "operation": "always", "args": [] }
+        }
+      ]
+    }
+  ]
+}
+```
+

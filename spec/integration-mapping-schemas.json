@@ -1,0 +1,391 @@
+{
+  "FormalooHubspotMappedFields": {
+    "type": "object",
+    "description": "HubSpot mappings grouped by contacts, companies, and deals. Unsupported object groups are rejected.",
+    "additionalProperties": false,
+    "properties": {
+      "contacts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "source_field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Saved Formaloo field slug from the target form."
+            },
+            "destination_field": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Use discovery name and fieldType (not its storage type).",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provider field identifier returned by discovery."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "booleancheckbox",
+                    "radio",
+                    "select",
+                    "checkbox",
+                    "text",
+                    "number",
+                    "textarea",
+                    "html",
+                    "file",
+                    "date"
+                  ],
+                  "description": "Provider field type returned by discovery."
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          },
+          "required": [
+            "source_field",
+            "destination_field"
+          ]
+        }
+      },
+      "companies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "source_field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Saved Formaloo field slug from the target form."
+            },
+            "destination_field": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Use discovery name and fieldType (not its storage type).",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provider field identifier returned by discovery."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "booleancheckbox",
+                    "radio",
+                    "select",
+                    "checkbox",
+                    "text",
+                    "number",
+                    "textarea",
+                    "html",
+                    "file",
+                    "date"
+                  ],
+                  "description": "Provider field type returned by discovery."
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          },
+          "required": [
+            "source_field",
+            "destination_field"
+          ]
+        }
+      },
+      "deals": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "source_field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Saved Formaloo field slug from the target form."
+            },
+            "destination_field": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Use discovery name and fieldType (not its storage type).",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provider field identifier returned by discovery."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "booleancheckbox",
+                    "radio",
+                    "select",
+                    "checkbox",
+                    "text",
+                    "number",
+                    "textarea",
+                    "html",
+                    "file",
+                    "date"
+                  ],
+                  "description": "Provider field type returned by discovery."
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          },
+          "required": [
+            "source_field",
+            "destination_field"
+          ]
+        }
+      }
+    }
+  },
+  "FormalooNetsuiteMappedFields": {
+    "type": "object",
+    "description": "NetSuite mappings grouped by customer and vendor. Unsupported record groups are rejected.",
+    "additionalProperties": false,
+    "properties": {
+      "customer": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "source_field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Saved Formaloo field slug from the target form."
+            },
+            "destination_field": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "NetSuite field selected from record metadata discovery.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provider field identifier returned by discovery."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "textarea",
+                    "number",
+                    "boolean",
+                    "date",
+                    "datetime",
+                    "select",
+                    "multiselect",
+                    "file"
+                  ],
+                  "description": "Provider field type returned by discovery."
+                },
+                "value_mappings": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Optional mapping from saved Formaloo choice slugs to NetSuite select, multiselect, or boolean destination values."
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          },
+          "required": [
+            "source_field",
+            "destination_field"
+          ]
+        }
+      },
+      "vendor": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "source_field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Saved Formaloo field slug from the target form."
+            },
+            "destination_field": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "NetSuite field selected from record metadata discovery.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Provider field identifier returned by discovery."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "textarea",
+                    "number",
+                    "boolean",
+                    "date",
+                    "datetime",
+                    "select",
+                    "multiselect",
+                    "file"
+                  ],
+                  "description": "Provider field type returned by discovery."
+                },
+                "value_mappings": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Optional mapping from saved Formaloo choice slugs to NetSuite select, multiselect, or boolean destination values."
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ]
+            }
+          },
+          "required": [
+            "source_field",
+            "destination_field"
+          ]
+        }
+      }
+    }
+  },
+  "FormalooNotionMappedFields": {
+    "type": "object",
+    "description": "Keys are saved Formaloo field slugs; values are discovered Notion property descriptors.",
+    "additionalProperties": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Destination field selected from provider discovery.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider field identifier returned by discovery."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "title",
+            "rich_text",
+            "multi_select",
+            "number",
+            "select",
+            "email",
+            "checkbox",
+            "phone_number",
+            "date",
+            "files"
+          ],
+          "description": "Provider field type returned by discovery."
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ]
+    }
+  },
+  "FormalooMailchimpMappedFields": {
+    "type": "object",
+    "description": "Complete mapping keyed by saved Formaloo field slug. At least one descriptor must use both tag and type `email_address`.",
+    "additionalProperties": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Destination field selected from provider discovery.",
+      "properties": {
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider field identifier returned by discovery."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "radio",
+            "text",
+            "number",
+            "date",
+            "dropdown",
+            "address",
+            "phone",
+            "website",
+            "birthday",
+            "imageurl",
+            "email_address"
+          ],
+          "description": "Provider field type returned by discovery."
+        }
+      },
+      "required": [
+        "tag",
+        "type"
+      ]
+    },
+    "minProperties": 1
+  },
+  "FormalooBrevoMappedFields": {
+    "type": "object",
+    "description": "Keys are saved Formaloo field slugs; values are discovered Brevo attribute descriptors.",
+    "additionalProperties": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Destination field selected from provider discovery.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider field identifier returned by discovery."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "float",
+            "boolean",
+            "date",
+            "category"
+          ],
+          "description": "Provider field type returned by discovery."
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ]
+    }
+  },
+  "FormalooLeadEnrichmentMappedFields": {
+    "type": "object",
+    "minProperties": 1,
+    "additionalProperties": {
+      "type": "string"
+    },
+    "description": "Keys are saved Formaloo destination-field slugs; values are provider keys returned by the enrichable-fields operation."
+  }
+}

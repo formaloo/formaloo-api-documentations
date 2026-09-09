@@ -1,1 +1,1 @@
-Partially updates an existing edit form sendinblue integration.
+Partially updates a form-level Brevo mapping. Retrieve the current integration and Brevo attributes first. If `mapped_fields` is supplied, it replaces the saved mapping object and a non-empty mapping must include at least one email or SMS attribute. Omitting `mapped_fields` preserves it.

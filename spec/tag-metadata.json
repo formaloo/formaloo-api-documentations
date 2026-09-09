@@ -117,7 +117,7 @@
   },
   "integration-apps": {
     "displayName": "Integration Apps",
-    "description": "Browse and manage integration app definitions."
+    "description": "Browse supported app definitions and manage profile/workspace installation records. Installation is separate from provider authorization and configured integration items."
   },
   "integrations": {
     "displayName": "Integrations",
@@ -125,7 +125,7 @@
   },
   "integration-tags": {
     "displayName": "Integration Tags",
-    "description": "List and manage tags used for integrations."
+    "description": "List catalog metadata used to group and filter supported integration apps."
   },
   "hubspot-integrations": {
     "displayName": "HubSpot Integrations",
@@ -136,8 +136,8 @@
     "description": "Manage Mailchimp integration resources."
   },
   "sendinblue-integrations": {
-    "displayName": "Sendinblue Integrations",
-    "description": "Manage Sendinblue integration resources."
+    "displayName": "Brevo Integrations",
+    "description": "Manage Brevo integration resources exposed under the legacy Sendinblue API name."
   },
   "notion-workspaces": {
     "displayName": "Notion Workspaces",
@@ -169,7 +169,7 @@
   },
   "lead-enrichments": {
     "displayName": "Lead Enrichments",
-    "description": "Access lead enrichment runs and their results."
+    "description": "Configure form-triggered people or company enrichment and discover provider-supported destination fields."
   },
   "reports": {
     "displayName": "Reports",
@@ -214,6 +214,18 @@
   "themes": {
     "displayName": "Themes",
     "description": "Create, copy, and manage reusable theme resources."
+  },
+  "whatsapp-campaigns": {
+    "displayName": "WhatsApp Campaigns",
+    "description": "Create, start, inspect, and troubleshoot WhatsApp campaigns that use approved templates and configured recipient sources."
+  },
+  "whatsapp-connection": {
+    "displayName": "WhatsApp Connection",
+    "description": "Start embedded signup, inspect connection readiness, troubleshoot provider status, and disconnect a workspace's WhatsApp Business account."
+  },
+  "whatsapp-templates": {
+    "displayName": "WhatsApp Templates",
+    "description": "Manage WhatsApp content-template drafts and their asynchronous provider approval lifecycle."
   },
   "prompts": {
     "displayName": "Prompts",

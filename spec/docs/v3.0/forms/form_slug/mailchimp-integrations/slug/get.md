@@ -1,1 +1,2 @@
-Retrieves the specified form mailchimp integration.
+Retrieves one form-level Mailchimp audience mapping by integration slug. This
+does not verify that Mailchimp authorization is still valid.

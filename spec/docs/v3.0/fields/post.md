@@ -36,7 +36,7 @@ Field types available from the dashboard form editor:
 | Signature | `signature` | — | E-signature field. |
 | Repeating section | `repeating_section` | — | Repeating group of fields. |
 | Hidden Field | `hidden` | — | Hidden field for values not shown to submitters. |
-| AI Analysis | `ai_box` | — | Dashboard-created AI Analysis fields are `admin_only: true`. |
+| AI Analysis | `ai_box` | — | Generates admin-only AI content; `mode: edit` can also update selected same-row fields. |
 | City | `city` | — | City selector. |
 | Country | `country` | — | Country selector. |
 | Lookup | `lookup` | — | Looks up values from a related source. |

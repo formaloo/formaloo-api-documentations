@@ -130,3 +130,28 @@ In order to have a subscription based product field, user needs to have the foll
 - If the're more than one subscription items, or a subscription and a on-time purchase in the same submit, only the first subscription product will be taken into account and all the rest will be ignored.
 - Users **can** have multiple subscription based and normal products in the same form if they make sure that they use proper logic to make sure only one of them is shown or filled in any request.
 - Users also **can** have multiple normal product fields and submit them at the same time for a on-time purchase, as long as no subscription based product field is submitted.
+
+## Updating an AI Analysis field
+
+Set `mode` to `edit` and provide same-form target slugs in `editable_fields` to let the AI Analysis field update those fields after submission:
+
+```json
+{
+  "mode": "edit",
+  "editable_fields": [
+    "status_field_slug",
+    "score_field_slug"
+  ],
+  "description": "{% block AI %}Evaluate the submission, select its status, and assign a score.{% endblock %}"
+}
+```
+
+Edit mode requires at least one editable target. Targets from another form and unsupported target types are rejected.
+
+Switching back to normal analysis mode clears the saved editable targets:
+
+```json
+{
+  "mode": "analyze"
+}
+```

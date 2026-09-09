@@ -1,4 +1,4 @@
-Deletes the specified form sendinblue integration.
+Deletes the form-level Brevo mapping. This does not uninstall the catalog app, revoke Brevo authorization, or delete the destination list.
 
 ## Behavior
 

@@ -1,4 +1,6 @@
-Deletes the specified lead enrichment integration.
+Deletes a lead-enrichment configuration by slug. This stops that configuration from enriching future matching submissions; it does not remove form fields or previously enriched data.
+
+Deleting the configuration also removes its managed form webhook.
 
 ## Behavior
 
