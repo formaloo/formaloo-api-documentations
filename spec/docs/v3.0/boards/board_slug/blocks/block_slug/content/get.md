@@ -1,4 +1,8 @@
 
+Returns runtime content for a board block.
+
+For kanban and gallery blocks, row objects include only the fields configured in `card_fields`. When `card_fields` is empty, the endpoint falls back to `fields`. The block payload still returns `fields` separately for clients that configure the open-row editor.
+
 ## Searching for a text on all fields
 
 If you want to search on the whole fields:
@@ -33,4 +37,3 @@ Like the previous item, search term can be either saved on the block settings, o
 Notes:
 - The search term is case-insensitive, so `Lorem` and `lorem` are the same.
 - On the admin view, the query param (if sent) will override the saved search term. On the public view, it will be added to the saved query.
-Get content of a block.

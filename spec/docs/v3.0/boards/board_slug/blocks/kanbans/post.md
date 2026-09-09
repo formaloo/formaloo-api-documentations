@@ -2,11 +2,14 @@ Creates a kanban block on a board/app. Use this when an app page should show for
 
 `form` is the source form slug. `columns_field` is the field used to group cards and should be choice-like (`choice`, `dropdown`, `rating`, or `yes_no`). `items_field` is the non-file field used as the card title or primary label. `featured_image_field` is a file field used as the card image.
 
+`fields` controls which fields are available when a row is opened. `card_fields` independently controls which field values are returned for each kanban or gallery card. When `card_fields` is empty or omitted, it falls back to `fields`.
+
 ```json
 {
   "title": "Pipeline",
   "form": "application_form",
   "fields": ["name", "status", "photo"],
+  "card_fields": ["name", "status"],
   "columns_field": "status",
   "items_field": "name",
   "featured_image_field": "photo",
@@ -22,12 +25,12 @@ For a gallery/card grid, create a kanban block with `display_type: "grid_view"`:
   "title": "Applicant gallery",
   "form": "application_form",
   "fields": ["name", "status", "photo"],
+  "card_fields": ["status"],
   "items_field": "name",
   "featured_image_field": "photo",
   "display_type": "grid_view",
   "settings": {
-    "columns_count": "3",
-    "card_fields": ["status"]
+    "columns_count": "3"
   }
 }
 ```
