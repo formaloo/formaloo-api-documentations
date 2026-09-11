@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { deriveLogicEnums } from "./logic-schema-source.mjs";
+
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
 const intermediateDir = path.join(artifactsDir, "intermediate");
@@ -106,34 +108,6 @@ const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
 const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
-const formalooLogicConditionOperations = [
-  "equal",
-  "not_equal",
-  "gt",
-  "lt",
-  "gte",
-  "lte",
-  "greatest",
-  "smallest",
-  "is",
-  "is_not",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "is_answered",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
 
 function titleizeTag(slug) {
   const overrides = {
@@ -475,6 +449,13 @@ function normalizeSchemaTree(node) {
 }
 
 function ensureFormalooLogicSchemas() {
+  const {
+    ruleTypes: logicRuleTypeEnum,
+    actions: logicActionEnum,
+    operations: conditionOperationEnum,
+    argumentTypes: logicArgumentTypeEnum
+  } = deriveLogicEnums(spec.components.schemas);
+
   spec.components.schemas.FormalooLogicScalarValue = {
     anyOf: [
       { type: "string", nullable: true },
@@ -493,23 +474,7 @@ function ensureFormalooLogicSchemas() {
       type: {
         type: "string",
         description: "Argument kind.",
-        enum: [
-          "field",
-          "matrix",
-          "table",
-          "choice",
-          "user",
-          "row",
-          "constant",
-          "variable",
-          "success_page",
-          "link",
-          "send_email_template",
-          "send_email_receiver",
-          "webhook",
-          "slack",
-          "pdf_template"
-        ]
+        enum: logicArgumentTypeEnum
       },
       value: {
         $ref: "#/components/schemas/FormalooLogicScalarValue",
@@ -534,7 +499,7 @@ function ensureFormalooLogicSchemas() {
       operation: {
         type: "string",
         description: "Nested condition operation.",
-        enum: formalooLogicConditionOperations
+        enum: conditionOperationEnum
       },
       args: {
         type: "array",
@@ -558,7 +523,7 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Condition operation. Common operations include comparison, choice, state, and boolean-composition operations.",
-        enum: formalooLogicConditionOperations
+        enum: conditionOperationEnum
       },
       args: {
         type: "array",
@@ -592,25 +557,7 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Action type to execute. `disable` is accepted by the backend for legacy logic payloads, but the current form logic analyzer treats it as a no-op and the dashboard UI does not expose it; avoid `disable` for new rules.",
-        enum: [
-          "jump",
-          "jump_to_success_page",
-          "hide",
-          "show",
-          "disable",
-          "set",
-          "submit",
-          "redirect",
-          "add",
-          "multiply",
-          "subtract",
-          "divide",
-          "send_email",
-          "send_webhook",
-          "send_slack",
-          "generate_pdf",
-          "set_related"
-        ]
+        enum: logicActionEnum
       },
       args: {
         type: "array",
@@ -643,7 +590,7 @@ function ensureFormalooLogicSchemas() {
     properties: {
       type: {
         type: "string",
-        enum: ["field", "submit", "update"],
+        enum: logicRuleTypeEnum,
         description: "Logic rule scope."
       },
       identifier: {
