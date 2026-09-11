@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -19,6 +20,22 @@ const allowedMetadataKeys = new Set([
 ]);
 
 const spec = JSON.parse(await fs.readFile(normalizedSpecPath, "utf8"));
+
+// The normalized public spec (above) only carries the Formaloo*-overlaid logic
+// schemas, not the backend's raw LogicActionTypeEnum/LogicOperationTypeEnum/
+// ActionArgumentTypeEnum they were derived from. Read the pre-normalize raw
+// merge -- the same file normalize-openapi.mjs derives the overlay from --
+// so this validator checks against the real backend contract instead of a
+// second hand-typed guess at it. See logic-schema-source.mjs.
+const rawSpecPath = path.join(artifactsDir, "intermediate", "openapi-merged.raw.json");
+let rawSpecSchemas = {};
+try {
+  const rawSpec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
+  rawSpecSchemas = rawSpec.components?.schemas ?? {};
+} catch {
+  // Raw pre-normalize spec not available (e.g. validating an ad-hoc spec) --
+  // deriveLogicEnums falls back to its last-known-good backend snapshot.
+}
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const introContents = await fs.readFile(introPath, "utf8");
 
@@ -176,70 +193,11 @@ for (const operationId of integrationDiscoveryOperationIds) {
 
 const logicArgumentTypeEnum =
   spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
-const expectedLogicArgumentTypes = [
-  "field",
-  "choice",
-  "variable",
-  "constant",
-  "matrix",
-  "table",
-  "user",
-  "row",
-  "success_page",
-  "link",
-  "send_email_template",
-  "send_email_receiver",
-  "webhook",
-  "slack",
-  "pdf_template"
-];
-const expectedLogicOperations = [
-  "is",
-  "is_not",
-  "equal",
-  "not_equal",
-  "gt",
-  "gte",
-  "lt",
-  "lte",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "is_answered",
-  "smallest",
-  "greatest",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
-const expectedLogicActions = [
-  "show",
-  "hide",
-  "disable",
-  "jump",
-  "jump_to_success_page",
-  "submit",
-  "set",
-  "add",
-  "subtract",
-  "multiply",
-  "divide",
-  "send_email",
-  "send_webhook",
-  "send_slack",
-  "generate_pdf",
-  "set_related",
-  "redirect"
-];
+const {
+  argumentTypes: expectedLogicArgumentTypes,
+  operations: expectedLogicOperations,
+  actions: expectedLogicActions
+} = deriveLogicEnums(rawSpecSchemas);
 
 if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
   errors.push(
