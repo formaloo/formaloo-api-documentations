@@ -1549,34 +1549,6 @@ const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
 const mcpEnvelopeResponseDescription =
   "Wire response is the Formaloo API envelope: `{ status, errors, data }`. The `data` property contains the operation-specific success payload documented by this response schema.";
-const formalooLogicConditionOperations = [
-  "equal",
-  "not_equal",
-  "gt",
-  "lt",
-  "gte",
-  "lte",
-  "greatest",
-  "smallest",
-  "is",
-  "is_not",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "is_answered",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
 
 function cloneJson(value) {
   if (value === undefined) {
@@ -1820,10 +1792,16 @@ function enforceBoundedLogicHelperSchemas(openapiSpec) {
     return;
   }
 
+  // Reuse the enum normalize-openapi.mjs already derived from the backend
+  // spec (see logic-schema-source.mjs) instead of a hand-typed snapshot.
+  // A hardcoded array here previously overwrote that correct value right
+  // back to a stale one -- the exact FRM-3448 bug, reintroduced a 4th time
+  // in this same pipeline after normalize-openapi.mjs was fixed to derive it.
+  const conditionOperationEnum = schemas.FormalooLogicCondition.properties.operation?.enum;
   const operationProperty = {
     type: "string",
     description: "Nested condition operation.",
-    enum: formalooLogicConditionOperations
+    enum: conditionOperationEnum
   };
 
   schemas.FormalooLogicShallowCondition = {
@@ -1845,10 +1823,6 @@ function enforceBoundedLogicHelperSchemas(openapiSpec) {
     required: ["operation", "args"]
   };
 
-  schemas.FormalooLogicCondition.properties.operation = {
-    ...(schemas.FormalooLogicCondition.properties.operation ?? {}),
-    enum: formalooLogicConditionOperations
-  };
   schemas.FormalooLogicCondition.properties.args = {
     ...(schemas.FormalooLogicCondition.properties.args ?? {}),
     type: "array",
