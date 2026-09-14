@@ -2201,6 +2201,30 @@ function upsertQueryParameter(operation, parameter) {
   operation.parameters.push(parameter);
 }
 
+function enrichDashboardFolderListContract() {
+  const listBoards = spec.paths["/v3.0/boards/"]?.get;
+  if (!listBoards) {
+    return;
+  }
+
+  upsertQueryParameter(listBoards, {
+    in: "query",
+    name: "folder",
+    required: false,
+    schema: { type: "string" },
+    description:
+      "One folder slug. This is the parameter used by the Formaloo dashboard when listing a folder's direct app contents."
+  });
+  upsertQueryParameter(listBoards, {
+    in: "query",
+    name: "include_sub_folders",
+    required: false,
+    schema: { type: "boolean", default: false },
+    description:
+      "When true with folder, include apps from that folder and all descendant folders."
+  });
+}
+
 function enrichFormsRowsListOperation() {
   const listRows = spec.paths["/v3.0/forms/{slug}/rows/"]?.get;
   if (!listRows) {
@@ -3327,6 +3351,7 @@ enrichFormDisplaySubmitContract();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 enrichRowSchemas();
+enrichDashboardFolderListContract();
 enrichFormsRowsListOperation();
 enrichBlockSchemas();
 enrichBoardSchemas();
