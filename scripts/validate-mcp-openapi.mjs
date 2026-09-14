@@ -753,6 +753,29 @@ validateMethodExclusions();
 validatePutSettings();
 validatePatchFirstUpdates();
 validatePaymentMethodPutException();
+validateDashboardFolderListContract();
+
+function validateDashboardFolderListContract() {
+  const boardsList = operations.get("boardsList");
+  if (!boardsList) {
+    return;
+  }
+
+  const queryParameters = (boardsList.operation.parameters ?? [])
+    .map(resolveParameter)
+    .filter((parameter) => parameter?.in === "query");
+  const folder = queryParameters.find((parameter) => parameter.name === "folder");
+  const includeSubFolders = queryParameters.find(
+    (parameter) => parameter.name === "include_sub_folders"
+  );
+
+  if (folder?.schema?.type !== "string") {
+    errors.push("boardsList must document the dashboard's singular folder query parameter.");
+  }
+  if (includeSubFolders?.schema?.type !== "boolean") {
+    errors.push("boardsList must document include_sub_folders as a boolean query parameter.");
+  }
+}
 
 function validateRequiredOperation(
   operationId,
