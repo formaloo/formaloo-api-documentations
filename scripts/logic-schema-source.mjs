@@ -20,7 +20,7 @@
 // components (LogicTypeEnum, LogicActionTypeEnum, LogicOperationTypeEnum,
 // ActionArgumentTypeEnum) in the fetched formz/formz-mcp contracts.
 
-export const FALLBACK_LOGIC_RULE_TYPES = ["field", "submit", "update"];
+export const FALLBACK_LOGIC_RULE_TYPES = ["field", "submit", "update", "schedule"];
 
 export const FALLBACK_LOGIC_ACTIONS = [
   "jump",
@@ -37,9 +37,13 @@ export const FALLBACK_LOGIC_ACTIONS = [
   "divide",
   "send_email",
   "send_webhook",
+  "send_whatsapp",
   "send_slack",
   "generate_pdf",
-  "set_related"
+  "set_related",
+  "add_row",
+  "edit_row",
+  "wait"
 ];
 
 export const FALLBACK_LOGIC_OPERATIONS = [
@@ -81,6 +85,15 @@ export const FALLBACK_ACTION_ARGUMENT_TYPES = [
   "send_email_template",
   "send_email_receiver",
   "webhook",
+  "whatsapp_template",
+  "whatsapp_receiver",
+  "whatsapp_variables",
+  "agent",
+  "form",
+  "row_data",
+  "row_filter",
+  "row_sort",
+  "limit",
   "slack",
   "pdf_template"
 ];
