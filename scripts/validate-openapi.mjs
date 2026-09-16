@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
+import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -41,6 +42,7 @@ const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"))
 const introContents = await fs.readFile(introPath, "utf8");
 
 const errors = [];
+errors.push(...validateFormAnswerProperties(spec));
 const warnings = [];
 const defaultPrefix = publicContract.defaultVersionPrefix;
 const legacyPaths = new Set(Object.keys(publicContract.legacyPaths));
