@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { normalizeFormAnswerProperties } from "./form-answer-contract.mjs";
 
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
@@ -2890,22 +2891,6 @@ function enrichFieldConfigSchemas() {
       "Field-specific configuration. Shape varies by field type. May include validation rules, display settings, calculation formulas, and integration settings."
   };
 
-  spec.components.schemas.FormalooAcceptableAnswers = {
-    oneOf: [
-      { type: "array", nullable: true, items: { type: "string" } },
-      { type: "string" }
-    ],
-    description: "Allowed answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Exact values are trimmed and lowercased; slash-delimited regex entries are preserved and validated."
-  };
-
-  spec.components.schemas.FormalooUnacceptableAnswers = {
-    oneOf: [
-      { type: "array", nullable: true, items: { type: "string" } },
-      { type: "string" }
-    ],
-    description: "Blocked answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Values are trimmed and lowercased."
-  };
-
   for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
     if (!schema?.properties) continue;
 
@@ -2930,14 +2915,6 @@ function enrichFieldConfigSchemas() {
         nullable: true,
         description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
       };
-    }
-
-    if (schema.properties.acceptable_answers && schema.properties.acceptable_answers.type === "object" && JSON.stringify(schema.properties.acceptable_answers.additionalProperties) === "{}") {
-      schema.properties.acceptable_answers = { $ref: "#/components/schemas/FormalooAcceptableAnswers" };
-    }
-
-    if (schema.properties.unacceptable_answers && schema.properties.unacceptable_answers.type === "object" && JSON.stringify(schema.properties.unacceptable_answers.additionalProperties) === "{}") {
-      schema.properties.unacceptable_answers = { $ref: "#/components/schemas/FormalooUnacceptableAnswers" };
     }
 
     if (schemaName === "FormBuilderRegexFieldRequest") {
@@ -2977,6 +2954,9 @@ function enrichFieldConfigSchemas() {
       };
     }
   }
+
+  normalizeFormAnswerProperties(spec);
+
   for (const schemaName of [
     "FormMailchimpIntegrationRequest",
     "PatchedFormMailchimpIntegrationRequest",

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
+import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -79,6 +80,7 @@ const removedPutMigrationTargets = {
 const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
+errors.push(...validateFormAnswerProperties(spec));
 const warnings = [];
 const operations = new Map();
 const excludeSettings = settings.exclude ?? {};
