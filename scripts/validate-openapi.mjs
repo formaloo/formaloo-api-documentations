@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { backendEnumContractError } from "./backend-enum-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -92,16 +93,14 @@ for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) 
   }
 }
 
-const expectedIntegrationAppTypes = [
-  "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
-  "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
-  "active_campaign", "webhook", "email_template", "email_campaign",
-  "pdf_generator", "make", "calendly", "recurring_submission",
-  "lead_enrichment", "send_whatsapp"
-];
 const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
-if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
-  errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+const integrationAppTypeError = backendEnumContractError({
+  actual: integrationAppTypes,
+  rawSchemas: rawSpecSchemas,
+  schemaName: "IntegrationAppTypeEnum"
+});
+if (integrationAppTypeError) {
+  errors.push(integrationAppTypeError);
 }
 
 const whatsappConnectionOperations = new Set([
