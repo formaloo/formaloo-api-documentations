@@ -579,16 +579,49 @@ function validateResponseEnvelopes() {
 
 function validateTypedHelperSchemas() {
   const {
-    argumentTypes: expectedLogicArgumentTypes,
+    conditionArgumentTypes: expectedConditionArgumentTypes,
+    actionArgumentTypes: expectedActionArgumentTypes,
     operations: expectedLogicOperations,
     actions: expectedLogicActions
   } = deriveLogicEnums(rawMcpSpecSchemas);
-  const logicArgumentTypeEnum =
-    spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
-  if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
+  const logicActionArgument = spec.components?.schemas?.FormalooLogicActionArgument;
+  const logicConditionArgument = spec.components?.schemas?.FormalooLogicConditionArgument;
+  const logicActionArgumentTypeEnum = logicActionArgument?.properties?.type?.enum;
+  const logicActionArgumentValueVariants = logicActionArgument?.properties?.value?.anyOf ?? [];
+  const logicConditionArgumentBranches = logicConditionArgument?.oneOf ?? [];
+  const logicConditionArgumentTypeEnum = logicConditionArgumentBranches.flatMap(
+    (branch) => branch?.properties?.type?.enum ?? []
+  );
+  const rowCountArgumentBranch = logicConditionArgumentBranches.find((branch) =>
+    branch?.properties?.type?.enum?.includes("row_count")
+  );
+  if (!sameMembers(logicActionArgumentTypeEnum, expectedActionArgumentTypes)) {
     errors.push(
-      "FormalooLogicArgument.type must match the backend operation/action argument constants."
+      "FormalooLogicActionArgument.type must match the backend action argument constants."
     );
+  }
+
+  if (
+    !logicActionArgumentValueVariants.some(
+      (variant) => variant?.type === "object" && variant?.additionalProperties === true
+    )
+  ) {
+    errors.push(
+      "FormalooLogicActionArgument.value must preserve the backend object-valued action argument contract."
+    );
+  }
+
+  if (!sameMembers(logicConditionArgumentTypeEnum, expectedConditionArgumentTypes)) {
+    errors.push(
+      "FormalooLogicConditionArgument.type branches must match the backend condition argument constants."
+    );
+  }
+
+  if (
+    rowCountArgumentBranch?.properties?.value?.$ref !==
+    "#/components/schemas/FormalooLogicRowCountValue"
+  ) {
+    errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
   }
 
   const logicOperationEnum =
@@ -625,12 +658,19 @@ function validateTypedHelperSchemas() {
       ?.map((item) => item?.$ref)
       .filter(Boolean) ?? [];
   if (
-    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicConditionArgument") ||
     !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
   ) {
     errors.push(
-      "FormalooLogicCondition.args.items must compose FormalooLogicArgument and FormalooLogicShallowCondition with anyOf."
+      "FormalooLogicCondition.args.items must compose FormalooLogicConditionArgument and FormalooLogicShallowCondition with anyOf."
     );
+  }
+
+  if (
+    spec.components?.schemas?.FormalooLogicAction?.properties?.args?.items?.$ref !==
+    "#/components/schemas/FormalooLogicActionArgument"
+  ) {
+    errors.push("FormalooLogicAction.args.items must reference FormalooLogicActionArgument.");
   }
 
   const builderField = spec.components?.schemas?.FormalooBuilderFieldInput;

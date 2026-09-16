@@ -20,7 +20,7 @@
 // components (LogicTypeEnum, LogicActionTypeEnum, LogicOperationTypeEnum,
 // ActionArgumentTypeEnum) in the fetched formz/formz-mcp contracts.
 
-export const FALLBACK_LOGIC_RULE_TYPES = ["field", "submit", "update"];
+export const FALLBACK_LOGIC_RULE_TYPES = ["field", "submit", "update", "schedule"];
 
 export const FALLBACK_LOGIC_ACTIONS = [
   "jump",
@@ -37,9 +37,13 @@ export const FALLBACK_LOGIC_ACTIONS = [
   "divide",
   "send_email",
   "send_webhook",
+  "send_whatsapp",
   "send_slack",
   "generate_pdf",
-  "set_related"
+  "set_related",
+  "add_row",
+  "edit_row",
+  "wait"
 ];
 
 export const FALLBACK_LOGIC_OPERATIONS = [
@@ -81,6 +85,15 @@ export const FALLBACK_ACTION_ARGUMENT_TYPES = [
   "send_email_template",
   "send_email_receiver",
   "webhook",
+  "whatsapp_template",
+  "whatsapp_receiver",
+  "whatsapp_variables",
+  "agent",
+  "form",
+  "row_data",
+  "row_filter",
+  "row_sort",
+  "limit",
   "slack",
   "pdf_template"
 ];
@@ -92,7 +105,17 @@ export const FALLBACK_ACTION_ARGUMENT_TYPES = [
 // inlined with no stable name to read back. Kept in sync by hand with
 // formz_core formz/logic/utils/constants.py OperationArgumentType.choices;
 // review it if backend adds a new condition-side argument kind.
-export const CONDITION_ARGUMENT_TYPES = ["field", "matrix", "table", "choice", "user", "row"];
+export const CONDITION_ARGUMENT_TYPES = [
+  "field",
+  "matrix",
+  "table",
+  "choice",
+  "user",
+  "row",
+  "constant",
+  "variable",
+  "row_count"
+];
 
 function deriveEnum(schemas, schemaName, fallback) {
   const values = schemas?.[schemaName]?.enum;
@@ -111,7 +134,14 @@ export function deriveLogicEnums(schemas) {
   // argument kinds into one schema -- it is the single shape MCP/CLI callers
   // use for both condition args (`value`) and action args (`identifier`).
   const argumentTypes = [
-    ...new Set([...CONDITION_ARGUMENT_TYPES, "constant", "variable", ...actionArgumentTypes])
+    ...new Set([...CONDITION_ARGUMENT_TYPES, ...actionArgumentTypes])
   ];
-  return { ruleTypes, actions, operations, argumentTypes };
+  return {
+    ruleTypes,
+    actions,
+    operations,
+    conditionArgumentTypes: [...CONDITION_ARGUMENT_TYPES],
+    actionArgumentTypes,
+    argumentTypes
+  };
 }

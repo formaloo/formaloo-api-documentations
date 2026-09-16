@@ -1788,7 +1788,7 @@ function annotateResponseEnvelopes(openapiSpec) {
 
 function enforceBoundedLogicHelperSchemas(openapiSpec) {
   const schemas = openapiSpec.components?.schemas;
-  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicArgument) {
+  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicConditionArgument) {
     return;
   }
 
@@ -1828,11 +1828,11 @@ function enforceBoundedLogicHelperSchemas(openapiSpec) {
     type: "array",
     items: {
       anyOf: [
-        { $ref: "#/components/schemas/FormalooLogicArgument" },
+        { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
         { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
       ],
       description:
-        "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+        "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
     }
   };
 }
