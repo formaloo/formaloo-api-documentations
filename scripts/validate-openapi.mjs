@@ -193,6 +193,8 @@ for (const operationId of integrationDiscoveryOperationIds) {
 
 const logicArgumentTypeEnum =
   spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
+const logicArgumentValueVariants =
+  spec.components?.schemas?.FormalooLogicArgument?.properties?.value?.anyOf ?? [];
 const {
   argumentTypes: expectedLogicArgumentTypes,
   operations: expectedLogicOperations,
@@ -202,6 +204,16 @@ const {
 if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
   errors.push(
     "FormalooLogicArgument.type must match the backend operation/action argument constants."
+  );
+}
+
+if (
+  !logicArgumentValueVariants.some(
+    (variant) => variant?.type === "object" && variant?.additionalProperties === true
+  )
+) {
+  errors.push(
+    "FormalooLogicArgument.value must preserve the backend object-valued action argument contract."
   );
 }
 

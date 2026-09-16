@@ -455,6 +455,15 @@ function ensureFormalooLogicSchemas() {
     operations: conditionOperationEnum,
     argumentTypes: logicArgumentTypeEnum
   } = deriveLogicEnums(spec.components.schemas);
+  const backendActionValueSchema =
+    spec.components.schemas.ActionArgumentRequest?.properties?.value ??
+    spec.components.schemas.ActionArgument?.properties?.value;
+
+  if (!backendActionValueSchema) {
+    throw new Error(
+      "Backend ActionArgument value schema is required to build the Formaloo logic contract."
+    );
+  }
 
   spec.components.schemas.FormalooLogicScalarValue = {
     anyOf: [
@@ -477,9 +486,9 @@ function ensureFormalooLogicSchemas() {
         enum: logicArgumentTypeEnum
       },
       value: {
-        $ref: "#/components/schemas/FormalooLogicScalarValue",
+        ...structuredClone(backendActionValueSchema),
         description:
-          "Condition-side primitive value or referenced slug. Examples: field slug for `field`, choice slug for `choice`, numeric/text value for `constant`, or `matrix_slug.group_slug` for `matrix`."
+          "Condition-side primitive value or referenced slug, or an object for backend-defined structured action arguments such as `whatsapp_variables`, `row_data`, `row_filter`, and `row_sort`."
       },
       identifier: {
         type: "string",
