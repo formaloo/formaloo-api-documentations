@@ -453,7 +453,8 @@ function ensureFormalooLogicSchemas() {
     ruleTypes: logicRuleTypeEnum,
     actions: logicActionEnum,
     operations: conditionOperationEnum,
-    argumentTypes: logicArgumentTypeEnum
+    conditionArgumentTypes,
+    actionArgumentTypes
   } = deriveLogicEnums(spec.components.schemas);
   const backendActionValueSchema =
     spec.components.schemas.ActionArgumentRequest?.properties?.value ??
@@ -475,20 +476,63 @@ function ensureFormalooLogicSchemas() {
       "Scalar logic argument value. Referenced slugs are strings; constants may be strings, numbers, booleans, or null."
   };
 
-  spec.components.schemas.FormalooLogicArgument = {
+  spec.components.schemas.FormalooLogicRowCountValue = {
     type: "object",
     description:
-      "Argument object used by Formaloo form logic conditions and actions. Condition arguments use `value`. Action object references and variables use `identifier`; action constants use `value`.",
+      "Row-count query against an accessible destination form. Filters use destination field query keys and typed source mappings.",
+    properties: {
+      form: { type: "string", description: "Destination form slug." },
+      filters: {
+        type: "object",
+        description: "Optional destination-field filters.",
+        additionalProperties: { type: "object", additionalProperties: true }
+      }
+    },
+    required: ["form"]
+  };
+
+  spec.components.schemas.FormalooLogicConditionArgument = {
+    oneOf: [
+      {
+        type: "object",
+        description: "Scalar condition argument.",
+        properties: {
+          type: {
+            type: "string",
+            enum: conditionArgumentTypes.filter((value) => value !== "row_count")
+          },
+          value: { $ref: "#/components/schemas/FormalooLogicScalarValue" }
+        },
+        required: ["type", "value"]
+      },
+      {
+        type: "object",
+        description: "Row-count condition argument.",
+        properties: {
+          type: { type: "string", enum: ["row_count"] },
+          value: { $ref: "#/components/schemas/FormalooLogicRowCountValue" }
+        },
+        required: ["type", "value"]
+      }
+    ],
+    description:
+      "Condition argument. Ordinary arguments require scalar values; `row_count` requires an object containing a form and optional filters."
+  };
+
+  spec.components.schemas.FormalooLogicActionArgument = {
+    type: "object",
+    description:
+      "Argument object used by Formaloo form logic actions. Object references and variables use `identifier`; constants and structured action values use `value`.",
     properties: {
       type: {
         type: "string",
-        description: "Argument kind.",
-        enum: logicArgumentTypeEnum
+        description: "Action argument kind.",
+        enum: actionArgumentTypes
       },
       value: {
         ...structuredClone(backendActionValueSchema),
         description:
-          "Condition-side primitive value or referenced slug, or an object for backend-defined structured action arguments such as `whatsapp_variables`, `row_data`, `row_filter`, and `row_sort`."
+          "Primitive value, or an object for backend-defined structured action arguments such as `whatsapp_variables`, `row_data`, `row_filter`, and `row_sort`."
       },
       identifier: {
         type: "string",
@@ -498,6 +542,15 @@ function ensureFormalooLogicSchemas() {
       }
     },
     required: ["type"]
+  };
+
+  spec.components.schemas.FormalooLogicArgument = {
+    anyOf: [
+      { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
+      { $ref: "#/components/schemas/FormalooLogicActionArgument" }
+    ],
+    description:
+      "Compatibility union of Formaloo condition and action arguments. Prefer the context-specific component."
   };
 
   spec.components.schemas.FormalooLogicShallowCondition = {
@@ -540,11 +593,11 @@ function ensureFormalooLogicSchemas() {
           "Operation arguments. Condition args use `value`, not `identifier`. For `is`, use field ref plus choice/value ref. For comparisons, use field ref plus constant/value ref. For `and`/`or`, args are nested condition objects with their own `operation` and `args`. For `always` and `otherwise`, use an empty array. This intentionally stays non-recursive for MCP/tool-schema compatibility.",
         items: {
           anyOf: [
-            { $ref: "#/components/schemas/FormalooLogicArgument" },
+            { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
             { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
           ],
           description:
-            "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+            "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
         }
       }
     },
@@ -572,7 +625,7 @@ function ensureFormalooLogicSchemas() {
         type: "array",
         description:
           "Action arguments. Object references and variables use `identifier`; literal constants and links use `value`. `jump_to_success_page` requires exactly one `type: field` argument whose identifier is the success-page field slug or `default_success_page`.",
-        items: { $ref: "#/components/schemas/FormalooLogicArgument" }
+        items: { $ref: "#/components/schemas/FormalooLogicActionArgument" }
       },
       when: {
         $ref: "#/components/schemas/FormalooLogicCondition"

@@ -191,30 +191,51 @@ for (const operationId of integrationDiscoveryOperationIds) {
   }
 }
 
-const logicArgumentTypeEnum =
-  spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
-const logicArgumentValueVariants =
-  spec.components?.schemas?.FormalooLogicArgument?.properties?.value?.anyOf ?? [];
+const logicActionArgument = spec.components?.schemas?.FormalooLogicActionArgument;
+const logicConditionArgument = spec.components?.schemas?.FormalooLogicConditionArgument;
+const logicActionArgumentTypeEnum = logicActionArgument?.properties?.type?.enum;
+const logicActionArgumentValueVariants = logicActionArgument?.properties?.value?.anyOf ?? [];
+const logicConditionArgumentBranches = logicConditionArgument?.oneOf ?? [];
+const logicConditionArgumentTypeEnum = logicConditionArgumentBranches.flatMap(
+  (branch) => branch?.properties?.type?.enum ?? []
+);
+const rowCountArgumentBranch = logicConditionArgumentBranches.find((branch) =>
+  branch?.properties?.type?.enum?.includes("row_count")
+);
 const {
-  argumentTypes: expectedLogicArgumentTypes,
+  conditionArgumentTypes: expectedConditionArgumentTypes,
+  actionArgumentTypes: expectedActionArgumentTypes,
   operations: expectedLogicOperations,
   actions: expectedLogicActions
 } = deriveLogicEnums(rawSpecSchemas);
 
-if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
+if (!sameMembers(logicActionArgumentTypeEnum, expectedActionArgumentTypes)) {
   errors.push(
-    "FormalooLogicArgument.type must match the backend operation/action argument constants."
+    "FormalooLogicActionArgument.type must match the backend action argument constants."
   );
 }
 
 if (
-  !logicArgumentValueVariants.some(
+  !logicActionArgumentValueVariants.some(
     (variant) => variant?.type === "object" && variant?.additionalProperties === true
   )
 ) {
   errors.push(
-    "FormalooLogicArgument.value must preserve the backend object-valued action argument contract."
+    "FormalooLogicActionArgument.value must preserve the backend object-valued action argument contract."
   );
+}
+
+if (!sameMembers(logicConditionArgumentTypeEnum, expectedConditionArgumentTypes)) {
+  errors.push(
+    "FormalooLogicConditionArgument.type branches must match the backend condition argument constants."
+  );
+}
+
+if (
+  rowCountArgumentBranch?.properties?.value?.$ref !==
+  "#/components/schemas/FormalooLogicRowCountValue"
+) {
+  errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
 }
 
 const logicOperationEnum =
@@ -247,14 +268,14 @@ if (
 }
 
 const logicIdentifierDescription =
-  spec.components?.schemas?.FormalooLogicArgument?.properties?.identifier
+  spec.components?.schemas?.FormalooLogicActionArgument?.properties?.identifier
     ?.description ?? "";
 if (
   !logicIdentifierDescription.includes("jump_to_success_page") ||
   !logicIdentifierDescription.includes("default_success_page")
 ) {
   errors.push(
-    "FormalooLogicArgument.identifier must document the executable success-page routing contract."
+    "FormalooLogicActionArgument.identifier must document the executable success-page routing contract."
   );
 }
 
@@ -263,12 +284,19 @@ const logicConditionArgsItems =
 const logicConditionArgRefs =
   logicConditionArgsItems?.anyOf?.map((item) => item?.$ref).filter(Boolean) ?? [];
 if (
-  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicConditionArgument") ||
   !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
 ) {
   errors.push(
-    "FormalooLogicCondition.args.items must compose FormalooLogicArgument and FormalooLogicShallowCondition with anyOf."
+    "FormalooLogicCondition.args.items must compose FormalooLogicConditionArgument and FormalooLogicShallowCondition with anyOf."
   );
+}
+
+if (
+  spec.components?.schemas?.FormalooLogicAction?.properties?.args?.items?.$ref !==
+  "#/components/schemas/FormalooLogicActionArgument"
+) {
+  errors.push("FormalooLogicAction.args.items must reference FormalooLogicActionArgument.");
 }
 
 if (spec.components?.schemas?.FormalooBuilderFieldInput) {

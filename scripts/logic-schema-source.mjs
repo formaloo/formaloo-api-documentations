@@ -105,7 +105,17 @@ export const FALLBACK_ACTION_ARGUMENT_TYPES = [
 // inlined with no stable name to read back. Kept in sync by hand with
 // formz_core formz/logic/utils/constants.py OperationArgumentType.choices;
 // review it if backend adds a new condition-side argument kind.
-export const CONDITION_ARGUMENT_TYPES = ["field", "matrix", "table", "choice", "user", "row"];
+export const CONDITION_ARGUMENT_TYPES = [
+  "field",
+  "matrix",
+  "table",
+  "choice",
+  "user",
+  "row",
+  "constant",
+  "variable",
+  "row_count"
+];
 
 function deriveEnum(schemas, schemaName, fallback) {
   const values = schemas?.[schemaName]?.enum;
@@ -124,7 +134,14 @@ export function deriveLogicEnums(schemas) {
   // argument kinds into one schema -- it is the single shape MCP/CLI callers
   // use for both condition args (`value`) and action args (`identifier`).
   const argumentTypes = [
-    ...new Set([...CONDITION_ARGUMENT_TYPES, "constant", "variable", ...actionArgumentTypes])
+    ...new Set([...CONDITION_ARGUMENT_TYPES, ...actionArgumentTypes])
   ];
-  return { ruleTypes, actions, operations, argumentTypes };
+  return {
+    ruleTypes,
+    actions,
+    operations,
+    conditionArgumentTypes: [...CONDITION_ARGUMENT_TYPES],
+    actionArgumentTypes,
+    argumentTypes
+  };
 }
