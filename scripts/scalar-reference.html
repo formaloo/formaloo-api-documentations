@@ -17,6 +17,27 @@
     <!-- @scalar/api-reference standalone bundle. Version is pinned in package.json. -->
     <script src="assets/scalar-api-reference.js"></script>
     <script>
+      // Scalar keeps the next operation's sticky request card on screen while the
+      // hash is still the introduction or a tag. Hide that panel until the hash
+      // is an operation. replaceState does not fire hashchange.
+      ;(function () {
+        var method = /\/(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE|QUERY)\//i
+        function isOperation() {
+          var id = ""
+          try { id = decodeURIComponent(location.hash.replace(/^#/, "")) } catch (e) { id = location.hash.replace(/^#/, "") }
+          return method.test("/" + id + "/")
+        }
+        function sync() {
+          document.documentElement.classList.toggle("scalar-non-operation", !isOperation())
+        }
+        var push = history.pushState
+        var replace = history.replaceState
+        history.pushState = function () { var result = push.apply(this, arguments); sync(); return result }
+        history.replaceState = function () { var result = replace.apply(this, arguments); sync(); return result }
+        window.addEventListener("hashchange", sync)
+        window.addEventListener("popstate", sync)
+        sync()
+      })()
       Scalar.createApiReference("#app", {
         url: "openapi-v3.0.yaml",
         agent: { disabled: true },
@@ -28,7 +49,8 @@
           ".introduction-description .scalar-code-block,",
           ".introduction-description pre,",
           ".tag-section-container .section-columns > .section-column:first-child .scalar-code-block,",
-          ".tag-section-container .section-columns > .section-column:first-child pre{display:none !important}"
+          ".tag-section-container .section-columns > .section-column:first-child pre{display:none !important}",
+          "html.scalar-non-operation .examples{display:none !important}"
         ].join("\n")
       })
     </script>
