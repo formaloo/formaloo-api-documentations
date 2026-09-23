@@ -426,6 +426,12 @@ function normalizeResponses(pathKey, method, operation) {
   ensureResponseDescriptions(operation, method);
 }
 
+const schemaInstanceKeys = new Set(["default", "example", "examples", "enum"]);
+
+function branchCanCarryNullable(branch) {
+  return Boolean(branch && typeof branch === "object" && !branch.$ref && typeof branch.type === "string");
+}
+
 function normalizeSchemaTree(node) {
   if (!node || typeof node !== "object") {
     return;
@@ -433,12 +439,25 @@ function normalizeSchemaTree(node) {
 
   if (node.nullable === true && typeof node.type !== "string") {
     const inferredType = inferSchemaType(node);
+    const unionBranches = Array.isArray(node.anyOf) ? node.anyOf : Array.isArray(node.oneOf) ? node.oneOf : null;
     if (inferredType) {
       node.type = inferredType;
+    } else if (unionBranches && unionBranches.every(branchCanCarryNullable)) {
+      // OAS 3.0 requires type when nullable is set. Keep nullability on each typed branch.
+      for (const branch of unionBranches) {
+        branch.nullable = true;
+      }
+      delete node.nullable;
+    } else if (!node.$ref && !node.allOf && !unionBranches) {
+      // With no type to infer, the schema is already unconstrained and already allows null.
+      delete node.nullable;
     }
   }
 
-  for (const value of Object.values(node)) {
+  for (const [key, value] of Object.entries(node)) {
+    if (schemaInstanceKeys.has(key)) {
+      continue;
+    }
     if (Array.isArray(value)) {
       for (const item of value) {
         normalizeSchemaTree(item);
@@ -1994,11 +2013,12 @@ function enrichChoiceFieldSchemas() {
 function enrichRowSchemas() {
   spec.components.schemas.FormalooRowFieldValue = {
     anyOf: [
-      { type: "string" },
-      { type: "number" },
-      { type: "boolean" },
+      { type: "string", nullable: true },
+      { type: "number", nullable: true },
+      { type: "boolean", nullable: true },
       {
         type: "array",
+        nullable: true,
         items: {
           anyOf: [
             { type: "string" },
@@ -2008,12 +2028,18 @@ function enrichRowSchemas() {
           ]
         }
       },
-      { type: "object", additionalProperties: true }
+      { type: "object", additionalProperties: true, nullable: true }
     ],
-    nullable: true,
     description:
       "Field value in a row. Type varies by field type: strings for text/choice/date/file slugs, numbers for numeric/rating, booleans for yes_no/checkbox, arrays for multiple_select, multi-file, or repeating_section values, objects for matrix/table/lookup-style values, or null for unanswered fields."
   };
+
+  // SubmitRowSerializer adds one serializer field per form field slug at runtime.
+  // Spectacular only emits the static row metadata, so slug keys are additional properties.
+  const addRowRequest = spec.components.schemas.AddRowRequest;
+  if (addRowRequest && addRowRequest.type === "object" && addRowRequest.additionalProperties === undefined) {
+    addRowRequest.additionalProperties = { $ref: "#/components/schemas/FormalooRowFieldValue" };
+  }
 
   spec.components.schemas.FormalooRowFieldValues = {
     type: "object",
