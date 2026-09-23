@@ -102,10 +102,17 @@ if ! "$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.yaml" > "$VALIDATION_DIR/redocl
 fi
 
 echo "Building HTML documentation..."
-"$REDOCLY_BIN" build-docs "$ROOT_DIR/openapi-v3.0.yaml" -o "$HTML_DIR/index.html"
+NODE_MODULES_DIR="$(cd "$(dirname "$TOOL_BIN")/.." && pwd)"
+SCALAR_STANDALONE="$NODE_MODULES_DIR/@scalar/api-reference/dist/browser/standalone.js"
+if [[ ! -f "$SCALAR_STANDALONE" ]]; then
+  echo "Missing @scalar/api-reference browser bundle. Run 'npm ci' or build through Docker first." >&2
+  exit 1
+fi
+mkdir -p "$HTML_DIR/assets"
+cp "$ROOT_DIR/scripts/scalar-reference.html" "$HTML_DIR/index.html"
+cp "$SCALAR_STANDALONE" "$HTML_DIR/assets/scalar-api-reference.js"
 cp "$ROOT_DIR/openapi-v3.0.yaml" "$HTML_DIR/openapi-v3.0.yaml"
 cp "$ROOT_DIR/openapi-v3.0.mcp.yaml" "$HTML_DIR/openapi-v3.0.mcp.yaml"
-mkdir -p "$HTML_DIR/assets"
 cp -R "$ROOT_DIR/assets/." "$HTML_DIR/assets/"
 
 echo "Packaging release artifacts..."
