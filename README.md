@@ -28,7 +28,7 @@ Generated outputs:
 
 - `openapi-v3.0.yaml`: canonical public OpenAPI artifact
 - `openapi-v3.0.mcp.yaml`: MCP-focused OpenAPI artifact
-- `html/`: generated static docs bundle
+- `html/`: static API reference. The page is the pinned open-source Scalar renderer (`@scalar/api-reference`) loading `openapi-v3.0.yaml`. Redocly CLI still bundles and lints the spec.
 - `artifacts/validation/`: validation and lint reports
 - `artifacts/release/`: packaged release assets
 
