@@ -19,7 +19,10 @@
     <script>
       Scalar.createApiReference("#app", {
         url: "openapi-v3.0.yaml",
-        agent: { disabled: true }
+        agent: { disabled: true },
+        hideClientButton: true,
+        hideTestRequestButton: true,
+        hideModels: true
       })
     </script>
   </body>
