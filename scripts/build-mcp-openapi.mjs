@@ -616,9 +616,11 @@ const coreMcpOperations = {
             current_page: 1,
             rows: [
               {
+                form: "customer-feedback",
                 slug: "row-123",
                 submit_number: 1,
                 tracking_code: "TRK-123",
+                row_tags: [{ title: "Follow up" }],
                 data: {
                   email: "customer@example.com"
                 }
@@ -668,8 +670,7 @@ const coreMcpOperations = {
             boards: [
               {
                 title: "CRM App",
-                slug: "crm-app",
-                address: "crm-app"
+                slug: "crm-app"
               }
             ]
           }
@@ -881,7 +882,13 @@ const coreMcpOperations = {
       "200": {
         deleted_form: {
           summary: "Deleted form",
-          value: {}
+          value: {
+            status: 200,
+            errors: {
+              general_errors: [],
+              form_errors: {}
+            }
+          }
         }
       }
     }
@@ -1009,7 +1016,8 @@ const coreMcpOperations = {
           fields: [
             {
               ref_id: "existing_name",
-              slug: "short_text_abc123"
+              slug: "short_text_abc123",
+              type: "short_text"
             },
             {
               ref_id: "satisfaction",
@@ -1194,7 +1202,13 @@ const coreMcpOperations = {
       "200": {
         deleted_field: {
           summary: "Deleted field",
-          value: {}
+          value: {
+            status: 200,
+            errors: {
+              general_errors: [],
+              form_errors: {}
+            }
+          }
         }
       }
     }
@@ -1516,6 +1530,22 @@ const coreMcpOperations = {
 };
 
 const localDescriptionFixes = {
+  askCustomDomainRetrieve: {
+    summary: "Check whether a custom domain or subdomain is already in use.",
+    description: "Checks whether a custom domain or subdomain is already in use."
+  },
+  profilesProfileMeRetrieve: {
+    summary: "Profile",
+    description: "Retrieves the current profile. The active_business query parameter is the business slug for this request."
+  },
+  profilesProfileMePartialUpdate: {
+    summary: "Profile",
+    description: "Partially updates the current profile. The active_business query parameter is the business slug for this request."
+  },
+  whatsappSenderRetrieve: {
+    summary: "Retrieve the WhatsApp sender for the current business.",
+    description: "Retrieves the WhatsApp sender for the current business."
+  },
   currenciesList: {
     summary: "List currencies",
     description: "Lists currencies available for payment, pricing, and localization workflows."
@@ -1628,9 +1658,8 @@ function ensureResponseEnvelopeBaseSchemas(openapiSpec) {
         $ref: "#/components/schemas/FormalooResponseErrors"
       },
       data: {
-        type: "object",
-        additionalProperties: true,
-        description: "Operation-specific success payload."
+        description:
+          "Operation-specific success payload. Shape varies by operation, including objects and arrays, so this base schema does not fix a type."
       }
     },
     additionalProperties: true
@@ -1746,6 +1775,7 @@ function annotateResponseEnvelopes(openapiSpec) {
         const componentName = `Formaloo${pascalCase(operation.operationId)}${statusCode}Response`;
         const dataSchema = cloneJson(schema) ?? { $ref: "#/components/schemas/FormalooEmptyData" };
         openapiSpec.components.schemas[componentName] = {
+          allOf: [{ $ref: "#/components/schemas/FormalooResponseEnvelope" }],
           type: "object",
           required: ["status", "errors", "data"],
           description: `Formaloo response envelope for ${operation.operationId} ${statusCode}.`,

@@ -97,13 +97,15 @@ node "$ROOT_DIR/scripts/validate-mcp-openapi.mjs" "$INTERMEDIATE_DIR/openapi-mcp
 echo "Validating generated public contract..."
 node "$ROOT_DIR/scripts/validate-openapi.mjs"
 node "$ROOT_DIR/scripts/validate-integration-mappings.mjs"
-if ! "$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.yaml" > "$VALIDATION_DIR/redocly-lint.txt" 2>&1; then
-  echo "Redocly lint reported issues. Report saved to artifacts/validation/redocly-lint.txt"
-fi
+echo "Linting generated contracts..."
+"$REDOCLY_BIN" lint "$ROOT_DIR/openapi-v3.0.yaml" "$ROOT_DIR/openapi-v3.0.mcp.yaml" | tee "$VALIDATION_DIR/redocly-lint.txt"
 
 echo "Building HTML documentation..."
 NODE_MODULES_DIR="$(cd "$(dirname "$TOOL_BIN")/.." && pwd)"
 SCALAR_STANDALONE="$NODE_MODULES_DIR/@scalar/api-reference/dist/browser/standalone.js"
+if [[ ! -f "$SCALAR_STANDALONE" && -f "$ROOT_DIR/node_modules/@scalar/api-reference/dist/browser/standalone.js" ]]; then
+  SCALAR_STANDALONE="$ROOT_DIR/node_modules/@scalar/api-reference/dist/browser/standalone.js"
+fi
 if [[ ! -f "$SCALAR_STANDALONE" ]]; then
   echo "Missing @scalar/api-reference browser bundle. Run 'npm ci' or build through Docker first." >&2
   exit 1
