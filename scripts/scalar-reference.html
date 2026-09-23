@@ -22,7 +22,14 @@
         agent: { disabled: true },
         hideClientButton: true,
         hideTestRequestButton: true,
-        hideModels: true
+        hideModels: true,
+        customCss: [
+          ".scalar-reference-intro-clients{display:none !important}",
+          ".introduction-description .scalar-code-block,",
+          ".introduction-description pre,",
+          ".tag-section-container .section-columns > .section-column:first-child .scalar-code-block,",
+          ".tag-section-container .section-columns > .section-column:first-child pre{display:none !important}"
+        ].join("\n")
       })
     </script>
   </body>
