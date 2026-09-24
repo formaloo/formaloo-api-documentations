@@ -42,10 +42,22 @@ jobs:
       - name: Install toolchain
         run: npm ci
 
+      - name: Download authentication OpenAPI
+        env:
+          GH_TOKEN: ${{ secrets.AUTH_SPEC_READ_TOKEN }}
+        run: |
+          mkdir -p ci-artifacts
+          artifact_id=$(gh api repos/formaloo/authentication/actions/artifacts \
+            --jq '[.artifacts[] | select(.name=="authentication-openapi" and .expired==false)][0].id')
+          test -n "$artifact_id"
+          gh api "repos/formaloo/authentication/actions/artifacts/${artifact_id}/zip" > authentication-openapi.zip
+          unzip -p authentication-openapi.zip authentication.yaml > ci-artifacts/authentication.yaml
+
       - name: Build documentation
         run: ./generate.sh
         env:
           STAGING_DOCS: ${{ env.DEPLOY_BRANCH == 'dev' && 'true' || 'false' }}
+          AUTH_SPEC_FILE: ci-artifacts/authentication.yaml
 
       - name: Build MCP spec
         run: |

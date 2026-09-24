@@ -11,7 +11,6 @@ const sources = staging
       icas: "https://id.staging.formaloo.com/docs/openapi/yaml/?version=3.0",
       formz: "https://api.staging.formaloo.com/docs/openapi/yaml/?version=3.0",
       "formz-mcp": "https://api.staging.formaloo.com/docs/openapi/yaml/?version=mcp-1.0",
-      authentication: "https://auth.staging.formaloo.com/docs/openapi/yaml?version=3.0",
       storage: "https://storage.staging.formaloo.com/docs/openapi/yaml/?version=3.0",
       ai: "https://ai.staging.formaloo.com/docs/openapi/yaml/?version=3.0"
     }
@@ -19,12 +18,20 @@ const sources = staging
       icas: "https://id.formaloo.com/docs/openapi/yaml/?version=3.0",
       formz: "https://api.formaloo.me/docs/openapi/yaml/?version=3.0",
       "formz-mcp": "https://api.formaloo.me/docs/openapi/yaml/?version=mcp-1.0",
-      authentication: "https://auth.formaloo.me/docs/openapi/yaml?version=3.0",
       storage: "https://storage.formaloo.me/docs/openapi/yaml/?version=3.0",
       ai: "https://ai-api.formaloo.co/docs/openapi/yaml/?version=3.0"
     };
 
 await fs.mkdir(specDir, { recursive: true });
+
+const authSpecFile = process.env.AUTH_SPEC_FILE;
+if (!authSpecFile) {
+  throw new Error(
+    "AUTH_SPEC_FILE is required. The authentication spec comes from the formaloo/authentication CI artifact, not from a live host."
+  );
+}
+await fs.copyFile(authSpecFile, path.join(specDir, "authentication.yaml"));
+console.log("Copied authentication spec -> spec/authentication.yaml");
 
 function fetchSpec(outputPath, url) {
   const commonArgs = [
