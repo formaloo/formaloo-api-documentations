@@ -499,7 +499,7 @@ function ensureFormalooLogicSchemas() {
   spec.components.schemas.FormalooLogicRowCountValue = {
     type: "object",
     description:
-      "Row-count query against an accessible destination form. Filters use destination field query keys and typed source mappings.",
+      "Row-count query against an accessible destination form. `row_count` can only be used in submit or update logic. Filters use destination field query keys and typed source mappings.",
     properties: {
       form: { type: "string", description: "Destination form slug." },
       filters: {
@@ -527,7 +527,8 @@ function ensureFormalooLogicSchemas() {
       },
       {
         type: "object",
-        description: "Row-count condition argument.",
+        description:
+          "Row-count condition argument. `row_count` can only be used in submit or update logic.",
         properties: {
           type: { type: "string", enum: ["row_count"] },
           value: { $ref: "#/components/schemas/FormalooLogicRowCountValue" }
@@ -536,7 +537,7 @@ function ensureFormalooLogicSchemas() {
       }
     ],
     description:
-      "Condition argument. Ordinary arguments require scalar values; `row_count` requires an object containing a form and optional filters."
+      "Condition argument. Ordinary arguments require scalar values; `row_count` requires an object containing a form and optional filters, and can only be used in submit or update logic."
   };
 
   spec.components.schemas.FormalooLogicActionArgument = {

@@ -625,6 +625,17 @@ function validateTypedHelperSchemas() {
     errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
   }
 
+  const rowCountScope = [
+    logicConditionArgument?.description,
+    rowCountArgumentBranch?.description,
+    spec.components?.schemas?.FormalooLogicRowCountValue?.description,
+  ].join("\n");
+  if (!rowCountScope.includes("`row_count` can only be used in submit or update logic.")) {
+    errors.push(
+      "FormalooLogicConditionArgument must document that row_count can only be used in submit or update logic."
+    );
+  }
+
   const logicOperationEnum =
     spec.components?.schemas?.FormalooLogicCondition?.properties?.operation?.enum;
   if (!sameMembers(logicOperationEnum, expectedLogicOperations)) {
