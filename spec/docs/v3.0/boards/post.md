@@ -11,7 +11,7 @@ Common app shell fields:
 - `config`: app-level dashboard configuration. Retrieve the app first and preserve existing keys when changing one nested value.
 - `theme_config`: app theme configuration. Retrieve the app first and preserve existing keys when changing one nested value.
 - `user_form`: portal/member identity form slug.
-- `primary_form`: numeric form id of the primary workflow form. This is not the form slug. Omit it when only the slug is known and put that slug on the block instead. The response returns `primary_form` as a form object.
+- `primary_form` is deprecated. Do not send it. Attach the form by its slug on a block. Existing responses may still include it until the field is removed.
 
 ## Example request: create a board attached to a form
 
@@ -19,12 +19,11 @@ Common app shell fields:
 {
   "title": "Customer Feedback App",
   "description": "Responses and workflow for the feedback form.",
-  "primary_form": 120451,
   "folder": "3r2nfcn2"
 }
 ```
 
-`primary_form` is the numeric form id, not the form slug. A slug is rejected. Omit `primary_form` when only the slug is known. `folder` is optional.
+Do not send `primary_form`. It is deprecated. `folder` is optional. Attach the form by its slug on a block.
 
 ## Example response (`201`)
 
