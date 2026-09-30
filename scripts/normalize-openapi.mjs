@@ -2752,7 +2752,34 @@ function enrichBlockSchemas() {
   }
 }
 
+function omitBoardPrimaryForm(schema) {
+  if (!schema?.properties?.primary_form) {
+    return;
+  }
+  delete schema.properties.primary_form;
+  if (Array.isArray(schema.required)) {
+    schema.required = schema.required.filter((name) => name !== "primary_form");
+  }
+}
+
+function stripBoardPrimaryForm() {
+  for (const schema of Object.values(spec.components?.schemas ?? {})) {
+    const prop = schema?.properties?.primary_form;
+    if (!prop || prop.type === "string") {
+      continue;
+    }
+    const ref = prop.$ref || prop.allOf?.[0]?.$ref || "";
+    const isFormSummary = String(ref).includes("ShowFormSummary");
+    const isBoardForeignKey =
+      prop.type === "integer" && /primary form related to this board/i.test(prop.description || "");
+    if (isFormSummary || isBoardForeignKey) {
+      omitBoardPrimaryForm(schema);
+    }
+  }
+}
+
 function enrichBoardSchemas() {
+  stripBoardPrimaryForm();
   const boardSchemas = [
     "Board", "BoardCopy", "BoardUpdate", "PrivateBoard", "SharedBoard", "MoveBoard",
     "BoardList", "BoardRequest", "BoardCopyRequest", "PatchedBoardUpdateRequest",
