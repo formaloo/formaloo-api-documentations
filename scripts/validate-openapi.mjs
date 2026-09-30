@@ -43,6 +43,19 @@ const introContents = await fs.readFile(introPath, "utf8");
 
 const errors = [];
 errors.push(...validateFormAnswerProperties(spec));
+for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+  const prop = schema?.properties?.primary_form;
+  if (!prop || prop.type === "string") {
+    continue;
+  }
+  const ref = prop.$ref || prop.allOf?.[0]?.$ref || "";
+  const isFormSummary = String(ref).includes("ShowFormSummary");
+  const isBoardForeignKey =
+    prop.type === "integer" && /primary form related to this board/i.test(prop.description || "");
+  if (isFormSummary || isBoardForeignKey) {
+    errors.push(`${name} must not publish board primary_form`);
+  }
+}
 const warnings = [];
 const defaultPrefix = publicContract.defaultVersionPrefix;
 const legacyPaths = new Set(Object.keys(publicContract.legacyPaths));
