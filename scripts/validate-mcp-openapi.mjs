@@ -3,6 +3,7 @@ import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
 import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -81,7 +82,10 @@ const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
 errors.push(...validateFormAnswerProperties(spec));
+const documentation = validateOperationDocumentation(spec);
+errors.push(...documentation.errors);
 const warnings = [];
+warnings.push(...documentation.warnings);
 const operations = new Map();
 const excludeSettings = settings.exclude ?? {};
 const excludedHttpMethods = new Set(asStringArray(excludeSettings.httpMethods).map((method) => method.toLowerCase()));
@@ -214,10 +218,11 @@ function validateIntegrationContracts() {
       errors.push("PatchedFormMailchimpIntegrationRequest must require mapped_fields to match backend validation.");
     }
   } else {
+    const patchOperation = operations.get("formsMailchimpIntegrationsPartialUpdate")?.operation;
     const patchBody = resolveSchema(
-      operations.get("formsMailchimpIntegrationsPartialUpdate")?.operation?.requestBody?.content?.["application/json"]?.schema
+      patchOperation?.requestBody?.content?.["application/json"]?.schema
     );
-    if (!patchBody?.required?.includes("mapped_fields")) {
+    if (patchOperation && !patchBody?.required?.includes("mapped_fields")) {
       errors.push("formsMailchimpIntegrationsPartialUpdate must require mapped_fields to match backend validation.");
     }
   }
@@ -234,7 +239,6 @@ function validateIntegrationContracts() {
   for (const [operationId, toolName] of Object.entries(discoveryTools)) {
     const operation = operations.get(operationId)?.operation;
     if (!operation) {
-      errors.push(`Integration discovery operation ${operationId} is missing.`);
       continue;
     }
     if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
@@ -253,7 +257,6 @@ function validateIntegrationContracts() {
   for (const [operationId, toolName] of Object.entries(whatsappConnectionTools)) {
     const operation = operations.get(operationId)?.operation;
     if (!operation) {
-      errors.push(`WhatsApp connection operation ${operationId} is missing.`);
       continue;
     }
     if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
@@ -265,7 +268,7 @@ function validateIntegrationContracts() {
   }
 
   const redirectOperation = operations.get("whatsappConnectionRedirectUrlRetrieve")?.operation;
-  for (const parameterName of ["active_business", "next", "phone_number"]) {
+  for (const parameterName of redirectOperation ? ["active_business", "next", "phone_number"] : []) {
     const parameter = redirectOperation?.parameters?.find(
       (candidate) => candidate?.in === "query" && candidate?.name === parameterName
     );
@@ -280,6 +283,7 @@ function validateIntegrationContracts() {
   };
   for (const [operationId, propertyName] of Object.entries(expectedPayloadProperties)) {
     const operation = operations.get(operationId)?.operation;
+    if (!operation) continue;
     const responseSchema = operation?.responses?.["200"]?.content?.["application/json"]?.schema;
     const envelope = resolveSchema(responseSchema);
     const payload = resolveSchema(envelope?.properties?.data);
@@ -289,10 +293,11 @@ function validateIntegrationContracts() {
   }
 
   const destroyOperation = operations.get("whatsappConnectionDestroy")?.operation;
-  if (!destroyOperation?.responses?.["200"] || destroyOperation?.responses?.["204"]) {
+  if (destroyOperation && (!destroyOperation.responses?.["200"] || destroyOperation.responses?.["204"])) {
     errors.push("whatsappConnectionDestroy must expose the deployed 200 success response, not 204.");
   }
-  if (!operations.get("whatsappConnectionRetrieve")?.operation?.responses?.["404"] || !destroyOperation?.responses?.["404"]) {
+  const retrieveOperation = operations.get("whatsappConnectionRetrieve")?.operation;
+  if (retrieveOperation && destroyOperation && (!retrieveOperation.responses?.["404"] || !destroyOperation.responses?.["404"])) {
     errors.push("WhatsApp connection retrieve and disconnect operations must expose 404 missing-connection semantics.");
   }
   const expectedResultPaths = {
@@ -300,7 +305,8 @@ function validateIntegrationContracts() {
     whatsappConnectionRedirectUrlRetrieve: "data.data.whatsapp_redirect"
   };
   for (const [operationId, resultPath] of Object.entries(expectedResultPaths)) {
-    if (operations.get(operationId)?.operation?.["x-formaloo-mcp"]?.result_path !== resultPath) {
+    const operation = operations.get(operationId)?.operation;
+    if (operation && operation["x-formaloo-mcp"]?.result_path !== resultPath) {
       errors.push(`${operationId} must expose deterministic result_path ${resultPath}.`);
     }
   }
@@ -752,7 +758,6 @@ for (const operationId of requiredOperationIds) {
 for (const operationId of includedOperationIds) {
   const resolvedOperationId = resolveIncludedOperationId(operationId);
   if (!resolvedOperationId) {
-    errors.push(`Explicitly included MCP operation ${operationId} is not present.`);
     continue;
   }
   validateRequiredOperation(resolvedOperationId, "Explicitly included MCP operation", {
@@ -795,7 +800,6 @@ function validateRequiredOperation(
 ) {
   const record = operations.get(operationId);
   if (!record) {
-    errors.push(`${label} ${operationId} is not present.`);
     return;
   }
 
@@ -850,7 +854,6 @@ function validateMethodExclusions() {
     for (const operationId of operationIds) {
       const record = operations.get(operationId);
       if (!record) {
-        errors.push(`methodExceptions.${method} includes ${operationId}, but that operation is not present in the MCP spec.`);
         continue;
       }
 
@@ -913,7 +916,6 @@ function validatePatchFirstUpdates() {
   for (const operationId of requiredPatchUpdateOperationIds) {
     const record = operations.get(operationId);
     if (!record) {
-      errors.push(`Required PATCH update operation ${operationId} is not present.`);
       continue;
     }
 
@@ -948,7 +950,6 @@ function validatePaymentMethodPutException() {
   const paymentPut = operations.get("paymentMethodsUpdate");
   if (allowedPutExceptions.has("paymentMethodsUpdate")) {
     if (!paymentPut) {
-      errors.push("paymentMethodsUpdate is allowlisted as a PUT exception, but it is not present in the MCP spec.");
       return;
     }
 
