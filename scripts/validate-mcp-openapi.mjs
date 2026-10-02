@@ -19,6 +19,7 @@ const specPath = path.isAbsolute(specPathInput) ? specPathInput : path.join(root
 // overlay from) so this validator checks against the real backend contract
 // instead of a second hand-typed guess at it. See logic-schema-source.mjs.
 const rawMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-merged.mcp.raw.json");
+const normalizedMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-mcp-source.normalized.json");
 let rawMcpSpecSchemas = {};
 try {
   const rawMcpSpec = JSON.parse(await fs.readFile(rawMcpSpecPath, "utf8"));
@@ -138,6 +139,67 @@ function sameMembers(actual, expected) {
     actual.length === expected.length &&
     expected.every((value) => actual.includes(value))
   );
+}
+
+async function validateUpstreamOperationDescriptions() {
+  let upstream;
+  try {
+    upstream = JSON.parse(await fs.readFile(normalizedMcpSpecPath, "utf8"));
+  } catch (error) {
+    if (specPath === defaultSpecPath) {
+      errors.push(`Cannot compare MCP descriptions with ${path.relative(rootDir, normalizedMcpSpecPath)}: ${error.message}`);
+    }
+    return;
+  }
+
+  const upstreamOperations = new Map();
+  for (const [pathKey, pathItem] of Object.entries(upstream.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      upstreamOperations.set(`${method} ${pathKey}`, operation);
+    }
+  }
+
+  for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      const key = `${method} ${pathKey}`;
+      const sourceOperation = upstreamOperations.get(key);
+      if (!sourceOperation) {
+        errors.push(
+          `${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey} is not in the normalized MCP source inventory.`
+        );
+        continue;
+      }
+      if (sourceOperation.operationId !== operation.operationId) {
+        errors.push(
+          `${method.toUpperCase()} ${pathKey} operationId changed from ${sourceOperation.operationId ?? "<missing>"} to ${operation.operationId ?? "<missing>"}.`
+        );
+      }
+      const sourceDescription = typeof sourceOperation.description === "string" ? sourceOperation.description.trim() : "";
+      if (!sourceDescription) {
+        continue;
+      }
+      const enrichedDescription = typeof operation.description === "string" ? operation.description : "";
+      if (!enrichedDescription.includes(sourceDescription)) {
+        errors.push(
+          `${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey} dropped its upstream operation description.`
+        );
+      }
+    }
+  }
 }
 
 function collectOperations() {
@@ -728,6 +790,7 @@ function validateTypedHelperSchemas() {
 }
 
 collectOperations();
+await validateUpstreamOperationDescriptions();
 validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
