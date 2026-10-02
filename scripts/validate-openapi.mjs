@@ -3,6 +3,7 @@ import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
 import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -44,6 +45,9 @@ const introContents = await fs.readFile(introPath, "utf8");
 const errors = [];
 errors.push(...validateFormAnswerProperties(spec));
 const warnings = [];
+const documentation = validateOperationDocumentation(spec);
+errors.push(...documentation.errors);
+warnings.push(...documentation.warnings);
 const defaultPrefix = publicContract.defaultVersionPrefix;
 const legacyPaths = new Set(Object.keys(publicContract.legacyPaths));
 const knownSecuritySchemes = new Set(Object.keys(spec.components?.securitySchemes ?? {}));

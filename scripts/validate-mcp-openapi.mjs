@@ -3,6 +3,7 @@ import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
 import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
 import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -81,13 +82,10 @@ const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
 errors.push(...validateFormAnswerProperties(spec));
-for (const schemaName of ["CreateForm", "CreateFormRequest", "FormUpdate", "PatchedFormUpdateRequest"]) {
-  const slackAccesses = spec.components?.schemas?.[schemaName]?.properties?.slack_accesses;
-  if (slackAccesses && slackAccesses.$ref !== "#/components/schemas/FormalooSlackAccesses") {
-    errors.push(`${schemaName}.slack_accesses must reference FormalooSlackAccesses; found an opaque or incorrect schema.`);
-  }
-}
+const documentation = validateOperationDocumentation(spec);
+errors.push(...documentation.errors);
 const warnings = [];
+warnings.push(...documentation.warnings);
 const operations = new Map();
 const excludeSettings = settings.exclude ?? {};
 const excludedHttpMethods = new Set(asStringArray(excludeSettings.httpMethods).map((method) => method.toLowerCase()));

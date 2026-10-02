@@ -3325,11 +3325,6 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
     }
 
     const normalizedOperation = { ...operation };
-    // Keep the published operation ID stable for clients that pin the shared
-    // boards detail endpoint, even when drf-spectacular renames it upstream.
-    if (pathKey === "/v3.0/shared-boards/{boardShareAddress}/" && method === "get") {
-      normalizedOperation.operationId = "sharedBoardsRetrieve2";
-    }
     normalizeHeaderParameters(pathKey, method, normalizedOperation);
     normalizeSecurity(normalizedOperation);
     normalizeResponses(pathKey, method, normalizedOperation);
