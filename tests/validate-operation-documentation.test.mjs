@@ -41,3 +41,7 @@ test("rejects duplicate operation IDs", () => {
   });
   assert.match(result.errors.join("\n"), /duplicates operationId/);
 });
+
+test("does not require an endpoint to exist", () => {
+  assert.deepEqual(validateOperationDocumentation({ paths: {} }), { errors: [], warnings: [] });
+});
