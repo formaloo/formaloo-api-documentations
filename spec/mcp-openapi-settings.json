@@ -6,8 +6,7 @@
     "fieldsDestroy",
     "boardsTransferCreate",
     "userFormsSsoConfigCreate",
-    "userFormsSsoConfigPartialUpdate",
-    "sharedBoardsRetrieve2"
+    "userFormsSsoConfigPartialUpdate"
   ],
   "includeOperationIds": [
     "integrationAppsList",
