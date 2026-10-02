@@ -91,6 +91,8 @@ Each logic item is a JSON object:
 | `multiply` | Multiply variable      | Handle quantity × unit price |
 | `divide`   | Divide variable        | Compute averages             |
 
+`add`, `subtract`, `multiply`, and `divide` on a field rule run during the field phase. The same actions on the submit section run when a response is created. The same actions on the update section run when a response is updated. The API accepts those actions on a submit or update rule. It does not require scoring to be stored only on field rules.
+
 ### Workflow & Integrations
 
 | Action          | Description               |

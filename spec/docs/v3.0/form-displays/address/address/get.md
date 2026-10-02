@@ -1,1 +1,5 @@
-Returns the public rendering payload for a form resolved by address and request domain. Use this when embedding or displaying a live form on a subdomain, custom domain, or address-based public URL.
+Returns the same public form definition as `GET /v3.0/form-displays/slug/{slug}/`, resolved by the form address. The request domain is part of that lookup.
+
+Use the returned form slug for `POST /v3.0/form-displays/slug/{slug}/submit/`. This address path does not accept a submission.
+
+Rendering, `theme.form_type`, portal `x-scope`, and the excluded activity flags are the same as the slug display.

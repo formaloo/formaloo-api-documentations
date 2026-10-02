@@ -111,6 +111,17 @@ Some public app or client portal endpoints may also document optional headers su
 
 Only send these headers when the endpoint documentation for your scenario calls for them.
 
+## Custom form UI
+
+A browser form loads the live definition and posts answers to the public display endpoints. Do not copy a one-time field list into the client.
+
+- `GET /v3.0/form-displays/slug/{slug}/` and `GET /v3.0/form-displays/address/{address}/` return the definition. That slug page states how a renderer uses pages, visibility, client checks, answer piping, and the theme.
+- `POST /v3.0/form-displays/slug/{slug}/submit/` accepts the flat answer body. There is no address submit path. The response `success_page` is what the renderer shows after success.
+- `POST /v3.0/files/?id={fieldSlug}` uploads a respondent file before that submit.
+- Ending-page AI results use `GET /v3.0/custom-prompt-results/{slug}/` on the server this reference publishes.
+
+Those steps in the browser do not replace server validation, formula recomputation, or submit actions. Session tooling and client-only rewrites are not part of this HTTP contract.
+
 ## Contributing
 
 This repository combines generated public API specifications with manual endpoint descriptions. Contributions should improve the public contract and the consumer-facing documentation without adding internal implementation details.

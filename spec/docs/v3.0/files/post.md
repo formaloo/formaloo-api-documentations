@@ -8,3 +8,10 @@ field, such as `logo_slug`, `background_image_slug`, `cover_image_slug`, or
 returned URL or file reference according to their field schema. Creating a
 form field with `type: file` is different: that creates a respondent upload
 question and does not upload an asset.
+
+A respondent answer for that question is uploaded here before form submit.
+Send multipart field `file` and query `id` set to the field slug:
+`POST /v3.0/files/?id={fieldSlug}`. The hosted form client sends `x-api-key`
+and does not send `Authorization`. That client then submits the returned file slug.
+
+Custom integrations must verify stored-file submission support against the deployed submit API.
