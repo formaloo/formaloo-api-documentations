@@ -82,6 +82,12 @@ const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
 errors.push(...validateFormAnswerProperties(spec));
+for (const schemaName of ["CreateForm", "CreateFormRequest", "FormUpdate", "PatchedFormUpdateRequest"]) {
+  const slackAccesses = spec.components?.schemas?.[schemaName]?.properties?.slack_accesses;
+  if (slackAccesses && slackAccesses.$ref !== "#/components/schemas/FormalooSlackAccesses") {
+    errors.push(`${schemaName}.slack_accesses must reference FormalooSlackAccesses; found an opaque or incorrect schema.`);
+  }
+}
 const warnings = [];
 const operations = new Map();
 const excludeSettings = settings.exclude ?? {};
