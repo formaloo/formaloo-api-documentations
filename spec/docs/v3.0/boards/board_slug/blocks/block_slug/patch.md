@@ -6,7 +6,7 @@ Use this endpoint to update an existing block on a board/app. The API uses one P
 For data blocks connected to forms:
 
 - `form_result` uses `form`, `fields`, `filters`, `settings`, edit flags, voting, and export settings.
-- `form_charts` uses `form`, `fields`, `subtype`, `settings`, and `config`.
+- `form_charts` uses `form`, `fields`, `settings`, and `config`.
 - `kanban` uses `form`, `fields`, `card_fields`, `columns_field`, `items_field`, `featured_image_field`, `filters`, `settings`, `mode`, and `display_type`.
 - `gallery` is a kanban block with `display_type: "grid_view"`.
 - `ai_summary` uses `form`, `user_questions`, `length`, and `ai_engine_id`.

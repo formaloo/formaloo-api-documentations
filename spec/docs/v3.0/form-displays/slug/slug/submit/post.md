@@ -2,7 +2,29 @@
 
 Submit through the form **display slug** path: `POST /v3.0/form-displays/slug/{slug}/submit/`. There is no address-based submit path. If you only have a public form address, resolve it first with `GET /v3.0/form-displays/address/{address}/` and use the returned display slug here.
 
-Send a `post` request containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For the choice fields, you should send the desired choice's slug, and so on.
+Send a `post` request containing a map from each field to an acceptable value for it. For example for a number field, `3319` is an acceptable value while a text (e.g. `"john doe"`) is not accepted. For choice, dropdown, and multiple-select fields, send the choice slug. A `choice_fetch` answer is an object with `label` and `value`.
+
+## Live form UI
+
+Load the definition with `GET /v3.0/form-displays/slug/{slug}/` or, when you only have an address, `GET /v3.0/form-displays/address/{address}/`. Post answers to this slug path. The body is flat: field keys at the top level, not nested under `data`.
+
+Send `x-api-key`. `Authorization` is not required for a public submit. The hosted form client does not send cookies unless that call explicitly enables credentials.
+
+Ordinary public submit does not validate or store answers for `meta` (including a page break), `oembed`, `success_page`, `ai_box`, or `profile_data`. A body key for one of those types is not stored as an answer, and that key alone is not a field error. A `read_only` field is included in validation when the caller can edit the form or a logic `set` targeted it; otherwise it is left out the same way. When the form has logic, fields the submit traversal did not reach are left out of validation and are not stored from the body.
+
+Formula variables are recomputed from slug-keyed operands. A number sent for a formula variable does not replace that result.
+
+`submitter_referer_address` in the body is discarded. The stored referer is the HTTP `Referer` header.
+
+`submit_by_alias` stores alias-keyed answers under field slugs. Submit-time logic reads the body by field slug before that remap, so alias keys are not what emails, PDFs, Slack, webhooks, or the ending-page jump see. A renderer that needs those behaviors sends slug keys and leaves `submit_by_alias` unset.
+
+Field errors are `errors.form_errors`, keyed by the body identifier (the alias when `submit_by_alias` is true).
+
+The created row includes `success_page`. Render that object. If `success_page.description` contains `{% block AI %}...{% endblock %}`, the inner text is a result slug. Read it with `GET /v3.0/custom-prompt-results/{slug}/` on the server this reference publishes. The hosted form client polls a configured AI base URL instead, default `https://ai-api.formaloo.me`, at `/v1/custom-prompt-results/{slug}/`. That client base URL is not this operation's server.
+
+When the display payload has `portal_user_form` and the request already has a scope, `x-scope` must be that object's slug. A different scope is rejected. Do not send `x-scope` when `portal_user_form` is absent. On this public payload, `login_enabled` and `signup_enabled` are the stored settings, not the admin user-form effective flags.
+
+The hosted form client uploads a respondent file first with `POST /v3.0/files/?id={fieldSlug}` and the same `x-api-key`, then submits the returned file slug. Custom integrations must verify stored-file submission support against the deployed submit API.
 
 ## Submitting with Field Slugs
 
@@ -93,6 +115,8 @@ To submit a form using field aliases, you must:
 3. **Use aliases instead of slugs**: Send field aliases as keys in your request body instead of field slugs.
 
 4. **Do not mix aliases and slugs**: You cannot use both aliases and slugs in the same request. Choose one method per submission.
+
+Alias submit stores the answers. It does not make submit-time logic read those alias keys. See "Live form UI" above.
 
 ## Authorization and Authentication
 

@@ -2187,6 +2187,88 @@ function enforceDeleteSuccessResponses(openapiSpec) {
   }
 }
 
+function composePreservedDescription(incoming, addition) {
+  const base = typeof incoming === "string" ? incoming.trim() : "";
+  const note = typeof addition === "string" ? addition.trim() : "";
+  if (!note) {
+    return typeof incoming === "string" ? incoming : "";
+  }
+  if (!base) {
+    return note;
+  }
+  if (base === note) {
+    return base;
+  }
+  const paragraphs = base.split(/\n\s*\n/).map((part) => part.trim());
+  if (paragraphs.includes(note)) {
+    return base;
+  }
+  return `${base}\n\n${note}`;
+}
+
+function operationInventory(openapiSpec) {
+  const entries = [];
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      entries.push(`${method} ${pathKey} ${operation.operationId ?? ""}`);
+    }
+  }
+  return entries.sort();
+}
+
+function snapshotOperationDescriptions(openapiSpec) {
+  const snapshots = new Map();
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      snapshots.set(`${method} ${pathKey}`, typeof operation.description === "string" ? operation.description : "");
+    }
+  }
+  return snapshots;
+}
+
+function assertDescriptionsPreserved(openapiSpec, snapshots) {
+  const losses = [];
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      const key = `${method} ${pathKey}`;
+      const source = (snapshots.get(key) ?? "").trim();
+      if (!source) {
+        continue;
+      }
+      const enriched = typeof operation.description === "string" ? operation.description : "";
+      if (!enriched.includes(source)) {
+        losses.push(`${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey}`);
+      }
+    }
+  }
+  if (losses.length > 0) {
+    throw new Error(
+      `MCP description enrichment dropped upstream operation descriptions:\n- ${losses.join("\n- ")}`
+    );
+  }
+}
+
 function enrichMcpOperations(openapiSpec) {
   for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== "object") {
@@ -2202,7 +2284,7 @@ function enrichMcpOperations(openapiSpec) {
       const coreDefinition = coreMcpOperations[operation.operationId];
       if (coreDefinition) {
         operation.summary = coreDefinition.summary;
-        operation.description = coreDefinition.description;
+        operation.description = composePreservedDescription(operation.description, coreDefinition.description);
         operation["x-formaloo-mcp"] = {
           ...coreDefinition.mcp,
           auth: buildMcpAuthMetadata(operation)
@@ -2221,7 +2303,7 @@ function enrichMcpOperations(openapiSpec) {
       const descriptionFix = localDescriptionFixes[operation.operationId];
       if (descriptionFix) {
         operation.summary = descriptionFix.summary;
-        operation.description = descriptionFix.description;
+        operation.description = composePreservedDescription(operation.description, descriptionFix.description);
       }
 
       if (method === "put" && operation.operationId === "paymentMethodsUpdate") {
@@ -2352,7 +2434,14 @@ spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
 enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
+const inventoryBeforeEnrichment = operationInventory(spec);
+const descriptionsBeforeEnrichment = snapshotOperationDescriptions(spec);
 enrichMcpOperations(spec);
+const inventoryAfterEnrichment = operationInventory(spec);
+if (inventoryBeforeEnrichment.join("\n") !== inventoryAfterEnrichment.join("\n")) {
+  throw new Error("MCP description enrichment changed the operation inventory.");
+}
+assertDescriptionsPreserved(spec, descriptionsBeforeEnrichment);
 annotateResponseEnvelopes(spec);
 enforceBoundedLogicHelperSchemas(spec);
 
