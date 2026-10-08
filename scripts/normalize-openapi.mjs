@@ -2876,7 +2876,13 @@ function enrichFormSummarySchemas() {
       schema.properties.submission_config = { $ref: "#/components/schemas/FormalooSubmissionConfig" };
     }
 
-    if (schema.properties.slack_accesses && schema.properties.slack_accesses.type === "object" && JSON.stringify(schema.properties.slack_accesses.additionalProperties) === "{}") {
+    // The backend's JSONField sometimes emits only nullable/description,
+    // without even an object type. Both shapes are opaque to API clients.
+    const slackAccesses = schema.properties.slack_accesses;
+    if (slackAccesses && !slackAccesses.$ref && (
+      (!slackAccesses.type && !slackAccesses.items && !slackAccesses.oneOf && !slackAccesses.allOf) ||
+      (slackAccesses.type === "object" && JSON.stringify(slackAccesses.additionalProperties) === "{}")
+    )) {
       schema.properties.slack_accesses = { $ref: "#/components/schemas/FormalooSlackAccesses" };
     }
 
