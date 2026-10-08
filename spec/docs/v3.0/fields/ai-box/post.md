@@ -1,6 +1,6 @@
 # Create an AI Analysis field
 
-An AI Analysis field runs a custom prompt after a row is submitted. Its result is stored on that row and is visible to form administrators, not respondents. AI Analysis is a premium field; the API rejects creation when the workspace does not have premium-field access.
+An AI Analysis field runs a custom prompt after a row is submitted. A form editor can also re-run one field on a saved row with `POST /v5/rows/{row_slug}/ai-box/{field_slug}/regenerate/`. Update logic can re-run one field with the `run_ai_box` action. Its result is stored on that row and is visible to form administrators, not respondents. AI Analysis is a premium field; the API rejects creation when the workspace does not have premium-field access.
 
 The backend always saves this field as `admin_only: true` and `required: false`. Put the instruction sent to AI inside the field description's `{% block AI %}` block. Prompt placeholders can reference submission fields by slug or alias.
 

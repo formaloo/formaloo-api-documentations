@@ -43,6 +43,7 @@ export const FALLBACK_LOGIC_ACTIONS = [
   "set_related",
   "add_row",
   "edit_row",
+  "run_ai_box",
   "wait"
 ];
 

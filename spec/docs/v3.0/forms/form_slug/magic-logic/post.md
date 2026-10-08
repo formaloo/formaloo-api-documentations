@@ -10,7 +10,7 @@ First, the client should connect to the websockets, as they will receive the res
 Second, client sends the post request containing:
 
 - `mode`: which can be:
-  - `generate`: Create new logic based on the user requirements.
+  - `generate`: Create new logic based on the user requirements. Generated `update` logic can include `run_ai_box` to re-run one AI Analysis field on the current row. That action takes one `field` argument: the `ai_box` slug on this form.
   - `explain`: Tell the user what the existing logic on the form does.
   - `suggest`: Check the form and fields and data and suggest logic based improvements for the form.
 - `requirements`: user's text that tells what they want from their logic.
