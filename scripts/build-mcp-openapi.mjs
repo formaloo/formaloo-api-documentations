@@ -616,9 +616,11 @@ const coreMcpOperations = {
             current_page: 1,
             rows: [
               {
+                form: "customer-feedback",
                 slug: "row-123",
                 submit_number: 1,
                 tracking_code: "TRK-123",
+                row_tags: [{ title: "Follow up" }],
                 data: {
                   email: "customer@example.com"
                 }
@@ -668,8 +670,7 @@ const coreMcpOperations = {
             boards: [
               {
                 title: "CRM App",
-                slug: "crm-app",
-                address: "crm-app"
+                slug: "crm-app"
               }
             ]
           }
@@ -881,7 +882,13 @@ const coreMcpOperations = {
       "200": {
         deleted_form: {
           summary: "Deleted form",
-          value: {}
+          value: {
+            status: 200,
+            errors: {
+              general_errors: [],
+              form_errors: {}
+            }
+          }
         }
       }
     }
@@ -1009,7 +1016,8 @@ const coreMcpOperations = {
           fields: [
             {
               ref_id: "existing_name",
-              slug: "short_text_abc123"
+              slug: "short_text_abc123",
+              type: "short_text"
             },
             {
               ref_id: "satisfaction",
@@ -1194,7 +1202,13 @@ const coreMcpOperations = {
       "200": {
         deleted_field: {
           summary: "Deleted field",
-          value: {}
+          value: {
+            status: 200,
+            errors: {
+              general_errors: [],
+              form_errors: {}
+            }
+          }
         }
       }
     }
@@ -1516,6 +1530,22 @@ const coreMcpOperations = {
 };
 
 const localDescriptionFixes = {
+  askCustomDomainRetrieve: {
+    summary: "Check whether a custom domain or subdomain is already in use.",
+    description: "Checks whether a custom domain or subdomain is already in use."
+  },
+  profilesProfileMeRetrieve: {
+    summary: "Profile",
+    description: "Retrieves the current profile. The active_business query parameter is the business slug for this request."
+  },
+  profilesProfileMePartialUpdate: {
+    summary: "Profile",
+    description: "Partially updates the current profile. The active_business query parameter is the business slug for this request."
+  },
+  whatsappSenderRetrieve: {
+    summary: "Retrieve the WhatsApp sender for the current business.",
+    description: "Retrieves the WhatsApp sender for the current business."
+  },
   currenciesList: {
     summary: "List currencies",
     description: "Lists currencies available for payment, pricing, and localization workflows."
@@ -1549,34 +1579,6 @@ const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
 const mcpEnvelopeResponseDescription =
   "Wire response is the Formaloo API envelope: `{ status, errors, data }`. The `data` property contains the operation-specific success payload documented by this response schema.";
-const formalooLogicConditionOperations = [
-  "equal",
-  "not_equal",
-  "gt",
-  "lt",
-  "gte",
-  "lte",
-  "greatest",
-  "smallest",
-  "is",
-  "is_not",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "is_answered",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
 
 function cloneJson(value) {
   if (value === undefined) {
@@ -1656,9 +1658,8 @@ function ensureResponseEnvelopeBaseSchemas(openapiSpec) {
         $ref: "#/components/schemas/FormalooResponseErrors"
       },
       data: {
-        type: "object",
-        additionalProperties: true,
-        description: "Operation-specific success payload."
+        description:
+          "Operation-specific success payload. Shape varies by operation, including objects and arrays, so this base schema does not fix a type."
       }
     },
     additionalProperties: true
@@ -1774,6 +1775,7 @@ function annotateResponseEnvelopes(openapiSpec) {
         const componentName = `Formaloo${pascalCase(operation.operationId)}${statusCode}Response`;
         const dataSchema = cloneJson(schema) ?? { $ref: "#/components/schemas/FormalooEmptyData" };
         openapiSpec.components.schemas[componentName] = {
+          allOf: [{ $ref: "#/components/schemas/FormalooResponseEnvelope" }],
           type: "object",
           required: ["status", "errors", "data"],
           description: `Formaloo response envelope for ${operation.operationId} ${statusCode}.`,
@@ -1816,14 +1818,20 @@ function annotateResponseEnvelopes(openapiSpec) {
 
 function enforceBoundedLogicHelperSchemas(openapiSpec) {
   const schemas = openapiSpec.components?.schemas;
-  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicArgument) {
+  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicConditionArgument) {
     return;
   }
 
+  // Reuse the enum normalize-openapi.mjs already derived from the backend
+  // spec (see logic-schema-source.mjs) instead of a hand-typed snapshot.
+  // A hardcoded array here previously overwrote that correct value right
+  // back to a stale one -- the exact FRM-3448 bug, reintroduced a 4th time
+  // in this same pipeline after normalize-openapi.mjs was fixed to derive it.
+  const conditionOperationEnum = schemas.FormalooLogicCondition.properties.operation?.enum;
   const operationProperty = {
     type: "string",
     description: "Nested condition operation.",
-    enum: formalooLogicConditionOperations
+    enum: conditionOperationEnum
   };
 
   schemas.FormalooLogicShallowCondition = {
@@ -1845,20 +1853,16 @@ function enforceBoundedLogicHelperSchemas(openapiSpec) {
     required: ["operation", "args"]
   };
 
-  schemas.FormalooLogicCondition.properties.operation = {
-    ...(schemas.FormalooLogicCondition.properties.operation ?? {}),
-    enum: formalooLogicConditionOperations
-  };
   schemas.FormalooLogicCondition.properties.args = {
     ...(schemas.FormalooLogicCondition.properties.args ?? {}),
     type: "array",
     items: {
       anyOf: [
-        { $ref: "#/components/schemas/FormalooLogicArgument" },
+        { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
         { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
       ],
       description:
-        "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+        "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
     }
   };
 }
@@ -2183,6 +2187,88 @@ function enforceDeleteSuccessResponses(openapiSpec) {
   }
 }
 
+function composePreservedDescription(incoming, addition) {
+  const base = typeof incoming === "string" ? incoming.trim() : "";
+  const note = typeof addition === "string" ? addition.trim() : "";
+  if (!note) {
+    return typeof incoming === "string" ? incoming : "";
+  }
+  if (!base) {
+    return note;
+  }
+  if (base === note) {
+    return base;
+  }
+  const paragraphs = base.split(/\n\s*\n/).map((part) => part.trim());
+  if (paragraphs.includes(note)) {
+    return base;
+  }
+  return `${base}\n\n${note}`;
+}
+
+function operationInventory(openapiSpec) {
+  const entries = [];
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      entries.push(`${method} ${pathKey} ${operation.operationId ?? ""}`);
+    }
+  }
+  return entries.sort();
+}
+
+function snapshotOperationDescriptions(openapiSpec) {
+  const snapshots = new Map();
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      snapshots.set(`${method} ${pathKey}`, typeof operation.description === "string" ? operation.description : "");
+    }
+  }
+  return snapshots;
+}
+
+function assertDescriptionsPreserved(openapiSpec, snapshots) {
+  const losses = [];
+  for (const [pathKey, pathItem] of Object.entries(openapiSpec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      const key = `${method} ${pathKey}`;
+      const source = (snapshots.get(key) ?? "").trim();
+      if (!source) {
+        continue;
+      }
+      const enriched = typeof operation.description === "string" ? operation.description : "";
+      if (!enriched.includes(source)) {
+        losses.push(`${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey}`);
+      }
+    }
+  }
+  if (losses.length > 0) {
+    throw new Error(
+      `MCP description enrichment dropped upstream operation descriptions:\n- ${losses.join("\n- ")}`
+    );
+  }
+}
+
 function enrichMcpOperations(openapiSpec) {
   for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== "object") {
@@ -2198,7 +2284,7 @@ function enrichMcpOperations(openapiSpec) {
       const coreDefinition = coreMcpOperations[operation.operationId];
       if (coreDefinition) {
         operation.summary = coreDefinition.summary;
-        operation.description = coreDefinition.description;
+        operation.description = composePreservedDescription(operation.description, coreDefinition.description);
         operation["x-formaloo-mcp"] = {
           ...coreDefinition.mcp,
           auth: buildMcpAuthMetadata(operation)
@@ -2217,7 +2303,7 @@ function enrichMcpOperations(openapiSpec) {
       const descriptionFix = localDescriptionFixes[operation.operationId];
       if (descriptionFix) {
         operation.summary = descriptionFix.summary;
-        operation.description = descriptionFix.description;
+        operation.description = composePreservedDescription(operation.description, descriptionFix.description);
       }
 
       if (method === "put" && operation.operationId === "paymentMethodsUpdate") {
@@ -2348,7 +2434,14 @@ spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
 enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
+const inventoryBeforeEnrichment = operationInventory(spec);
+const descriptionsBeforeEnrichment = snapshotOperationDescriptions(spec);
 enrichMcpOperations(spec);
+const inventoryAfterEnrichment = operationInventory(spec);
+if (inventoryBeforeEnrichment.join("\n") !== inventoryAfterEnrichment.join("\n")) {
+  throw new Error("MCP description enrichment changed the operation inventory.");
+}
+assertDescriptionsPreserved(spec, descriptionsBeforeEnrichment);
 annotateResponseEnvelopes(spec);
 enforceBoundedLogicHelperSchemas(spec);
 

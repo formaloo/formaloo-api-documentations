@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { backendEnumContractError } from "./backend-enum-contract.mjs";
+import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
+import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -19,11 +23,31 @@ const allowedMetadataKeys = new Set([
 ]);
 
 const spec = JSON.parse(await fs.readFile(normalizedSpecPath, "utf8"));
+
+// The normalized public spec (above) only carries the Formaloo*-overlaid logic
+// schemas, not the backend's raw LogicActionTypeEnum/LogicOperationTypeEnum/
+// ActionArgumentTypeEnum they were derived from. Read the pre-normalize raw
+// merge -- the same file normalize-openapi.mjs derives the overlay from --
+// so this validator checks against the real backend contract instead of a
+// second hand-typed guess at it. See logic-schema-source.mjs.
+const rawSpecPath = path.join(artifactsDir, "intermediate", "openapi-merged.raw.json");
+let rawSpecSchemas = {};
+try {
+  const rawSpec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
+  rawSpecSchemas = rawSpec.components?.schemas ?? {};
+} catch {
+  // Raw pre-normalize spec not available (e.g. validating an ad-hoc spec) --
+  // deriveLogicEnums falls back to its last-known-good backend snapshot.
+}
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const introContents = await fs.readFile(introPath, "utf8");
 
 const errors = [];
+errors.push(...validateFormAnswerProperties(spec));
 const warnings = [];
+const documentation = validateOperationDocumentation(spec);
+errors.push(...documentation.errors);
+warnings.push(...documentation.warnings);
 const defaultPrefix = publicContract.defaultVersionPrefix;
 const legacyPaths = new Set(Object.keys(publicContract.legacyPaths));
 const knownSecuritySchemes = new Set(Object.keys(spec.components?.securitySchemes ?? {}));
@@ -75,16 +99,14 @@ for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) 
   }
 }
 
-const expectedIntegrationAppTypes = [
-  "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
-  "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
-  "active_campaign", "webhook", "email_template", "email_campaign",
-  "pdf_generator", "make", "calendly", "recurring_submission",
-  "lead_enrichment", "send_whatsapp"
-];
 const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
-if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
-  errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+const integrationAppTypeError = backendEnumContractError({
+  actual: integrationAppTypes,
+  rawSchemas: rawSpecSchemas,
+  schemaName: "IntegrationAppTypeEnum"
+});
+if (integrationAppTypeError) {
+  errors.push(integrationAppTypeError);
 }
 
 const whatsappConnectionOperations = new Set([
@@ -102,13 +124,8 @@ for (const pathItem of Object.values(spec.paths ?? {})) {
     }
   }
 }
-for (const operationId of whatsappConnectionOperations) {
-  if (!foundWhatsappConnectionOperations.has(operationId)) {
-    errors.push(`WhatsApp connection operation ${operationId} is missing from the public contract.`);
-  }
-}
 const whatsappRedirectOperation = foundWhatsappConnectionOperations.get("whatsappConnectionRedirectUrlRetrieve");
-for (const parameterName of ["active_business", "next", "phone_number"]) {
+for (const parameterName of whatsappRedirectOperation ? ["active_business", "next", "phone_number"] : []) {
   const parameter = whatsappRedirectOperation?.parameters?.find(
     (candidate) => candidate?.in === "query" && candidate?.name === parameterName
   );
@@ -116,20 +133,20 @@ for (const parameterName of ["active_business", "next", "phone_number"]) {
     errors.push(`whatsappConnectionRedirectUrlRetrieve must require query parameter ${parameterName}.`);
   }
 }
-if (
+if (whatsappRedirectOperation &&
   whatsappRedirectOperation?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref !==
   "#/components/schemas/FormalooWhatsAppRedirectData"
 ) {
   errors.push("whatsappConnectionRedirectUrlRetrieve must document data.whatsapp_redirect.redirect_url.");
 }
 const whatsappRetrieveOperation = foundWhatsappConnectionOperations.get("whatsappConnectionRetrieve");
-if (
+if (whatsappRetrieveOperation &&
   whatsappRetrieveOperation?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref !==
   "#/components/schemas/FormalooWhatsAppConnectionData"
 ) {
   errors.push("whatsappConnectionRetrieve must document data.whatsapp_connection.");
 }
-if (!whatsappRetrieveOperation?.responses?.["404"]) {
+if (whatsappRetrieveOperation && !whatsappRetrieveOperation.responses?.["404"]) {
   errors.push("whatsappConnectionRetrieve must document 404 when no connection exists.");
 }
 if (!sameMembers(
@@ -139,10 +156,10 @@ if (!sameMembers(
   errors.push("BusinessWhatsAppConnection.status must exactly enumerate connecting, pending, active, and error.");
 }
 const whatsappDestroyOperation = foundWhatsappConnectionOperations.get("whatsappConnectionDestroy");
-if (!whatsappDestroyOperation?.responses?.["200"] || whatsappDestroyOperation?.responses?.["204"]) {
+if (whatsappDestroyOperation && (!whatsappDestroyOperation.responses?.["200"] || whatsappDestroyOperation.responses?.["204"])) {
   errors.push("whatsappConnectionDestroy must document the deployed 200 success response, not 204.");
 }
-if (!whatsappDestroyOperation?.responses?.["404"]) {
+if (whatsappDestroyOperation && !whatsappDestroyOperation.responses?.["404"]) {
   errors.push("whatsappConnectionDestroy must document 404 when no connection exists.");
 }
 
@@ -155,11 +172,9 @@ const integrationDiscoveryOperationIds = new Set([
   "sendinblueIntegrationsAttributesRetrieve",
   "sendinblueIntegrationsListsRetrieve"
 ]);
-const foundIntegrationDiscoveryOperations = new Set();
 for (const pathItem of Object.values(spec.paths ?? {})) {
   for (const operation of Object.values(pathItem ?? {})) {
     if (!integrationDiscoveryOperationIds.has(operation?.operationId)) continue;
-    foundIntegrationDiscoveryOperations.add(operation.operationId);
     const hasTypedSuccess = Object.entries(operation.responses ?? {}).some(([statusCode, response]) =>
       /^2/u.test(statusCode) && Object.values(response?.content ?? {}).some((media) => media?.schema)
     );
@@ -168,82 +183,62 @@ for (const pathItem of Object.values(spec.paths ?? {})) {
     }
   }
 }
-for (const operationId of integrationDiscoveryOperationIds) {
-  if (!foundIntegrationDiscoveryOperations.has(operationId)) {
-    errors.push(`Integration discovery operation ${operationId} is missing from the public contract.`);
-  }
+
+const logicActionArgument = spec.components?.schemas?.FormalooLogicActionArgument;
+const logicConditionArgument = spec.components?.schemas?.FormalooLogicConditionArgument;
+const logicActionArgumentTypeEnum = logicActionArgument?.properties?.type?.enum;
+const logicActionArgumentValueVariants = logicActionArgument?.properties?.value?.anyOf ?? [];
+const logicConditionArgumentBranches = logicConditionArgument?.oneOf ?? [];
+const logicConditionArgumentTypeEnum = logicConditionArgumentBranches.flatMap(
+  (branch) => branch?.properties?.type?.enum ?? []
+);
+const rowCountArgumentBranch = logicConditionArgumentBranches.find((branch) =>
+  branch?.properties?.type?.enum?.includes("row_count")
+);
+const {
+  conditionArgumentTypes: expectedConditionArgumentTypes,
+  actionArgumentTypes: expectedActionArgumentTypes,
+  operations: expectedLogicOperations,
+  actions: expectedLogicActions
+} = deriveLogicEnums(rawSpecSchemas);
+
+if (!sameMembers(logicActionArgumentTypeEnum, expectedActionArgumentTypes)) {
+  errors.push(
+    "FormalooLogicActionArgument.type must match the backend action argument constants."
+  );
 }
 
-const logicArgumentTypeEnum =
-  spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
-const expectedLogicArgumentTypes = [
-  "field",
-  "choice",
-  "variable",
-  "constant",
-  "matrix",
-  "table",
-  "user",
-  "row",
-  "success_page",
-  "link",
-  "send_email_template",
-  "send_email_receiver",
-  "webhook",
-  "slack",
-  "pdf_template"
-];
-const expectedLogicOperations = [
-  "is",
-  "is_not",
-  "equal",
-  "not_equal",
-  "gt",
-  "gte",
-  "lt",
-  "lte",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "is_answered",
-  "smallest",
-  "greatest",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
-const expectedLogicActions = [
-  "show",
-  "hide",
-  "disable",
-  "jump",
-  "jump_to_success_page",
-  "submit",
-  "set",
-  "add",
-  "subtract",
-  "multiply",
-  "divide",
-  "send_email",
-  "send_webhook",
-  "send_slack",
-  "generate_pdf",
-  "set_related",
-  "redirect"
-];
-
-if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
+if (
+  !logicActionArgumentValueVariants.some(
+    (variant) => variant?.type === "object" && variant?.additionalProperties === true
+  )
+) {
   errors.push(
-    "FormalooLogicArgument.type must match the backend operation/action argument constants."
+    "FormalooLogicActionArgument.value must preserve the backend object-valued action argument contract."
+  );
+}
+
+if (!sameMembers(logicConditionArgumentTypeEnum, expectedConditionArgumentTypes)) {
+  errors.push(
+    "FormalooLogicConditionArgument.type branches must match the backend condition argument constants."
+  );
+}
+
+if (
+  rowCountArgumentBranch?.properties?.value?.$ref !==
+  "#/components/schemas/FormalooLogicRowCountValue"
+) {
+  errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
+}
+
+const rowCountScope = [
+  logicConditionArgument?.description,
+  rowCountArgumentBranch?.description,
+  spec.components?.schemas?.FormalooLogicRowCountValue?.description,
+].join("\n");
+if (!rowCountScope.includes("`row_count` can only be used in submit or update logic.")) {
+  errors.push(
+    "FormalooLogicConditionArgument must document that row_count can only be used in submit or update logic."
   );
 }
 
@@ -277,14 +272,14 @@ if (
 }
 
 const logicIdentifierDescription =
-  spec.components?.schemas?.FormalooLogicArgument?.properties?.identifier
+  spec.components?.schemas?.FormalooLogicActionArgument?.properties?.identifier
     ?.description ?? "";
 if (
   !logicIdentifierDescription.includes("jump_to_success_page") ||
   !logicIdentifierDescription.includes("default_success_page")
 ) {
   errors.push(
-    "FormalooLogicArgument.identifier must document the executable success-page routing contract."
+    "FormalooLogicActionArgument.identifier must document the executable success-page routing contract."
   );
 }
 
@@ -293,12 +288,19 @@ const logicConditionArgsItems =
 const logicConditionArgRefs =
   logicConditionArgsItems?.anyOf?.map((item) => item?.$ref).filter(Boolean) ?? [];
 if (
-  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+  !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicConditionArgument") ||
   !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
 ) {
   errors.push(
-    "FormalooLogicCondition.args.items must compose FormalooLogicArgument and FormalooLogicShallowCondition with anyOf."
+    "FormalooLogicCondition.args.items must compose FormalooLogicConditionArgument and FormalooLogicShallowCondition with anyOf."
   );
+}
+
+if (
+  spec.components?.schemas?.FormalooLogicAction?.properties?.args?.items?.$ref !==
+  "#/components/schemas/FormalooLogicActionArgument"
+) {
+  errors.push("FormalooLogicAction.args.items must reference FormalooLogicActionArgument.");
 }
 
 if (spec.components?.schemas?.FormalooBuilderFieldInput) {

@@ -92,6 +92,8 @@ Each logic item is a JSON object:
 | `multiply` | Multiply variable      | Handle quantity × unit price |
 | `divide`   | Divide variable        | Compute averages             |
 
+`add`, `subtract`, `multiply`, and `divide` on a field rule run during the field phase. The same actions on the submit section run when a response is created. The same actions on the update section run when a response is updated. The API accepts those actions on a submit or update rule. It does not require scoring to be stored only on field rules.
+
 ### Workflow & Integrations
 
 | Action          | Description               |
@@ -105,6 +107,7 @@ Each logic item is a JSON object:
 | `set_related`   | Set related record data   |
 | `add_row`       | Create one row in another accessible form in the same workspace. Not allowed in `field` or `schedule` logic |
 | `edit_row`      | Update matching rows in another accessible form. Not allowed in `field` or `schedule` logic |
+| `run_ai_box`    | Re-run one AI Analysis field on this row. Update logic only. One `field` argument |
 | `wait`          | Schedule an `on schedule` follow-up on this row. Not allowed in `field` logic |
 
 ---
@@ -351,6 +354,26 @@ Filter keys are destination field slugs, optionally with a lookup suffix such as
 ```
 
 Updated rows go through the destination form's normal update path, including that form's update logic.
+
+### Run AI box
+
+`run_ai_box` re-runs one AI Analysis (`ai_box`) field on the current row. It is allowed only in `update` logic.
+
+One argument:
+
+1. **Field** — `field` whose `identifier` is the slug of an `ai_box` field on this form.
+
+```json
+{
+  "action": "run_ai_box",
+  "args": [
+    {"type": "field", "identifier": "summary_ai_box_slug"}
+  ],
+  "when": {"operation": "always", "args": []}
+}
+```
+
+The action runs that field only. A field that already has a run in progress is skipped. An `edit` mode AI box that writes other fields can match update logic again. The same cascade stops after 3 AI box runs; a fourth `run_ai_box` on that cascade is skipped. `analyze` mode does not re-enter logic.
 
 ### Row count
 
@@ -671,6 +694,7 @@ Both items belong in the same `logic` array, together with the `schedule` sectio
 * Do not put `wait` in `field` logic.
 * Do not put `send_whatsapp` in `field` logic. Include all four arguments; the `agent` identifier is required.
 * Do not put `add_row`, `edit_row`, or `row_count` in `field` or `schedule` logic.
+* `run_ai_box` belongs in `update` logic only. Its single `field` argument must be an `ai_box` on this form. Edit-mode chains stop after 3 runs of the same cascade.
 * An `edit_row` limit requires an explicit sort. Row `status` is not a valid filter key.
 
 ---

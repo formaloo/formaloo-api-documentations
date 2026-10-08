@@ -10,7 +10,7 @@ Common app shell fields:
 - `thumbnail_slug`, `banner_slug`, `logo_slug`, `icon_slug`: Formaloo file slugs returned by the file service. File URLs are display/readback metadata; write the slug fields.
 - `config`: app-level dashboard configuration. Retrieve the app first and preserve existing keys when changing one nested value.
 - `theme_config`: app theme configuration. Retrieve the app first and preserve existing keys when changing one nested value.
-- `user_form`, `primary_form`: portal/member identity form and primary workflow form slugs when the app is tied to known forms.
+- `user_form`: portal/member identity form slug.
 
 ## Example request: create a board attached to a form
 
@@ -18,12 +18,11 @@ Common app shell fields:
 {
   "title": "Customer Feedback App",
   "description": "Responses and workflow for the feedback form.",
-  "primary_form": "kTX4WMpC",
   "folder": "3r2nfcn2"
 }
 ```
 
-`primary_form` is the form slug to attach as the board's primary form. `folder` is optional.
+`folder` is optional. Attach the form by its slug on a block.
 
 ## Example response (`201`)
 
@@ -40,12 +39,6 @@ Common app shell fields:
       "title": "Customer Feedback App",
       "description": "Responses and workflow for the feedback form.",
       "is_primary": false,
-      "primary_form": {
-        "slug": "kTX4WMpC",
-        "title": "Customer Feedback",
-        "address": "oukll",
-        "form_type": "simple"
-      },
       "folder": "3r2nfcn2"
     }
   }

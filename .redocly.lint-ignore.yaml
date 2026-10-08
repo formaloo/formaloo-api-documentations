@@ -1,0 +1,6 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+openapi-v3.0.yaml:
+  operation-2xx-response:
+    # Documented browser redirect. Success is 302, not a 2xx JSON response.
+    - '#/paths/~1v3.0~1end-users~1confirm-redirection~1/get/responses'

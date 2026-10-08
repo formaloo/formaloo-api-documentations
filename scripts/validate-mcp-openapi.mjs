@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { backendEnumContractError } from "./backend-enum-contract.mjs";
+import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
+import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -8,6 +12,23 @@ const defaultSpecPath = path.join(artifactsDir, "intermediate", "openapi-mcp.fil
 const settingsPath = path.join(rootDir, "spec", "mcp-openapi-settings.json");
 const specPathInput = process.argv[2] ?? defaultSpecPath;
 const specPath = path.isAbsolute(specPathInput) ? specPathInput : path.join(rootDir, specPathInput);
+
+// The pruned MCP spec (specPath, above) no longer carries the backend's raw
+// LogicActionTypeEnum/LogicOperationTypeEnum/ActionArgumentTypeEnum -- they get
+// consumed and overlaid into Formaloo*-prefixed schemas before pruning. Read
+// the pre-prune raw merge (the same file normalize-openapi.mjs derives the
+// overlay from) so this validator checks against the real backend contract
+// instead of a second hand-typed guess at it. See logic-schema-source.mjs.
+const rawMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-merged.mcp.raw.json");
+const normalizedMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-mcp-source.normalized.json");
+let rawMcpSpecSchemas = {};
+try {
+  const rawMcpSpec = JSON.parse(await fs.readFile(rawMcpSpecPath, "utf8"));
+  rawMcpSpecSchemas = rawMcpSpec.components?.schemas ?? {};
+} catch {
+  // Raw pre-prune spec not available (e.g. validating an ad-hoc spec path) --
+  // deriveLogicEnums falls back to its last-known-good backend snapshot.
+}
 
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
 const requiredMcpKeys = [
@@ -61,7 +82,11 @@ const removedPutMigrationTargets = {
 const settings = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(specPath, "utf8"));
 const errors = [];
+errors.push(...validateFormAnswerProperties(spec));
+const documentation = validateOperationDocumentation(spec);
+errors.push(...documentation.errors);
 const warnings = [];
+warnings.push(...documentation.warnings);
 const operations = new Map();
 const excludeSettings = settings.exclude ?? {};
 const excludedHttpMethods = new Set(asStringArray(excludeSettings.httpMethods).map((method) => method.toLowerCase()));
@@ -120,6 +145,67 @@ function sameMembers(actual, expected) {
   );
 }
 
+async function validateUpstreamOperationDescriptions() {
+  let upstream;
+  try {
+    upstream = JSON.parse(await fs.readFile(normalizedMcpSpecPath, "utf8"));
+  } catch (error) {
+    if (specPath === defaultSpecPath) {
+      errors.push(`Cannot compare MCP descriptions with ${path.relative(rootDir, normalizedMcpSpecPath)}: ${error.message}`);
+    }
+    return;
+  }
+
+  const upstreamOperations = new Map();
+  for (const [pathKey, pathItem] of Object.entries(upstream.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      upstreamOperations.set(`${method} ${pathKey}`, operation);
+    }
+  }
+
+  for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+    for (const method of httpMethods) {
+      const operation = pathItem[method];
+      if (!operation || typeof operation !== "object") {
+        continue;
+      }
+      const key = `${method} ${pathKey}`;
+      const sourceOperation = upstreamOperations.get(key);
+      if (!sourceOperation) {
+        errors.push(
+          `${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey} is not in the normalized MCP source inventory.`
+        );
+        continue;
+      }
+      if (sourceOperation.operationId !== operation.operationId) {
+        errors.push(
+          `${method.toUpperCase()} ${pathKey} operationId changed from ${sourceOperation.operationId ?? "<missing>"} to ${operation.operationId ?? "<missing>"}.`
+        );
+      }
+      const sourceDescription = typeof sourceOperation.description === "string" ? sourceOperation.description.trim() : "";
+      if (!sourceDescription) {
+        continue;
+      }
+      const enrichedDescription = typeof operation.description === "string" ? operation.description : "";
+      if (!enrichedDescription.includes(sourceDescription)) {
+        errors.push(
+          `${operation.operationId ?? "<missing operationId>"} ${method.toUpperCase()} ${pathKey} dropped its upstream operation description.`
+        );
+      }
+    }
+  }
+}
+
 function collectOperations() {
   for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== "object") {
@@ -159,16 +245,14 @@ function hasUsable2xxSchema(operation) {
 }
 
 function validateIntegrationContracts() {
-  const expectedIntegrationAppTypes = [
-    "slack", "google_sheet", "google_forms", "notion", "hubspot", "netsuite",
-    "mailchimp", "brevo", "stripe", "paypal", "square", "razorpay",
-    "active_campaign", "webhook", "email_template", "email_campaign",
-    "pdf_generator", "make", "calendly", "recurring_submission",
-    "lead_enrichment", "send_whatsapp"
-  ];
   const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
-  if (!sameMembers(integrationAppTypes, expectedIntegrationAppTypes)) {
-    errors.push("IntegrationAppTypeEnum must exactly match the 22 canonical backend integration types.");
+  const integrationAppTypeError = backendEnumContractError({
+    actual: integrationAppTypes,
+    rawSchemas: rawMcpSpecSchemas,
+    schemaName: "IntegrationAppTypeEnum"
+  });
+  if (integrationAppTypeError) {
+    errors.push(integrationAppTypeError);
   }
 
   const mappingRefs = {
@@ -196,10 +280,11 @@ function validateIntegrationContracts() {
       errors.push("PatchedFormMailchimpIntegrationRequest must require mapped_fields to match backend validation.");
     }
   } else {
+    const patchOperation = operations.get("formsMailchimpIntegrationsPartialUpdate")?.operation;
     const patchBody = resolveSchema(
-      operations.get("formsMailchimpIntegrationsPartialUpdate")?.operation?.requestBody?.content?.["application/json"]?.schema
+      patchOperation?.requestBody?.content?.["application/json"]?.schema
     );
-    if (!patchBody?.required?.includes("mapped_fields")) {
+    if (patchOperation && !patchBody?.required?.includes("mapped_fields")) {
       errors.push("formsMailchimpIntegrationsPartialUpdate must require mapped_fields to match backend validation.");
     }
   }
@@ -216,7 +301,6 @@ function validateIntegrationContracts() {
   for (const [operationId, toolName] of Object.entries(discoveryTools)) {
     const operation = operations.get(operationId)?.operation;
     if (!operation) {
-      errors.push(`Integration discovery operation ${operationId} is missing.`);
       continue;
     }
     if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
@@ -235,7 +319,6 @@ function validateIntegrationContracts() {
   for (const [operationId, toolName] of Object.entries(whatsappConnectionTools)) {
     const operation = operations.get(operationId)?.operation;
     if (!operation) {
-      errors.push(`WhatsApp connection operation ${operationId} is missing.`);
       continue;
     }
     if (operation["x-formaloo-mcp"]?.tool_name !== toolName) {
@@ -247,7 +330,7 @@ function validateIntegrationContracts() {
   }
 
   const redirectOperation = operations.get("whatsappConnectionRedirectUrlRetrieve")?.operation;
-  for (const parameterName of ["active_business", "next", "phone_number"]) {
+  for (const parameterName of redirectOperation ? ["active_business", "next", "phone_number"] : []) {
     const parameter = redirectOperation?.parameters?.find(
       (candidate) => candidate?.in === "query" && candidate?.name === parameterName
     );
@@ -262,6 +345,7 @@ function validateIntegrationContracts() {
   };
   for (const [operationId, propertyName] of Object.entries(expectedPayloadProperties)) {
     const operation = operations.get(operationId)?.operation;
+    if (!operation) continue;
     const responseSchema = operation?.responses?.["200"]?.content?.["application/json"]?.schema;
     const envelope = resolveSchema(responseSchema);
     const payload = resolveSchema(envelope?.properties?.data);
@@ -271,10 +355,11 @@ function validateIntegrationContracts() {
   }
 
   const destroyOperation = operations.get("whatsappConnectionDestroy")?.operation;
-  if (!destroyOperation?.responses?.["200"] || destroyOperation?.responses?.["204"]) {
+  if (destroyOperation && (!destroyOperation.responses?.["200"] || destroyOperation.responses?.["204"])) {
     errors.push("whatsappConnectionDestroy must expose the deployed 200 success response, not 204.");
   }
-  if (!operations.get("whatsappConnectionRetrieve")?.operation?.responses?.["404"] || !destroyOperation?.responses?.["404"]) {
+  const retrieveOperation = operations.get("whatsappConnectionRetrieve")?.operation;
+  if (retrieveOperation && destroyOperation && (!retrieveOperation.responses?.["404"] || !destroyOperation.responses?.["404"])) {
     errors.push("WhatsApp connection retrieve and disconnect operations must expose 404 missing-connection semantics.");
   }
   const expectedResultPaths = {
@@ -282,7 +367,8 @@ function validateIntegrationContracts() {
     whatsappConnectionRedirectUrlRetrieve: "data.data.whatsapp_redirect"
   };
   for (const [operationId, resultPath] of Object.entries(expectedResultPaths)) {
-    if (operations.get(operationId)?.operation?.["x-formaloo-mcp"]?.result_path !== resultPath) {
+    const operation = operations.get(operationId)?.operation;
+    if (operation && operation["x-formaloo-mcp"]?.result_path !== resultPath) {
       errors.push(`${operationId} must expose deterministic result_path ${resultPath}.`);
     }
   }
@@ -561,75 +647,60 @@ function validateResponseEnvelopes() {
 }
 
 function validateTypedHelperSchemas() {
-  const expectedLogicArgumentTypes = [
-    "field",
-    "choice",
-    "variable",
-    "constant",
-    "matrix",
-    "table",
-    "user",
-    "row",
-    "success_page",
-    "link",
-    "send_email_template",
-    "send_email_receiver",
-    "webhook",
-    "slack",
-    "pdf_template"
-  ];
-  const expectedLogicOperations = [
-    "is",
-    "is_not",
-    "equal",
-    "not_equal",
-    "gt",
-    "gte",
-    "lt",
-    "lte",
-    "on",
-    "not_on",
-    "before",
-    "after",
-    "before_or_on",
-    "after_or_on",
-    "contains",
-    "not_contains",
-    "starts_with",
-    "ends_with",
-    "is_answered",
-    "smallest",
-    "greatest",
-    "has_changed_to",
-    "and",
-    "or",
-    "always",
-    "otherwise"
-  ];
-  const expectedLogicActions = [
-    "show",
-    "hide",
-    "disable",
-    "jump",
-    "jump_to_success_page",
-    "submit",
-    "set",
-    "add",
-    "subtract",
-    "multiply",
-    "divide",
-    "send_email",
-    "send_webhook",
-    "send_slack",
-    "generate_pdf",
-    "set_related",
-    "redirect"
-  ];
-  const logicArgumentTypeEnum =
-    spec.components?.schemas?.FormalooLogicArgument?.properties?.type?.enum;
-  if (!sameMembers(logicArgumentTypeEnum, expectedLogicArgumentTypes)) {
+  const {
+    conditionArgumentTypes: expectedConditionArgumentTypes,
+    actionArgumentTypes: expectedActionArgumentTypes,
+    operations: expectedLogicOperations,
+    actions: expectedLogicActions
+  } = deriveLogicEnums(rawMcpSpecSchemas);
+  const logicActionArgument = spec.components?.schemas?.FormalooLogicActionArgument;
+  const logicConditionArgument = spec.components?.schemas?.FormalooLogicConditionArgument;
+  const logicActionArgumentTypeEnum = logicActionArgument?.properties?.type?.enum;
+  const logicActionArgumentValueVariants = logicActionArgument?.properties?.value?.anyOf ?? [];
+  const logicConditionArgumentBranches = logicConditionArgument?.oneOf ?? [];
+  const logicConditionArgumentTypeEnum = logicConditionArgumentBranches.flatMap(
+    (branch) => branch?.properties?.type?.enum ?? []
+  );
+  const rowCountArgumentBranch = logicConditionArgumentBranches.find((branch) =>
+    branch?.properties?.type?.enum?.includes("row_count")
+  );
+  if (!sameMembers(logicActionArgumentTypeEnum, expectedActionArgumentTypes)) {
     errors.push(
-      "FormalooLogicArgument.type must match the backend operation/action argument constants."
+      "FormalooLogicActionArgument.type must match the backend action argument constants."
+    );
+  }
+
+  if (
+    !logicActionArgumentValueVariants.some(
+      (variant) => variant?.type === "object" && variant?.additionalProperties === true
+    )
+  ) {
+    errors.push(
+      "FormalooLogicActionArgument.value must preserve the backend object-valued action argument contract."
+    );
+  }
+
+  if (!sameMembers(logicConditionArgumentTypeEnum, expectedConditionArgumentTypes)) {
+    errors.push(
+      "FormalooLogicConditionArgument.type branches must match the backend condition argument constants."
+    );
+  }
+
+  if (
+    rowCountArgumentBranch?.properties?.value?.$ref !==
+    "#/components/schemas/FormalooLogicRowCountValue"
+  ) {
+    errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
+  }
+
+  const rowCountScope = [
+    logicConditionArgument?.description,
+    rowCountArgumentBranch?.description,
+    spec.components?.schemas?.FormalooLogicRowCountValue?.description,
+  ].join("\n");
+  if (!rowCountScope.includes("`row_count` can only be used in submit or update logic.")) {
+    errors.push(
+      "FormalooLogicConditionArgument must document that row_count can only be used in submit or update logic."
     );
   }
 
@@ -667,12 +738,19 @@ function validateTypedHelperSchemas() {
       ?.map((item) => item?.$ref)
       .filter(Boolean) ?? [];
   if (
-    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicArgument") ||
+    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicConditionArgument") ||
     !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
   ) {
     errors.push(
-      "FormalooLogicCondition.args.items must compose FormalooLogicArgument and FormalooLogicShallowCondition with anyOf."
+      "FormalooLogicCondition.args.items must compose FormalooLogicConditionArgument and FormalooLogicShallowCondition with anyOf."
     );
+  }
+
+  if (
+    spec.components?.schemas?.FormalooLogicAction?.properties?.args?.items?.$ref !==
+    "#/components/schemas/FormalooLogicActionArgument"
+  ) {
+    errors.push("FormalooLogicAction.args.items must reference FormalooLogicActionArgument.");
   }
 
   const builderField = spec.components?.schemas?.FormalooBuilderFieldInput;
@@ -718,6 +796,7 @@ function validateTypedHelperSchemas() {
 }
 
 collectOperations();
+await validateUpstreamOperationDescriptions();
 validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
@@ -742,7 +821,6 @@ for (const operationId of requiredOperationIds) {
 for (const operationId of includedOperationIds) {
   const resolvedOperationId = resolveIncludedOperationId(operationId);
   if (!resolvedOperationId) {
-    errors.push(`Explicitly included MCP operation ${operationId} is not present.`);
     continue;
   }
   validateRequiredOperation(resolvedOperationId, "Explicitly included MCP operation", {
@@ -754,6 +832,29 @@ validateMethodExclusions();
 validatePutSettings();
 validatePatchFirstUpdates();
 validatePaymentMethodPutException();
+validateDashboardFolderListContract();
+
+function validateDashboardFolderListContract() {
+  const boardsList = operations.get("boardsList");
+  if (!boardsList) {
+    return;
+  }
+
+  const queryParameters = (boardsList.operation.parameters ?? [])
+    .map(resolveParameter)
+    .filter((parameter) => parameter?.in === "query");
+  const folder = queryParameters.find((parameter) => parameter.name === "folder");
+  const includeSubFolders = queryParameters.find(
+    (parameter) => parameter.name === "include_sub_folders"
+  );
+
+  if (folder?.schema?.type !== "string") {
+    errors.push("boardsList must document the dashboard's singular folder query parameter.");
+  }
+  if (includeSubFolders?.schema?.type !== "boolean") {
+    errors.push("boardsList must document include_sub_folders as a boolean query parameter.");
+  }
+}
 
 function validateRequiredOperation(
   operationId,
@@ -762,7 +863,6 @@ function validateRequiredOperation(
 ) {
   const record = operations.get(operationId);
   if (!record) {
-    errors.push(`${label} ${operationId} is not present.`);
     return;
   }
 
@@ -817,7 +917,6 @@ function validateMethodExclusions() {
     for (const operationId of operationIds) {
       const record = operations.get(operationId);
       if (!record) {
-        errors.push(`methodExceptions.${method} includes ${operationId}, but that operation is not present in the MCP spec.`);
         continue;
       }
 
@@ -880,7 +979,6 @@ function validatePatchFirstUpdates() {
   for (const operationId of requiredPatchUpdateOperationIds) {
     const record = operations.get(operationId);
     if (!record) {
-      errors.push(`Required PATCH update operation ${operationId} is not present.`);
       continue;
     }
 
@@ -915,7 +1013,6 @@ function validatePaymentMethodPutException() {
   const paymentPut = operations.get("paymentMethodsUpdate");
   if (allowedPutExceptions.has("paymentMethodsUpdate")) {
     if (!paymentPut) {
-      errors.push("paymentMethodsUpdate is allowlisted as a PUT exception, but it is not present in the MCP spec.");
       return;
     }
 

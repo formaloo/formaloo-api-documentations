@@ -26,4 +26,4 @@ Performs an action on a specific form connected to a board. The current supporte
 }
 ```
 
-To attach a form to a new board/app, use `POST /v3.0/forms/{slug}/create-default-board/` or create a board with `POST /v3.0/boards/` and set `primary_form` to the form slug. To delete the board/app without deleting forms, use `DELETE /v3.0/boards/{boardSlug}/` with `delete_forms` omitted or `false`.
+To attach a form to a new board/app, use `POST /v3.0/forms/{slug}/create-default-board/` or create a board and put the form slug on a block. To delete the board/app without deleting forms, use `DELETE /v3.0/boards/{boardSlug}/` with `delete_forms` omitted or `false`.

@@ -1,5 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { normalizeFormAnswerProperties } from "./form-answer-contract.mjs";
+
+import { deriveLogicEnums } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -106,34 +109,6 @@ const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
 const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
-const formalooLogicConditionOperations = [
-  "equal",
-  "not_equal",
-  "gt",
-  "lt",
-  "gte",
-  "lte",
-  "greatest",
-  "smallest",
-  "is",
-  "is_not",
-  "on",
-  "not_on",
-  "before",
-  "after",
-  "before_or_on",
-  "after_or_on",
-  "is_answered",
-  "contains",
-  "not_contains",
-  "starts_with",
-  "ends_with",
-  "has_changed_to",
-  "and",
-  "or",
-  "always",
-  "otherwise"
-];
 
 function titleizeTag(slug) {
   const overrides = {
@@ -451,6 +426,12 @@ function normalizeResponses(pathKey, method, operation) {
   ensureResponseDescriptions(operation, method);
 }
 
+const schemaInstanceKeys = new Set(["default", "example", "examples", "enum"]);
+
+function branchCanCarryNullable(branch) {
+  return Boolean(branch && typeof branch === "object" && !branch.$ref && typeof branch.type === "string");
+}
+
 function normalizeSchemaTree(node) {
   if (!node || typeof node !== "object") {
     return;
@@ -458,12 +439,25 @@ function normalizeSchemaTree(node) {
 
   if (node.nullable === true && typeof node.type !== "string") {
     const inferredType = inferSchemaType(node);
+    const unionBranches = Array.isArray(node.anyOf) ? node.anyOf : Array.isArray(node.oneOf) ? node.oneOf : null;
     if (inferredType) {
       node.type = inferredType;
+    } else if (unionBranches && unionBranches.every(branchCanCarryNullable)) {
+      // OAS 3.0 requires type when nullable is set. Keep nullability on each typed branch.
+      for (const branch of unionBranches) {
+        branch.nullable = true;
+      }
+      delete node.nullable;
+    } else if (!node.$ref && !node.allOf && !unionBranches) {
+      // With no type to infer, the schema is already unconstrained and already allows null.
+      delete node.nullable;
     }
   }
 
-  for (const value of Object.values(node)) {
+  for (const [key, value] of Object.entries(node)) {
+    if (schemaInstanceKeys.has(key)) {
+      continue;
+    }
     if (Array.isArray(value)) {
       for (const item of value) {
         normalizeSchemaTree(item);
@@ -475,6 +469,23 @@ function normalizeSchemaTree(node) {
 }
 
 function ensureFormalooLogicSchemas() {
+  const {
+    ruleTypes: logicRuleTypeEnum,
+    actions: logicActionEnum,
+    operations: conditionOperationEnum,
+    conditionArgumentTypes,
+    actionArgumentTypes
+  } = deriveLogicEnums(spec.components.schemas);
+  const backendActionValueSchema =
+    spec.components.schemas.ActionArgumentRequest?.properties?.value ??
+    spec.components.schemas.ActionArgument?.properties?.value;
+
+  if (!backendActionValueSchema) {
+    throw new Error(
+      "Backend ActionArgument value schema is required to build the Formaloo logic contract."
+    );
+  }
+
   spec.components.schemas.FormalooLogicScalarValue = {
     anyOf: [
       { type: "string", nullable: true },
@@ -485,36 +496,64 @@ function ensureFormalooLogicSchemas() {
       "Scalar logic argument value. Referenced slugs are strings; constants may be strings, numbers, booleans, or null."
   };
 
-  spec.components.schemas.FormalooLogicArgument = {
+  spec.components.schemas.FormalooLogicRowCountValue = {
     type: "object",
     description:
-      "Argument object used by Formaloo form logic conditions and actions. Condition arguments use `value`. Action object references and variables use `identifier`; action constants use `value`.",
+      "Row-count query against an accessible destination form. `row_count` can only be used in submit or update logic. Filters use destination field query keys and typed source mappings.",
+    properties: {
+      form: { type: "string", description: "Destination form slug." },
+      filters: {
+        type: "object",
+        description: "Optional destination-field filters.",
+        additionalProperties: { type: "object", additionalProperties: true }
+      }
+    },
+    required: ["form"]
+  };
+
+  spec.components.schemas.FormalooLogicConditionArgument = {
+    oneOf: [
+      {
+        type: "object",
+        description: "Scalar condition argument.",
+        properties: {
+          type: {
+            type: "string",
+            enum: conditionArgumentTypes.filter((value) => value !== "row_count")
+          },
+          value: { $ref: "#/components/schemas/FormalooLogicScalarValue" }
+        },
+        required: ["type", "value"]
+      },
+      {
+        type: "object",
+        description:
+          "Row-count condition argument. `row_count` can only be used in submit or update logic.",
+        properties: {
+          type: { type: "string", enum: ["row_count"] },
+          value: { $ref: "#/components/schemas/FormalooLogicRowCountValue" }
+        },
+        required: ["type", "value"]
+      }
+    ],
+    description:
+      "Condition argument. Ordinary arguments require scalar values; `row_count` requires an object containing a form and optional filters, and can only be used in submit or update logic."
+  };
+
+  spec.components.schemas.FormalooLogicActionArgument = {
+    type: "object",
+    description:
+      "Argument object used by Formaloo form logic actions. Object references and variables use `identifier`; constants and structured action values use `value`.",
     properties: {
       type: {
         type: "string",
-        description: "Argument kind.",
-        enum: [
-          "field",
-          "matrix",
-          "table",
-          "choice",
-          "user",
-          "row",
-          "constant",
-          "variable",
-          "success_page",
-          "link",
-          "send_email_template",
-          "send_email_receiver",
-          "webhook",
-          "slack",
-          "pdf_template"
-        ]
+        description: "Action argument kind.",
+        enum: actionArgumentTypes
       },
       value: {
-        $ref: "#/components/schemas/FormalooLogicScalarValue",
+        ...structuredClone(backendActionValueSchema),
         description:
-          "Condition-side primitive value or referenced slug. Examples: field slug for `field`, choice slug for `choice`, numeric/text value for `constant`, or `matrix_slug.group_slug` for `matrix`."
+          "Primitive value, or an object for backend-defined structured action arguments such as `whatsapp_variables`, `row_data`, `row_filter`, and `row_sort`."
       },
       identifier: {
         type: "string",
@@ -526,6 +565,15 @@ function ensureFormalooLogicSchemas() {
     required: ["type"]
   };
 
+  spec.components.schemas.FormalooLogicArgument = {
+    anyOf: [
+      { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
+      { $ref: "#/components/schemas/FormalooLogicActionArgument" }
+    ],
+    description:
+      "Compatibility union of Formaloo condition and action arguments. Prefer the context-specific component."
+  };
+
   spec.components.schemas.FormalooLogicShallowCondition = {
     type: "object",
     description:
@@ -534,7 +582,7 @@ function ensureFormalooLogicSchemas() {
       operation: {
         type: "string",
         description: "Nested condition operation.",
-        enum: formalooLogicConditionOperations
+        enum: conditionOperationEnum
       },
       args: {
         type: "array",
@@ -558,7 +606,7 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Condition operation. Common operations include comparison, choice, state, and boolean-composition operations.",
-        enum: formalooLogicConditionOperations
+        enum: conditionOperationEnum
       },
       args: {
         type: "array",
@@ -566,11 +614,11 @@ function ensureFormalooLogicSchemas() {
           "Operation arguments. Condition args use `value`, not `identifier`. For `is`, use field ref plus choice/value ref. For comparisons, use field ref plus constant/value ref. For `and`/`or`, args are nested condition objects with their own `operation` and `args`. For `always` and `otherwise`, use an empty array. This intentionally stays non-recursive for MCP/tool-schema compatibility.",
         items: {
           anyOf: [
-            { $ref: "#/components/schemas/FormalooLogicArgument" },
+            { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
             { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
           ],
           description:
-            "FormalooLogicArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
+            "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
         }
       }
     },
@@ -592,31 +640,13 @@ function ensureFormalooLogicSchemas() {
         type: "string",
         description:
           "Action type to execute. `disable` is accepted by the backend for legacy logic payloads, but the current form logic analyzer treats it as a no-op and the dashboard UI does not expose it; avoid `disable` for new rules.",
-        enum: [
-          "jump",
-          "jump_to_success_page",
-          "hide",
-          "show",
-          "disable",
-          "set",
-          "submit",
-          "redirect",
-          "add",
-          "multiply",
-          "subtract",
-          "divide",
-          "send_email",
-          "send_webhook",
-          "send_slack",
-          "generate_pdf",
-          "set_related"
-        ]
+        enum: logicActionEnum
       },
       args: {
         type: "array",
         description:
           "Action arguments. Object references and variables use `identifier`; literal constants and links use `value`. `jump_to_success_page` requires exactly one `type: field` argument whose identifier is the success-page field slug or `default_success_page`.",
-        items: { $ref: "#/components/schemas/FormalooLogicArgument" }
+        items: { $ref: "#/components/schemas/FormalooLogicActionArgument" }
       },
       when: {
         $ref: "#/components/schemas/FormalooLogicCondition"
@@ -643,7 +673,7 @@ function ensureFormalooLogicSchemas() {
     properties: {
       type: {
         type: "string",
-        enum: ["field", "submit", "update"],
+        enum: logicRuleTypeEnum,
         description: "Logic rule scope."
       },
       identifier: {
@@ -1984,11 +2014,12 @@ function enrichChoiceFieldSchemas() {
 function enrichRowSchemas() {
   spec.components.schemas.FormalooRowFieldValue = {
     anyOf: [
-      { type: "string" },
-      { type: "number" },
-      { type: "boolean" },
+      { type: "string", nullable: true },
+      { type: "number", nullable: true },
+      { type: "boolean", nullable: true },
       {
         type: "array",
+        nullable: true,
         items: {
           anyOf: [
             { type: "string" },
@@ -1998,12 +2029,18 @@ function enrichRowSchemas() {
           ]
         }
       },
-      { type: "object", additionalProperties: true }
+      { type: "object", additionalProperties: true, nullable: true }
     ],
-    nullable: true,
     description:
       "Field value in a row. Type varies by field type: strings for text/choice/date/file slugs, numbers for numeric/rating, booleans for yes_no/checkbox, arrays for multiple_select, multi-file, or repeating_section values, objects for matrix/table/lookup-style values, or null for unanswered fields."
   };
+
+  // SubmitRowSerializer adds one serializer field per form field slug at runtime.
+  // Spectacular only emits the static row metadata, so slug keys are additional properties.
+  const addRowRequest = spec.components.schemas.AddRowRequest;
+  if (addRowRequest && addRowRequest.type === "object" && addRowRequest.additionalProperties === undefined) {
+    addRowRequest.additionalProperties = { $ref: "#/components/schemas/FormalooRowFieldValue" };
+  }
 
   spec.components.schemas.FormalooRowFieldValues = {
     type: "object",
@@ -2189,6 +2226,30 @@ function upsertQueryParameter(operation, parameter) {
     return;
   }
   operation.parameters.push(parameter);
+}
+
+function enrichDashboardFolderListContract() {
+  const listBoards = spec.paths["/v3.0/boards/"]?.get;
+  if (!listBoards) {
+    return;
+  }
+
+  upsertQueryParameter(listBoards, {
+    in: "query",
+    name: "folder",
+    required: false,
+    schema: { type: "string" },
+    description:
+      "One folder slug. This is the parameter used by the Formaloo dashboard when listing a folder's direct app contents."
+  });
+  upsertQueryParameter(listBoards, {
+    in: "query",
+    name: "include_sub_folders",
+    required: false,
+    schema: { type: "boolean", default: false },
+    description:
+      "When true with folder, include apps from that folder and all descendant folders."
+  });
 }
 
 function enrichFormsRowsListOperation() {
@@ -2815,7 +2876,13 @@ function enrichFormSummarySchemas() {
       schema.properties.submission_config = { $ref: "#/components/schemas/FormalooSubmissionConfig" };
     }
 
-    if (schema.properties.slack_accesses && schema.properties.slack_accesses.type === "object" && JSON.stringify(schema.properties.slack_accesses.additionalProperties) === "{}") {
+    // The backend's JSONField sometimes emits only nullable/description,
+    // without even an object type. Both shapes are opaque to API clients.
+    const slackAccesses = schema.properties.slack_accesses;
+    if (slackAccesses && !slackAccesses.$ref && (
+      (!slackAccesses.type && !slackAccesses.items && !slackAccesses.oneOf && !slackAccesses.allOf) ||
+      (slackAccesses.type === "object" && JSON.stringify(slackAccesses.additionalProperties) === "{}")
+    )) {
       schema.properties.slack_accesses = { $ref: "#/components/schemas/FormalooSlackAccesses" };
     }
 
@@ -2881,22 +2948,6 @@ function enrichFieldConfigSchemas() {
       "Field-specific configuration. Shape varies by field type. May include validation rules, display settings, calculation formulas, and integration settings."
   };
 
-  spec.components.schemas.FormalooAcceptableAnswers = {
-    oneOf: [
-      { type: "array", nullable: true, items: { type: "string" } },
-      { type: "string" }
-    ],
-    description: "Allowed answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Exact values are trimmed and lowercased; slash-delimited regex entries are preserved and validated."
-  };
-
-  spec.components.schemas.FormalooUnacceptableAnswers = {
-    oneOf: [
-      { type: "array", nullable: true, items: { type: "string" } },
-      { type: "string" }
-    ],
-    description: "Blocked answer values. Accepts a list of strings (including an empty list), null, or a newline-delimited string. Values are trimmed and lowercased."
-  };
-
   for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
     if (!schema?.properties) continue;
 
@@ -2921,14 +2972,6 @@ function enrichFieldConfigSchemas() {
         nullable: true,
         description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
       };
-    }
-
-    if (schema.properties.acceptable_answers && schema.properties.acceptable_answers.type === "object" && JSON.stringify(schema.properties.acceptable_answers.additionalProperties) === "{}") {
-      schema.properties.acceptable_answers = { $ref: "#/components/schemas/FormalooAcceptableAnswers" };
-    }
-
-    if (schema.properties.unacceptable_answers && schema.properties.unacceptable_answers.type === "object" && JSON.stringify(schema.properties.unacceptable_answers.additionalProperties) === "{}") {
-      schema.properties.unacceptable_answers = { $ref: "#/components/schemas/FormalooUnacceptableAnswers" };
     }
 
     if (schemaName === "FormBuilderRegexFieldRequest") {
@@ -2968,6 +3011,9 @@ function enrichFieldConfigSchemas() {
       };
     }
   }
+
+  normalizeFormAnswerProperties(spec);
+
   for (const schemaName of [
     "FormMailchimpIntegrationRequest",
     "PatchedFormMailchimpIntegrationRequest",
@@ -3338,6 +3384,7 @@ enrichFormDisplaySubmitContract();
 enrichBoardDeleteOperation();
 enrichChoiceFieldSchemas();
 enrichRowSchemas();
+enrichDashboardFolderListContract();
 enrichFormsRowsListOperation();
 enrichBlockSchemas();
 enrichBoardSchemas();
