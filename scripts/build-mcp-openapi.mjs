@@ -1552,7 +1552,7 @@ const localDescriptionFixes = {
   },
   fieldsAiBoxCreate: {
     summary: "Create an AI box field",
-    description: "Creates an AI box field definition for a form or board."
+    description: "Creates an AI box field definition for a form."
   },
   filesUnsplashCreate: {
     summary: "Create a file from Unsplash",
