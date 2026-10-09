@@ -2187,23 +2187,15 @@ function enforceDeleteSuccessResponses(openapiSpec) {
   }
 }
 
-function composePreservedDescription(incoming, addition) {
-  const base = typeof incoming === "string" ? incoming.trim() : "";
-  const note = typeof addition === "string" ? addition.trim() : "";
-  if (!note) {
-    return typeof incoming === "string" ? incoming : "";
+function applyOperationDocumentationFallback(operation, fallback) {
+  // Backend-generated text owns standard OpenAPI metadata. Keep these tables as
+  // transitional fallbacks until every deployed backend publishes its metadata;
+  // unresolved $ref objects are not usable summary or description strings.
+  for (const field of ["summary", "description"]) {
+    if (typeof operation[field] !== "string" || operation[field].trim() === "") {
+      operation[field] = fallback[field];
+    }
   }
-  if (!base) {
-    return note;
-  }
-  if (base === note) {
-    return base;
-  }
-  const paragraphs = base.split(/\n\s*\n/).map((part) => part.trim());
-  if (paragraphs.includes(note)) {
-    return base;
-  }
-  return `${base}\n\n${note}`;
 }
 
 function operationInventory(openapiSpec) {
@@ -2283,8 +2275,7 @@ function enrichMcpOperations(openapiSpec) {
 
       const coreDefinition = coreMcpOperations[operation.operationId];
       if (coreDefinition) {
-        operation.summary = coreDefinition.summary;
-        operation.description = composePreservedDescription(operation.description, coreDefinition.description);
+        applyOperationDocumentationFallback(operation, coreDefinition);
         operation["x-formaloo-mcp"] = {
           ...coreDefinition.mcp,
           auth: buildMcpAuthMetadata(operation)
@@ -2302,8 +2293,7 @@ function enrichMcpOperations(openapiSpec) {
 
       const descriptionFix = localDescriptionFixes[operation.operationId];
       if (descriptionFix) {
-        operation.summary = descriptionFix.summary;
-        operation.description = composePreservedDescription(operation.description, descriptionFix.description);
+        applyOperationDocumentationFallback(operation, descriptionFix);
       }
 
       if (method === "put" && operation.operationId === "paymentMethodsUpdate") {
