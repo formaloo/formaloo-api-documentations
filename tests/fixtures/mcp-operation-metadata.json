@@ -1,0 +1,64 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Backend metadata fixture", "version": "1.0" },
+  "paths": {
+    "/forms/{slug}/": {
+      "patch": {
+        "operationId": "formsPartialUpdate",
+        "summary": "  Update editable form settings  ",
+        "description": "Updates the form settings supported by the backend.\n\nBackend permissions apply.\n",
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/ApiKey" },
+          { "name": "x-workspace", "in": "header", "required": false, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FormSettings" },
+              "examples": { "backend_request": { "value": { "title": "Backend example" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated form settings.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FormSettings" },
+                "examples": { "backend_response": { "value": { "title": "Backend example" } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fields/ai-box/": {
+      "post": {
+        "operationId": "fieldsAiBoxCreate",
+        "summary": "Create the backend AI box definition",
+        "description": "Creates an AI box using the backend field configuration.",
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/lead-enrichments/enrichable-fields/": {
+      "get": {
+        "operationId": "leadEnrichmentsEnrichableFieldsList",
+        "summary": "Get the provider field catalog",
+        "description": "Retrieves available company and people fields.",
+        "parameters": [
+          { "name": "x-workspace", "in": "header", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Field catalog." } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ApiKey": { "name": "x-api-key", "in": "header", "required": false, "schema": { "type": "string" } }
+    },
+    "schemas": {
+      "FormSettings": { "type": "object", "properties": { "title": { "type": "string" } } }
+    }
+  }
+}

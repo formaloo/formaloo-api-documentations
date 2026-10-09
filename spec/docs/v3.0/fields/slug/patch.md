@@ -155,3 +155,5 @@ Switching back to normal analysis mode clears the saved editable targets:
   "mode": "analyze"
 }
 ```
+
+`analyze_files` turns on the file-analysis prompt for this field. It defaults to `false`. Setting it to `true` requires the AI File Analysis add-on; otherwise the API returns `File analysis for AI box fields requires the AI File Analysis add-on.` Leaving the field unchanged does not recheck the add-on.

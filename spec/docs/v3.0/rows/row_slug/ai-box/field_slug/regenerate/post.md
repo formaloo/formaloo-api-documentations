@@ -6,6 +6,8 @@ Re-run one AI Analysis (`ai_box`) field on a saved row. The call runs that field
 
 The run happens inside the request. A slow prompt returns `in_progress` and finishes later. A fast edit-mode prompt can return `completed` in this response.
 
+If the field's `analyze_files` is `true` and the workspace has the AI File Analysis add-on, analyze and edit runs use the file-analysis prompt. Otherwise the run uses the normal prompt for that mode. Fast edit always uses the fast-edit prompt.
+
 ### Path parameters
 
 - `row_slug` — slug of the saved row.

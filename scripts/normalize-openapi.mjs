@@ -1073,7 +1073,7 @@ function enrichFormDisplaySubmitContract() {
     return;
   }
 
-  setOperationDescription(
+  setOperationDescriptionFallback(
     operation,
     [
       "Submit uses the form **display slug** path parameter (`/v3.0/form-displays/slug/{slug}/submit/`), not the public form address.",
@@ -1406,13 +1406,16 @@ function createManualTypedFieldSchema({ type, description }) {
   };
 }
 
-function setOperationDescription(operation, description) {
+function setOperationDescriptionFallback(operation, description) {
   if (!operation) {
     return;
   }
 
-  const existing = typeof operation.description === "string" ? operation.description.trim() : "";
-  operation.description = existing ? `${existing}\n\n${description}` : description;
+  // Standard operation prose belongs to the backend. Keep local guidance only
+  // as a compatibility fallback while deployed backend metadata catches up.
+  if (typeof operation.description !== "string" || operation.description.trim() === "") {
+    operation.description = description;
+  }
 }
 
 function setJsonExamples(operation, examples) {
@@ -1742,7 +1745,7 @@ function enrichFieldCreateSchemasAndOperations() {
   const fieldsCreate = spec.paths["/v3.0/fields/"]?.post;
   if (fieldsCreate) {
     upsertJsonRequestBody(fieldsCreate, "#/components/schemas/FormalooFieldCreateRequest", true);
-    setOperationDescription(
+    setOperationDescriptionFallback(
       fieldsCreate,
       "Recommended field creation endpoint for agents and form builders when adding documented form-editor field types through one URL. Prefer this endpoint when adding mixed field types programmatically; use `type` and, where needed, `sub_type` to select the exact field variant. The per-type endpoints document the same field-specific settings and remain available as specialized alternatives. Some dashboard editor shortcuts apply extra UI defaults, and `table` / `email_verification` are documented through the generic field-create schema because the generated backend OpenAPI does not currently expose dedicated request schemas for them."
     );
@@ -1912,13 +1915,13 @@ function enrichFieldCreateSchemasAndOperations() {
         setJsonExamples(operation, examples);
       }
       if (operation.operationId === "fieldsRatingCreate") {
-        setOperationDescription(
+        setOperationDescriptionFallback(
           operation,
           "For dashboard-compatible Star Rating / CSAT fields, use `sub_type: \"embeded\"` (legacy API spelling). Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
         );
       }
       if (operation.operationId === "fieldsMultipleSelectCreate") {
-        setOperationDescription(
+        setOperationDescriptionFallback(
           operation,
           "Use `sub_type: \"standard\"` for normal multiple choice, `dropdown` for multiple-choice dropdown, and `ranking` for ranking fields."
         );
@@ -2258,15 +2261,12 @@ function enrichFormsRowsListOperation() {
     return;
   }
 
-  listRows.summary = listRows.summary || "List form submissions";
-  const existingDescription = String(listRows.description || "").trim();
+  if (typeof listRows.summary !== "string" || listRows.summary.trim() === "") {
+    listRows.summary = "List form submissions";
+  }
   const filterNotice =
     "Supports dashboard-parity filters: pagination (`page`, `page_size`), `search`, `sort_by`, `status`, meta (`created_by`, `updated_by`, `tags`, `tracking_code`, `submit_number`), timestamp/date ranges (`submit_time`/`created_at`/`updated_at` plus `_gte`/`_lte`/`_gt`/`_lt`), and dynamic `{fieldSlug}` / `{fieldSlug}_{operator}` field filters. `RowQueryUtils` supports contains/has/equal/exact/lt/lte/gt/gte and `not_` variants; comma-separated bare field values become list filters. Response includes `rows`, `count`, and often `top_fields` for table columns.";
-  if (!existingDescription.includes("dashboard-parity filters")) {
-    listRows.description = existingDescription
-      ? `${existingDescription}\n\n${filterNotice}`
-      : filterNotice;
-  }
+  setOperationDescriptionFallback(listRows, filterNotice);
 
   const queryParams = [
     {
@@ -3174,7 +3174,7 @@ function enrichIntegrationSchemas() {
     for (const operation of Object.values(pathItem ?? {})) {
       const contract = discoveryContracts[operation?.operationId];
       if (!contract) continue;
-      operation.description = contract.description;
+      setOperationDescriptionFallback(operation, contract.description);
       for (const parameter of operation.parameters ?? []) {
         const values = discoveryParameterEnums[operation.operationId]?.[parameter.name];
         if (values) {

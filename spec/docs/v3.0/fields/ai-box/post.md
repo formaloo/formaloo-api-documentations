@@ -11,6 +11,8 @@ AI Analysis supports two modes:
 
 Edit targets must belong to the same form. Supported targets are text, number, rating, hidden, date/time, variable, checkbox, yes/no, choice, dropdown, multiple-select, and assignee fields. Read-only, relation, file, product, matrix, table, and repeating-section fields cannot be targets.
 
+`analyze_files` defaults to `false`. Set it to `true` to run this field with the file-analysis prompt, which can read files uploaded on the row. The workspace must have the AI File Analysis add-on. Without it, the API rejects the request with `File analysis for AI box fields requires the AI File Analysis add-on.` A field already saved as `true` keeps that value if the add-on is later removed, and its runs use the normal prompt for its mode until the add-on is present again. Fast edit mode always uses the fast-edit prompt.
+
 ## Analyze mode example
 
 ```json
