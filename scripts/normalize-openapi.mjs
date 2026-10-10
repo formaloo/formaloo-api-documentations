@@ -1512,12 +1512,6 @@ function enrichFieldCreateSchemasAndOperations() {
       if (examples) {
         setJsonExamples(operation, examples);
       }
-      if (operation.operationId === "fieldsRatingCreate") {
-        setOperationDescriptionFallback(
-          operation,
-          "For dashboard-compatible Star Rating / CSAT fields, use `sub_type: \"embeded\"` (legacy API spelling). Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
-        );
-      }
       if (operation.operationId === "fieldsMultipleSelectCreate") {
         setOperationDescriptionFallback(
           operation,
