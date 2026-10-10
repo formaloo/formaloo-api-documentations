@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
 import { validateFormAnswerProperties } from "./form-answer-contract.mjs";
-import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateLogicSourceContract } from "./logic-schema-source.mjs";
 import { validateOperationDocumentation } from "./validate-operation-documentation.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -13,22 +13,9 @@ const settingsPath = path.join(rootDir, "spec", "mcp-openapi-settings.json");
 const specPathInput = process.argv[2] ?? defaultSpecPath;
 const specPath = path.isAbsolute(specPathInput) ? specPathInput : path.join(rootDir, specPathInput);
 
-// The pruned MCP spec (specPath, above) no longer carries the backend's raw
-// LogicActionTypeEnum/LogicOperationTypeEnum/ActionArgumentTypeEnum -- they get
-// consumed and overlaid into Formaloo*-prefixed schemas before pruning. Read
-// the pre-prune raw merge (the same file normalize-openapi.mjs derives the
-// overlay from) so this validator checks against the real backend contract
-// instead of a second hand-typed guess at it. See logic-schema-source.mjs.
 const rawMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-merged.mcp.raw.json");
 const normalizedMcpSpecPath = path.join(artifactsDir, "intermediate", "openapi-mcp-source.normalized.json");
-let rawMcpSpecSchemas = {};
-try {
-  const rawMcpSpec = JSON.parse(await fs.readFile(rawMcpSpecPath, "utf8"));
-  rawMcpSpecSchemas = rawMcpSpec.components?.schemas ?? {};
-} catch {
-  // Raw pre-prune spec not available (e.g. validating an ad-hoc spec path) --
-  // deriveLogicEnums falls back to its last-known-good backend snapshot.
-}
+const rawMcpSpec = JSON.parse(await fs.readFile(rawMcpSpecPath, "utf8"));
 
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
 const requiredMcpKeys = [
@@ -647,111 +634,7 @@ function validateResponseEnvelopes() {
 }
 
 function validateTypedHelperSchemas() {
-  const {
-    conditionArgumentTypes: expectedConditionArgumentTypes,
-    actionArgumentTypes: expectedActionArgumentTypes,
-    operations: expectedLogicOperations,
-    actions: expectedLogicActions
-  } = deriveLogicEnums(rawMcpSpecSchemas);
-  const logicActionArgument = spec.components?.schemas?.FormalooLogicActionArgument;
-  const logicConditionArgument = spec.components?.schemas?.FormalooLogicConditionArgument;
-  const logicActionArgumentTypeEnum = logicActionArgument?.properties?.type?.enum;
-  const logicActionArgumentValueVariants = logicActionArgument?.properties?.value?.anyOf ?? [];
-  const logicConditionArgumentBranches = logicConditionArgument?.oneOf ?? [];
-  const logicConditionArgumentTypeEnum = logicConditionArgumentBranches.flatMap(
-    (branch) => branch?.properties?.type?.enum ?? []
-  );
-  const rowCountArgumentBranch = logicConditionArgumentBranches.find((branch) =>
-    branch?.properties?.type?.enum?.includes("row_count")
-  );
-  if (!sameMembers(logicActionArgumentTypeEnum, expectedActionArgumentTypes)) {
-    errors.push(
-      "FormalooLogicActionArgument.type must match the backend action argument constants."
-    );
-  }
-
-  if (
-    !logicActionArgumentValueVariants.some(
-      (variant) => variant?.type === "object" && variant?.additionalProperties === true
-    )
-  ) {
-    errors.push(
-      "FormalooLogicActionArgument.value must preserve the backend object-valued action argument contract."
-    );
-  }
-
-  if (!sameMembers(logicConditionArgumentTypeEnum, expectedConditionArgumentTypes)) {
-    errors.push(
-      "FormalooLogicConditionArgument.type branches must match the backend condition argument constants."
-    );
-  }
-
-  if (
-    rowCountArgumentBranch?.properties?.value?.$ref !==
-    "#/components/schemas/FormalooLogicRowCountValue"
-  ) {
-    errors.push("FormalooLogicConditionArgument must model row_count as an object-valued branch.");
-  }
-
-  const rowCountScope = [
-    logicConditionArgument?.description,
-    rowCountArgumentBranch?.description,
-    spec.components?.schemas?.FormalooLogicRowCountValue?.description,
-  ].join("\n");
-  if (!rowCountScope.includes("`row_count` can only be used in submit or update logic.")) {
-    errors.push(
-      "FormalooLogicConditionArgument must document that row_count can only be used in submit or update logic."
-    );
-  }
-
-  const logicOperationEnum =
-    spec.components?.schemas?.FormalooLogicCondition?.properties?.operation?.enum;
-  if (!sameMembers(logicOperationEnum, expectedLogicOperations)) {
-    errors.push(
-      "FormalooLogicCondition.operation must match the backend OperationType constants."
-    );
-  }
-
-  const logicActionEnum =
-    spec.components?.schemas?.FormalooLogicAction?.properties?.action?.enum;
-  if (!sameMembers(logicActionEnum, expectedLogicActions)) {
-    errors.push(
-      "FormalooLogicAction.action must match the backend ActionType constants."
-    );
-  }
-
-  const logicActionDescription =
-    spec.components?.schemas?.FormalooLogicAction?.properties?.action
-      ?.description ?? "";
-  if (
-    !logicActionDescription.includes("disable") ||
-    !logicActionDescription.includes("no-op") ||
-    !logicActionDescription.includes("dashboard UI does not expose")
-  ) {
-    errors.push(
-      "FormalooLogicAction.action must document disable as backend-accepted but not active/recommended."
-    );
-  }
-
-  const logicConditionArgRefs =
-    spec.components?.schemas?.FormalooLogicCondition?.properties?.args?.items?.anyOf
-      ?.map((item) => item?.$ref)
-      .filter(Boolean) ?? [];
-  if (
-    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicConditionArgument") ||
-    !logicConditionArgRefs.includes("#/components/schemas/FormalooLogicShallowCondition")
-  ) {
-    errors.push(
-      "FormalooLogicCondition.args.items must compose FormalooLogicConditionArgument and FormalooLogicShallowCondition with anyOf."
-    );
-  }
-
-  if (
-    spec.components?.schemas?.FormalooLogicAction?.properties?.args?.items?.$ref !==
-    "#/components/schemas/FormalooLogicActionArgument"
-  ) {
-    errors.push("FormalooLogicAction.args.items must reference FormalooLogicActionArgument.");
-  }
+  errors.push(...validateLogicSourceContract(spec, rawMcpSpec));
 
   const builderField = spec.components?.schemas?.FormalooBuilderFieldInput;
   if (builderField?.properties) {

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { normalizeFormAnswerProperties } from "./form-answer-contract.mjs";
 
-import { deriveLogicEnums } from "./logic-schema-source.mjs";
+import { validateLogicSourceContract } from "./logic-schema-source.mjs";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const artifactsDir = path.join(rootDir, "artifacts");
@@ -29,6 +29,7 @@ const endUserSessionAuthorizationDescription =
 
 const publicContract = JSON.parse(await fs.readFile(publicContractPath, "utf8"));
 const spec = JSON.parse(await fs.readFile(rawSpecPath, "utf8"));
+const sourceLogicSpec = structuredClone(spec);
 const integrationMappingSchemas = JSON.parse(await fs.readFile(
   path.join(rootDir, "spec", "integration-mapping-schemas.json"), "utf8"
 ));
@@ -468,312 +469,6 @@ function normalizeSchemaTree(node) {
   }
 }
 
-function ensureFormalooLogicSchemas() {
-  const {
-    ruleTypes: logicRuleTypeEnum,
-    actions: logicActionEnum,
-    operations: conditionOperationEnum,
-    conditionArgumentTypes,
-    actionArgumentTypes
-  } = deriveLogicEnums(spec.components.schemas);
-  const backendActionValueSchema =
-    spec.components.schemas.ActionArgumentRequest?.properties?.value ??
-    spec.components.schemas.ActionArgument?.properties?.value;
-
-  if (!backendActionValueSchema) {
-    throw new Error(
-      "Backend ActionArgument value schema is required to build the Formaloo logic contract."
-    );
-  }
-
-  spec.components.schemas.FormalooLogicScalarValue = {
-    anyOf: [
-      { type: "string", nullable: true },
-      { type: "number", nullable: true },
-      { type: "boolean", nullable: true }
-    ],
-    description:
-      "Scalar logic argument value. Referenced slugs are strings; constants may be strings, numbers, booleans, or null."
-  };
-
-  spec.components.schemas.FormalooLogicRowCountValue = {
-    type: "object",
-    description:
-      "Row-count query against an accessible destination form. `row_count` can only be used in submit or update logic. Filters use destination field query keys and typed source mappings.",
-    properties: {
-      form: { type: "string", description: "Destination form slug." },
-      filters: {
-        type: "object",
-        description: "Optional destination-field filters.",
-        additionalProperties: { type: "object", additionalProperties: true }
-      }
-    },
-    required: ["form"]
-  };
-
-  spec.components.schemas.FormalooLogicConditionArgument = {
-    oneOf: [
-      {
-        type: "object",
-        description: "Scalar condition argument.",
-        properties: {
-          type: {
-            type: "string",
-            enum: conditionArgumentTypes.filter((value) => value !== "row_count")
-          },
-          value: { $ref: "#/components/schemas/FormalooLogicScalarValue" }
-        },
-        required: ["type", "value"]
-      },
-      {
-        type: "object",
-        description:
-          "Row-count condition argument. `row_count` can only be used in submit or update logic.",
-        properties: {
-          type: { type: "string", enum: ["row_count"] },
-          value: { $ref: "#/components/schemas/FormalooLogicRowCountValue" }
-        },
-        required: ["type", "value"]
-      }
-    ],
-    description:
-      "Condition argument. Ordinary arguments require scalar values; `row_count` requires an object containing a form and optional filters, and can only be used in submit or update logic."
-  };
-
-  spec.components.schemas.FormalooLogicActionArgument = {
-    type: "object",
-    description:
-      "Argument object used by Formaloo form logic actions. Object references and variables use `identifier`; constants and structured action values use `value`.",
-    properties: {
-      type: {
-        type: "string",
-        description: "Action argument kind.",
-        enum: actionArgumentTypes
-      },
-      value: {
-        ...structuredClone(backendActionValueSchema),
-        description:
-          "Primitive value, or an object for backend-defined structured action arguments such as `whatsapp_variables`, `row_data`, `row_filter`, and `row_sort`."
-      },
-      identifier: {
-        type: "string",
-        nullable: true,
-        description:
-          "Action-side reference identifier. Examples: target field slug, variable slug, email template slug, webhook slug, or PDF template slug. For `jump_to_success_page`, use one `type: field` argument whose identifier is the success-page field slug or `default_success_page`. Literal constants and links use `value` instead."
-      }
-    },
-    required: ["type"]
-  };
-
-  spec.components.schemas.FormalooLogicArgument = {
-    anyOf: [
-      { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
-      { $ref: "#/components/schemas/FormalooLogicActionArgument" }
-    ],
-    description:
-      "Compatibility union of Formaloo condition and action arguments. Prefer the context-specific component."
-  };
-
-  spec.components.schemas.FormalooLogicShallowCondition = {
-    type: "object",
-    description:
-      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
-    properties: {
-      operation: {
-        type: "string",
-        description: "Nested condition operation.",
-        enum: conditionOperationEnum
-      },
-      args: {
-        type: "array",
-        description:
-          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
-        items: {
-          type: "object",
-          additionalProperties: true
-        }
-      }
-    },
-    required: ["operation", "args"]
-  };
-
-  spec.components.schemas.FormalooLogicCondition = {
-    type: "object",
-    description:
-      "Condition object under a Formaloo logic action's `when` property. Use exact field, choice, variable, matrix, and page slugs from the form definition.",
-    properties: {
-      operation: {
-        type: "string",
-        description:
-          "Condition operation. Common operations include comparison, choice, state, and boolean-composition operations.",
-        enum: conditionOperationEnum
-      },
-      args: {
-        type: "array",
-        description:
-          "Operation arguments. Condition args use `value`, not `identifier`. For `is`, use field ref plus choice/value ref. For comparisons, use field ref plus constant/value ref. For `and`/`or`, args are nested condition objects with their own `operation` and `args`. For `always` and `otherwise`, use an empty array. This intentionally stays non-recursive for MCP/tool-schema compatibility.",
-        items: {
-          anyOf: [
-            { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
-            { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
-          ],
-          description:
-            "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
-        }
-      }
-    },
-    required: ["operation", "args"],
-    example: {
-      operation: "is",
-      args: [
-        { type: "field", value: "service_type" },
-        { type: "choice", value: "choice_web_design" }
-      ]
-    }
-  };
-
-  spec.components.schemas.FormalooLogicAction = {
-    type: "object",
-    description: "Action executed when a Formaloo logic condition matches.",
-    properties: {
-      action: {
-        type: "string",
-        description:
-          "Action type to execute. `disable` is accepted by the backend for legacy logic payloads, but the current form logic analyzer treats it as a no-op and the dashboard UI does not expose it; avoid `disable` for new rules.",
-        enum: logicActionEnum
-      },
-      args: {
-        type: "array",
-        description:
-          "Action arguments. Object references and variables use `identifier`; literal constants and links use `value`. `jump_to_success_page` requires exactly one `type: field` argument whose identifier is the success-page field slug or `default_success_page`.",
-        items: { $ref: "#/components/schemas/FormalooLogicActionArgument" }
-      },
-      when: {
-        $ref: "#/components/schemas/FormalooLogicCondition"
-      }
-    },
-    required: ["action", "args", "when"],
-    example: {
-      action: "show",
-      args: [{ type: "field", identifier: "follow_up_message" }],
-      when: {
-        operation: "is",
-        args: [
-          { type: "field", value: "satisfaction_choice" },
-          { type: "choice", value: "choice_needs_help" }
-        ]
-      }
-    }
-  };
-
-  spec.components.schemas.FormalooLogicRule = {
-    type: "object",
-    description:
-      "One Formaloo form logic rule. `field` rules react to field values, `submit` rules run on submission, and `update` rules run on field edit/update flows.",
-    properties: {
-      type: {
-        type: "string",
-        enum: logicRuleTypeEnum,
-        description: "Logic rule scope."
-      },
-      identifier: {
-        type: "string",
-        nullable: true,
-        description:
-          "Trigger field slug for `field` rules. `submit` and `update` rules may omit it."
-      },
-      actions: {
-        type: "array",
-        items: { $ref: "#/components/schemas/FormalooLogicAction" },
-        description: "Actions evaluated for this logic rule."
-      }
-    },
-    required: ["type", "actions"],
-    example: {
-      type: "field",
-      identifier: "satisfaction_choice",
-      actions: [
-        {
-          action: "show",
-          args: [{ type: "field", identifier: "follow_up_message" }],
-          when: {
-            operation: "is",
-            args: [
-              { type: "field", value: "satisfaction_choice" },
-              { type: "choice", value: "choice_needs_help" }
-            ]
-          }
-        }
-      ]
-    }
-  };
-
-  spec.components.schemas.FormalooFormLogic = {
-    type: "array",
-    description:
-      "List of Formaloo form logic rules saved on a form's `logic` property. Reference exact field, choice, variable, matrix, and page slugs from the form definition.",
-    items: { $ref: "#/components/schemas/FormalooLogicRule" }
-  };
-}
-
-function enrichFormLogicSchemas() {
-  ensureFormalooLogicSchemas();
-
-  for (const schemaName of [
-    "CreateForm",
-    "CreateFormRequest",
-    "ShowForm",
-    "FormUpdateRequest",
-    "PatchedFormUpdateRequest"
-  ]) {
-    const schema = spec.components.schemas[schemaName];
-    if (!schema || typeof schema !== "object") {
-      continue;
-    }
-
-    schema.properties = schema.properties ?? {};
-    schema.properties.logic = {
-      $ref: "#/components/schemas/FormalooFormLogic"
-    };
-    schema.properties.run_field_logics_on_update = {
-      type: "boolean",
-      description:
-        "When true, field logic is also evaluated on row update for fields included in the update payload."
-    };
-  }
-
-  for (const schemaName of ["ActionArgument", "OperationArgument"]) {
-    const schema = spec.components.schemas[schemaName];
-    if (
-      schema?.properties?.value &&
-      schema.properties.value.type === "object" &&
-      JSON.stringify(schema.properties.value.additionalProperties) === "{}"
-    ) {
-      schema.properties.value = {
-        $ref: "#/components/schemas/FormalooLogicScalarValue",
-        description:
-          schema.properties.value.description ??
-          "Scalar logic argument value. Lists and objects are not accepted."
-      };
-    }
-  }
-
-  const operationSchema = spec.components.schemas.Operation;
-  if (
-    operationSchema?.properties?.args &&
-    operationSchema.properties.args.type === "object" &&
-    JSON.stringify(operationSchema.properties.args.additionalProperties) === "{}"
-  ) {
-    operationSchema.properties.args = {
-      type: "array",
-      items: { type: "object", additionalProperties: true },
-      description:
-        operationSchema.properties.args.description ??
-        "Operation arguments. For and/or operations, items are nested condition objects; otherwise items are argument objects with type and value."
-    };
-  }
-}
-
 function ensureFormalooThemeSchemas() {
   spec.components.schemas.FormalooRgbaColorString = {
     type: "string",
@@ -946,10 +641,7 @@ function enrichThemeSchemas() {
         "Canonical form presentation type for this theme. Valid API values are `simple` and `multi_step`. Prefer this over legacy form-level `form_type`.";
     }
 
-    if (schema.properties.logo_position) {
-      schema.properties.logo_position.description =
-        "Logo position. Common values include `left`, `center`, `right`, or null.";
-    }
+
   }
 
   deprecateLegacyFormFields();
@@ -965,7 +657,7 @@ function enrichThemeSchemas() {
         type: "string",
         nullable: true,
         description:
-          "Theme slug to assign as the form's active reusable v5 theme. Use `/v3.0/themes/` to list or create themes first. Send null or an empty value only when intentionally clearing the assigned theme."
+          "Theme slug to assign as the form's active reusable v5 theme. Use `/v3.0/themes/` to list or create themes first. Send null only when intentionally clearing the assigned theme."
       };
     }
 
@@ -1308,12 +1000,10 @@ function createTypedFieldSchema({ schemaName, type, description, subType, notes 
   const required = ["type"];
 
   if (subType) {
-    properties.sub_type = {
-      type: "string",
-      enum: subType.values,
-      ...(subType.default ? { default: subType.default } : {}),
-      description: subType.description
-    };
+    // Subtype vocabulary, defaults and annotations belong to the source
+    // serializer. The discovery discriminator must not narrow that contract.
+    const sourceSubType = spec.components.schemas[schemaName]?.properties?.sub_type;
+    if (sourceSubType) properties.sub_type = structuredClone(sourceSubType);
   }
 
   return {
@@ -1531,12 +1221,7 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "multiple_select",
       description:
         "Creates a multiple-select field. Use sub_type to choose standard multi-choice, dropdown multi-choice, or ranking.",
-      subType: {
-        values: ["standard", "dropdown", "ranking"],
-        default: "standard",
-        description:
-          "`standard` renders as normal multiple choice, `dropdown` renders as a multiple-choice dropdown, and `ranking` renders as a ranking field."
-      }
+      subType: true
     },
     {
       componentName: "FormalooRatingFieldCreate",
@@ -1544,12 +1229,7 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "rating",
       description:
         "Creates a rating field. Use sub_type to choose Star Rating/CSAT, Like/Dislike, NPS, or Slider.",
-      subType: {
-        values: ["embeded", "like_dislike", "nps", "score"],
-        default: "embeded",
-        description:
-          "`embeded` is the dashboard-compatible Star Rating / CSAT subtype. The spelling is legacy API spelling. Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down. Some older/generated contracts may mention `star`; treat it as a legacy alias and prefer `embeded` for new fields."
-      }
+      subType: true
     },
     {
       componentName: "FormalooFileFieldCreate",
@@ -1575,11 +1255,7 @@ function enrichFieldCreateSchemasAndOperations() {
       schemaName: "MetaFieldRequest",
       type: "meta",
       description: "Creates a content/meta field such as page break, section text, or video.",
-      subType: {
-        values: ["page_break", "section", "video"],
-        description:
-          "`page_break` divides a form into pages, `section` adds static content, and `video` embeds video content."
-      }
+      subType: true
     },
     {
       componentName: "FormalooOembedFieldCreate",
@@ -1598,12 +1274,7 @@ function enrichFieldCreateSchemasAndOperations() {
       schemaName: "VariableFieldRequest",
       type: "variable",
       description: "Creates a logic/calculation variable field.",
-      subType: {
-        values: ["int", "decimal", "string", "formula"],
-        default: "int",
-        description:
-          "`int` and `decimal` are numeric variables, `string` is a text variable, and `formula` is calculated from a formula expression."
-      }
+      subType: true
     },
     {
       componentName: "FormalooProductFieldCreate",
@@ -1701,28 +1372,10 @@ function enrichFieldCreateSchemasAndOperations() {
     }))
     .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
-  // Stable consumer-facing enum retained across upstream serializer naming
-  // changes. The form builder's generated enum may have a hash-derived name,
-  // which is unsuitable for MCP clients and documentation links.
-  spec.components.schemas.RatingFieldSubTypeEnum = {
-    type: "string",
-    enum: ["embeded", "like_dislike", "nps", "score"],
-    description:
-      "Rating subtype. `embeded` is the legacy API spelling for Star Rating / CSAT; use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
-  };
-
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
       ? createManualTypedFieldSchema(variant)
       : createTypedFieldSchema(variant);
-  }
-
-  const ratingSubType = spec.components.schemas.FormalooRatingFieldCreate
-    ?.allOf?.[1]?.properties?.sub_type;
-  if (ratingSubType) {
-    delete ratingSubType.type;
-    delete ratingSubType.enum;
-    ratingSubType.allOf = [{ $ref: "#/components/schemas/RatingFieldSubTypeEnum" }];
   }
 
   spec.components.schemas.FormalooFieldCreateRequest = {
@@ -2803,7 +2456,7 @@ function enrichFormSummarySchemas() {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Form submission configuration flags. Example: {\"accept_voice_messages\": true}. Shape is freeform and may include feature flags for submission behavior."
+    description: "Form submission configuration flags. Example: {\"enable_magic_voice\": true}. Shape is freeform and may include feature flags for submission behavior."
   };
 
   spec.components.schemas.FormalooLocalizedContent = {
@@ -2831,43 +2484,6 @@ function enrichFormSummarySchemas() {
     const schema = spec.components.schemas[schemaName];
     if (!schema?.properties) continue;
 
-    for (const [propertyName, description] of [
-      ["success_message", "Message shown after a successful form submission."],
-      ["error_message", "Message shown when a form submission fails."]
-    ]) {
-      if (!schema.properties[propertyName]) {
-        schema.properties[propertyName] = {
-          type: "string",
-          nullable: true,
-          description
-        };
-      }
-    }
-
-    if (!schema.properties.ai_mode) {
-      schema.properties.ai_mode = {
-        type: "boolean",
-        nullable: true,
-        description: "Enables Formaloo AI-assisted form behavior when supported for the form."
-      };
-    }
-
-    if (!schema.properties.public_stats) {
-      schema.properties.public_stats = {
-        type: "boolean",
-        nullable: true,
-        description: "Whether form statistics are publicly visible."
-      };
-    }
-
-    if (!schema.properties.public_rows) {
-      schema.properties.public_rows = {
-        type: "boolean",
-        nullable: true,
-        description: "Whether form submission rows are publicly visible."
-      };
-    }
-
     if (schema.properties.localized_content && schema.properties.localized_content.type === "object" && JSON.stringify(schema.properties.localized_content.additionalProperties) === "{}") {
       schema.properties.localized_content = { $ref: "#/components/schemas/FormalooLocalizedContent" };
     }
@@ -2887,11 +2503,13 @@ function enrichFormSummarySchemas() {
     }
 
     if (schema.properties.forward_submit_emails_to && schema.properties.forward_submit_emails_to.type === "object" && JSON.stringify(schema.properties.forward_submit_emails_to.additionalProperties) === "{}") {
+      const sourceProperty = schema.properties.forward_submit_emails_to;
+      const { additionalProperties, ...sourceMetadata } = sourceProperty;
       schema.properties.forward_submit_emails_to = {
+        ...sourceMetadata,
         type: "array",
         items: { type: "string", format: "email" },
-        nullable: true,
-        description: "Email addresses to forward submission notifications to."
+        description: sourceProperty.description ?? "Email addresses to forward submission notifications to."
       };
     }
 
@@ -2963,14 +2581,6 @@ function enrichFieldConfigSchemas() {
         allOf: [{ $ref: "#/components/schemas/FormalooFieldThemeConfig" }],
         nullable: true,
         description: "Field-level presentation settings."
-      };
-    }
-
-    if (!schema.properties.answer_description && /Field(Request)?$/.test(schemaName)) {
-      schema.properties.answer_description = {
-        type: "string",
-        nullable: true,
-        description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
       };
     }
 
@@ -3375,7 +2985,8 @@ for (const pathKey of Object.keys(spec.paths).sort()) {
 
 spec.paths = sortedPaths;
 spec.tags = Array.from(tagDefinitions.values()).sort((left, right) => left.name.localeCompare(right.name));
-enrichFormLogicSchemas();
+const logicErrors = validateLogicSourceContract(spec);
+if (logicErrors.length) throw new Error(logicErrors.join("\n"));
 enrichThemeSchemas();
 enrichThemeOperations();
 enrichFormBuilderSchemasAndOperations();
@@ -3394,6 +3005,8 @@ enrichIntegrationSchemas();
 enrichRemainingGenericSchemas();
 normalizeSchemaTree(spec.components?.schemas);
 pruneUnusedSchemas();
+const preservedLogicErrors = validateLogicSourceContract(spec, sourceLogicSpec);
+if (preservedLogicErrors.length) throw new Error(preservedLogicErrors.join("\n"));
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(normalizedSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
