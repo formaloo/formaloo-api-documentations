@@ -605,14 +605,6 @@ function enrichThemeSchemas() {
       continue;
     }
 
-    if (schema.properties.theme) {
-      schema.properties.theme = {
-        type: "string",
-        nullable: true,
-        description:
-          "Theme slug to assign as the form's active reusable v5 theme. Use `/v3.0/themes/` to list or create themes first. Send null only when intentionally clearing the assigned theme."
-      };
-    }
 
     if (schema.properties.theme_config) {
       schema.properties.theme_config.description =
