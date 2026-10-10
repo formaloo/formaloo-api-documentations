@@ -641,10 +641,7 @@ function enrichThemeSchemas() {
         "Canonical form presentation type for this theme. Valid API values are `simple` and `multi_step`. Prefer this over legacy form-level `form_type`.";
     }
 
-    if (schema.properties.logo_position) {
-      schema.properties.logo_position.description =
-        "Logo position. Common values include `left`, `center`, `right`, or null.";
-    }
+
   }
 
   deprecateLegacyFormFields();
@@ -1003,12 +1000,10 @@ function createTypedFieldSchema({ schemaName, type, description, subType, notes 
   const required = ["type"];
 
   if (subType) {
-    properties.sub_type = {
-      type: "string",
-      enum: subType.values,
-      ...(subType.default ? { default: subType.default } : {}),
-      description: subType.description
-    };
+    // Subtype vocabulary, defaults and annotations belong to the source
+    // serializer. The discovery discriminator must not narrow that contract.
+    const sourceSubType = spec.components.schemas[schemaName]?.properties?.sub_type;
+    if (sourceSubType) properties.sub_type = structuredClone(sourceSubType);
   }
 
   return {
@@ -1226,12 +1221,7 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "multiple_select",
       description:
         "Creates a multiple-select field. Use sub_type to choose standard multi-choice, dropdown multi-choice, or ranking.",
-      subType: {
-        values: ["standard", "dropdown", "ranking"],
-        default: "standard",
-        description:
-          "`standard` renders as normal multiple choice, `dropdown` renders as a multiple-choice dropdown, and `ranking` renders as a ranking field."
-      }
+      subType: true
     },
     {
       componentName: "FormalooRatingFieldCreate",
@@ -1239,12 +1229,7 @@ function enrichFieldCreateSchemasAndOperations() {
       type: "rating",
       description:
         "Creates a rating field. Use sub_type to choose Star Rating/CSAT, Like/Dislike, NPS, or Slider.",
-      subType: {
-        values: ["embeded", "like_dislike", "nps", "score"],
-        default: "embeded",
-        description:
-          "`embeded` is the dashboard-compatible Star Rating / CSAT subtype. The spelling is legacy API spelling. Use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down. Some older/generated contracts may mention `star`; treat it as a legacy alias and prefer `embeded` for new fields."
-      }
+      subType: true
     },
     {
       componentName: "FormalooFileFieldCreate",
@@ -1270,11 +1255,7 @@ function enrichFieldCreateSchemasAndOperations() {
       schemaName: "MetaFieldRequest",
       type: "meta",
       description: "Creates a content/meta field such as page break, section text, or video.",
-      subType: {
-        values: ["page_break", "section", "video"],
-        description:
-          "`page_break` divides a form into pages, `section` adds static content, and `video` embeds video content."
-      }
+      subType: true
     },
     {
       componentName: "FormalooOembedFieldCreate",
@@ -1293,12 +1274,7 @@ function enrichFieldCreateSchemasAndOperations() {
       schemaName: "VariableFieldRequest",
       type: "variable",
       description: "Creates a logic/calculation variable field.",
-      subType: {
-        values: ["int", "decimal", "string", "formula"],
-        default: "int",
-        description:
-          "`int` and `decimal` are numeric variables, `string` is a text variable, and `formula` is calculated from a formula expression."
-      }
+      subType: true
     },
     {
       componentName: "FormalooProductFieldCreate",
@@ -1396,28 +1372,10 @@ function enrichFieldCreateSchemasAndOperations() {
     }))
     .filter(({ schemaName, manualSchema }) => manualSchema || Boolean(schemaName));
 
-  // Stable consumer-facing enum retained across upstream serializer naming
-  // changes. The form builder's generated enum may have a hash-derived name,
-  // which is unsuitable for MCP clients and documentation links.
-  spec.components.schemas.RatingFieldSubTypeEnum = {
-    type: "string",
-    enum: ["embeded", "like_dislike", "nps", "score"],
-    description:
-      "Rating subtype. `embeded` is the legacy API spelling for Star Rating / CSAT; use `nps` for NPS, `score` for slider, and `like_dislike` for thumbs up/down."
-  };
-
   for (const variant of fieldCreateVariants) {
     spec.components.schemas[variant.componentName] = variant.manualSchema
       ? createManualTypedFieldSchema(variant)
       : createTypedFieldSchema(variant);
-  }
-
-  const ratingSubType = spec.components.schemas.FormalooRatingFieldCreate
-    ?.allOf?.[1]?.properties?.sub_type;
-  if (ratingSubType) {
-    delete ratingSubType.type;
-    delete ratingSubType.enum;
-    ratingSubType.allOf = [{ $ref: "#/components/schemas/RatingFieldSubTypeEnum" }];
   }
 
   spec.components.schemas.FormalooFieldCreateRequest = {
@@ -2498,7 +2456,7 @@ function enrichFormSummarySchemas() {
     type: "object",
     additionalProperties: true,
     nullable: true,
-    description: "Form submission configuration flags. Example: {\"accept_voice_messages\": true}. Shape is freeform and may include feature flags for submission behavior."
+    description: "Form submission configuration flags. Example: {\"enable_magic_voice\": true}. Shape is freeform and may include feature flags for submission behavior."
   };
 
   spec.components.schemas.FormalooLocalizedContent = {
@@ -2526,43 +2484,6 @@ function enrichFormSummarySchemas() {
     const schema = spec.components.schemas[schemaName];
     if (!schema?.properties) continue;
 
-    for (const [propertyName, description] of [
-      ["success_message", "Message shown after a successful form submission."],
-      ["error_message", "Message shown when a form submission fails."]
-    ]) {
-      if (!schema.properties[propertyName]) {
-        schema.properties[propertyName] = {
-          type: "string",
-          nullable: true,
-          description
-        };
-      }
-    }
-
-    if (!schema.properties.ai_mode) {
-      schema.properties.ai_mode = {
-        type: "boolean",
-        nullable: true,
-        description: "Enables Formaloo AI-assisted form behavior when supported for the form."
-      };
-    }
-
-    if (!schema.properties.public_stats) {
-      schema.properties.public_stats = {
-        type: "boolean",
-        nullable: true,
-        description: "Whether form statistics are publicly visible."
-      };
-    }
-
-    if (!schema.properties.public_rows) {
-      schema.properties.public_rows = {
-        type: "boolean",
-        nullable: true,
-        description: "Whether form submission rows are publicly visible."
-      };
-    }
-
     if (schema.properties.localized_content && schema.properties.localized_content.type === "object" && JSON.stringify(schema.properties.localized_content.additionalProperties) === "{}") {
       schema.properties.localized_content = { $ref: "#/components/schemas/FormalooLocalizedContent" };
     }
@@ -2582,11 +2503,13 @@ function enrichFormSummarySchemas() {
     }
 
     if (schema.properties.forward_submit_emails_to && schema.properties.forward_submit_emails_to.type === "object" && JSON.stringify(schema.properties.forward_submit_emails_to.additionalProperties) === "{}") {
+      const sourceProperty = schema.properties.forward_submit_emails_to;
+      const { additionalProperties, ...sourceMetadata } = sourceProperty;
       schema.properties.forward_submit_emails_to = {
+        ...sourceMetadata,
         type: "array",
         items: { type: "string", format: "email" },
-        nullable: true,
-        description: "Email addresses to forward submission notifications to."
+        description: sourceProperty.description ?? "Email addresses to forward submission notifications to."
       };
     }
 
@@ -2658,14 +2581,6 @@ function enrichFieldConfigSchemas() {
         allOf: [{ $ref: "#/components/schemas/FormalooFieldThemeConfig" }],
         nullable: true,
         description: "Field-level presentation settings."
-      };
-    }
-
-    if (!schema.properties.answer_description && /Field(Request)?$/.test(schemaName)) {
-      schema.properties.answer_description = {
-        type: "string",
-        nullable: true,
-        description: "Optional answer help text shown with or after the field answer. Accepts plain text or Formaloo rich-text HTML fragments where supported."
       };
     }
 
