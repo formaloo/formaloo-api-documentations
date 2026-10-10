@@ -657,7 +657,7 @@ function enrichThemeSchemas() {
         type: "string",
         nullable: true,
         description:
-          "Theme slug to assign as the form's active reusable v5 theme. Use `/v3.0/themes/` to list or create themes first. Send null or an empty value only when intentionally clearing the assigned theme."
+          "Theme slug to assign as the form's active reusable v5 theme. Use `/v3.0/themes/` to list or create themes first. Send null only when intentionally clearing the assigned theme."
       };
     }
 
