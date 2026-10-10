@@ -1816,57 +1816,6 @@ function annotateResponseEnvelopes(openapiSpec) {
   }
 }
 
-function enforceBoundedLogicHelperSchemas(openapiSpec) {
-  const schemas = openapiSpec.components?.schemas;
-  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicConditionArgument) {
-    return;
-  }
-
-  // Reuse the enum normalize-openapi.mjs already derived from the backend
-  // spec (see logic-schema-source.mjs) instead of a hand-typed snapshot.
-  // A hardcoded array here previously overwrote that correct value right
-  // back to a stale one -- the exact FRM-3448 bug, reintroduced a 4th time
-  // in this same pipeline after normalize-openapi.mjs was fixed to derive it.
-  const conditionOperationEnum = schemas.FormalooLogicCondition.properties.operation?.enum;
-  const operationProperty = {
-    type: "string",
-    description: "Nested condition operation.",
-    enum: conditionOperationEnum
-  };
-
-  schemas.FormalooLogicShallowCondition = {
-    type: "object",
-    description:
-      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
-    properties: {
-      operation: operationProperty,
-      args: {
-        type: "array",
-        description:
-          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
-        items: {
-          type: "object",
-          additionalProperties: true
-        }
-      }
-    },
-    required: ["operation", "args"]
-  };
-
-  schemas.FormalooLogicCondition.properties.args = {
-    ...(schemas.FormalooLogicCondition.properties.args ?? {}),
-    type: "array",
-    items: {
-      anyOf: [
-        { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
-        { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
-      ],
-      description:
-        "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
-    }
-  };
-}
-
 function buildMcpAuthMetadata(operation) {
   return {
     api_key: {
@@ -2433,7 +2382,7 @@ if (inventoryBeforeEnrichment.join("\n") !== inventoryAfterEnrichment.join("\n")
 }
 assertDescriptionsPreserved(spec, descriptionsBeforeEnrichment);
 annotateResponseEnvelopes(spec);
-enforceBoundedLogicHelperSchemas(spec);
+
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
