@@ -83,7 +83,7 @@ for (const [label, unusable] of [
   ["absent", undefined], ["blank", " \n\t"], ["non-string", 42],
   ["unresolved reference", { $ref: "#/missing/description" }]
 ]) {
-  test(`normalization fills ${label} descriptions while preserving source summaries`, async (t) => {
+  test(`normalization fills legacy ${label} descriptions without fabricating source-owned rating guidance`, async (t) => {
     const source = sourceSpec();
     for (const [route, method] of operations) {
       source.paths[route][method].description = unusable;
@@ -93,6 +93,12 @@ for (const [label, unusable] of [
     for (const [route, method, operationId] of operations) {
       const published = artifact.paths[route][method];
       assert.equal(published.operationId, operationId);
+      if (operationId === "fieldsRatingCreate") {
+        // Missing rating guidance must be corrected at its owning backend.
+        assert.deepEqual(published.description, unusable);
+        assert.equal(published.summary, source.paths[route][method].summary);
+        continue;
+      }
       assert.equal(typeof published.description, "string");
       assert.ok(published.description.trim());
       if (operationId !== "formsRowsList") {
