@@ -22,6 +22,7 @@ async function buildArtifact(t, source) {
   await fs.mkdir(path.join(root, "scripts"));
   await fs.mkdir(path.join(root, "spec"));
   await fs.mkdir(path.join(root, "artifacts", "intermediate"), { recursive: true });
+  await fs.copyFile(new URL("scripts/request-context-contract.mjs", sourceRoot), path.join(root, "scripts", "request-context-contract.mjs"));
   await fs.copyFile(new URL("scripts/build-mcp-openapi.mjs", sourceRoot), path.join(root, "scripts", "build-mcp-openapi.mjs"));
   await fs.copyFile(new URL("spec/mcp-openapi-settings.json", sourceRoot), path.join(root, "spec", "mcp-openapi-settings.json"));
   await fs.writeFile(path.join(root, "artifacts", "intermediate", "openapi-mcp-source.normalized.json"), JSON.stringify(source));
@@ -43,10 +44,11 @@ test("publishes backend metadata verbatim while retaining MCP enrichment", async
 
   const form = artifact.paths["/forms/{slug}/"].patch;
   assert.equal(form["x-formaloo-mcp"].tool_name, "patch_form");
-  assert.equal(form["x-formaloo-mcp"].auth.api_key.required, true);
-  assert.equal(form["x-formaloo-mcp"].auth.workspace.required, true);
-  assert.equal(artifact.components.parameters.ApiKey.required, true);
-  assert.equal(form.parameters.find((parameter) => parameter.name === "x-workspace").required, true);
+  assert.equal(form["x-formaloo-mcp"].auth.api_key.required, false);
+  assert.equal(form["x-formaloo-mcp"].auth.workspace.required, false);
+  assert.equal(form["x-formaloo-mcp"].requires_workspace, null);
+  assert.equal(artifact.components.parameters.ApiKey.required, false);
+  assert.equal(form.parameters.find((parameter) => parameter.name === "x-workspace").required, false);
   assert.ok(form.parameters.find((parameter) => parameter.name === "slug").description.trim());
   const request = form.requestBody.content["application/json"];
   assert.deepEqual(request.schema, fixture.paths["/forms/{slug}/"].patch.requestBody.content["application/json"].schema);
@@ -60,7 +62,7 @@ test("publishes backend metadata verbatim while retaining MCP enrichment", async
   // Included operation repairs continue to run even after standard text is source-owned.
   const catalog = artifact.paths["/lead-enrichments/enrichable-fields/"].get;
   assert.equal(catalog["x-formaloo-mcp"].tool_name, "list_lead_enrichment_fields");
-  assert.equal(catalog["x-formaloo-mcp"].auth.workspace.required, true);
+  assert.equal(catalog["x-formaloo-mcp"].auth.workspace.required, false);
   assert.deepEqual(artifact.components.schemas.LeadEnrichmentEnrichableField.required, ["key", "display_name"]);
   assert.ok(catalog.responses["200"].content["application/json"].schema);
 });
@@ -89,3 +91,38 @@ for (const [label, unusable] of [
     });
   }
 }
+
+test("retains backend context, header requirements and inherited selection semantics", async(t)=>{
+  const source=structuredClone(fixture);
+  source.components.parameters.ApiKey.description="Backend API-key prerequisite.";
+  const pathItem=source.paths["/forms/{slug}/"];
+  pathItem.parameters=[{name:"Authorization",in:"header",required:false,schema:{type:"string"},description:"Session or JWT from the source."}];
+  const form=pathItem.patch;
+  form.parameters.find(p=>p.name==="x-workspace").description="Optional selector when workspace key binds tenant.";
+  form["x-formaloo-request-context"]={version:1,workspace:{requirement:"required",resolution:"workspace_key_then_selector"}};
+  form.security=[{jwtAuth:[]}];
+  source.components.securitySchemes={jwtAuth:{type:"apiKey",in:"header",name:"Authorization"}};
+  const artifact=await buildArtifact(t,source);
+  const actual=artifact.paths["/forms/{slug}/"].patch;
+  assert.deepEqual(actual.parameters.filter(p=>p.in==="header" || p.$ref),form.parameters.filter(p=>p.in==="header" || p.$ref));
+  assert.deepEqual(artifact.paths["/forms/{slug}/"].parameters,pathItem.parameters);
+  assert.deepEqual(artifact.components.parameters.ApiKey,source.components.parameters.ApiKey);
+  assert.deepEqual(actual.security,form.security);
+  assert.deepEqual(actual["x-formaloo-request-context"],form["x-formaloo-request-context"]);
+  assert.equal(actual["x-formaloo-mcp"].auth.workspace.required,false);
+  assert.equal(actual["x-formaloo-mcp"].auth.workspace.context_requirement,"required");
+  assert.equal(actual["x-formaloo-mcp"].requires_workspace,true);
+});
+test("required inherited API header remains required and backend MCP metadata wins",async(t)=>{
+  const source=structuredClone(fixture);
+  const item=source.paths["/forms/{slug}/"];
+  item.parameters=[{name:"x-api-key",in:"header",required:true,schema:{type:"string"}}];
+  item.patch.parameters=item.patch.parameters.filter(p=>!p.$ref);
+  item.patch["x-formaloo-mcp"]={tool_name:"backend_form_task",requires_workspace:false,auth:{provenance:"backend_review",workspace:{required:false}}};
+  const artifact=await buildArtifact(t,source);
+  const form=artifact.paths["/forms/{slug}/"].patch;
+  assert.equal(artifact.paths["/forms/{slug}/"].parameters[0].required,true);
+  assert.equal(form["x-formaloo-mcp"].tool_name,"backend_form_task");
+  assert.equal(form["x-formaloo-mcp"].requires_workspace,false);
+  assert.deepEqual(form["x-formaloo-mcp"].auth,item.patch["x-formaloo-mcp"].auth);
+});

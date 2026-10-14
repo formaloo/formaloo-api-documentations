@@ -1,3 +1,4 @@
+import { validateRequestContextPreservation } from "./request-context-contract.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { backendEnumContractError } from "./backend-enum-contract.mjs";
@@ -483,6 +484,7 @@ function validateMcpMetadata(operationId, operation) {
   }
 
   for (const key of ["requires_workspace", "read_only", "destructive", "idempotent", "user_data", "requires_confirmation"]) {
+    if (key === "requires_workspace" && metadata[key] === null) continue;
     if (typeof metadata[key] !== "boolean") {
       errors.push(`${operationId} x-formaloo-mcp.${key} must be boolean.`);
     }
@@ -517,48 +519,9 @@ function resolveParameter(parameter) {
   return current;
 }
 
-function findHeaderParameter(pathKey, operation, headerName) {
-  const parameters = [...(spec.paths?.[pathKey]?.parameters ?? []), ...(operation.parameters ?? [])];
-  return (
-    parameters
-      .map(resolveParameter)
-      .find(
-        (parameter) =>
-          parameter?.in === "header" &&
-          typeof parameter.name === "string" &&
-          parameter.name.toLowerCase() === headerName
-      ) ?? null
-  );
-}
-
-function validateHeaderRequirements() {
-  for (const [operationId, { pathKey, method, operation }] of operations.entries()) {
-    const label = `${operationId} ${method.toUpperCase()} ${pathKey}`;
-    const apiKeyHeader = findHeaderParameter(pathKey, operation, "x-api-key");
-
-    if (!apiKeyHeader) {
-      errors.push(`${label} does not document the required x-api-key header.`);
-    } else if (apiKeyHeader.required !== true) {
-      errors.push(`${label} must mark x-api-key as required.`);
-    }
-
-    for (const headerName of ["x-workspace", "authorization"]) {
-      const header = findHeaderParameter(pathKey, operation, headerName);
-      if (header && header.required !== true) {
-        errors.push(`${label} documents ${headerName} but does not mark it as required.`);
-      }
-    }
-
-    const metadata = operation["x-formaloo-mcp"];
-    if (metadata && typeof metadata.requires_workspace === "boolean") {
-      const documentsWorkspace = findHeaderParameter(pathKey, operation, "x-workspace") !== null;
-      if (metadata.requires_workspace !== documentsWorkspace) {
-        errors.push(
-          `${label} x-formaloo-mcp.requires_workspace is ${metadata.requires_workspace}, but the operation ${documentsWorkspace ? "documents" : "omits"} the x-workspace header.`
-        );
-      }
-    }
-  }
+async function validateHeaderRequirements() {
+  const source = JSON.parse(await fs.readFile(normalizedMcpSpecPath, "utf8"));
+  errors.push(...validateRequestContextPreservation(source, spec).errors);
 }
 
 function validateDeleteSuccessResponses() {
@@ -797,7 +760,7 @@ function validateTypedHelperSchemas() {
 
 collectOperations();
 await validateUpstreamOperationDescriptions();
-validateHeaderRequirements();
+await validateHeaderRequirements();
 validateDeleteSuccessResponses();
 validateResponseEnvelopes();
 validateTypedHelperSchemas();

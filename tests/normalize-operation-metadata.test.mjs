@@ -104,3 +104,30 @@ for (const [label, unusable] of [
     }
   });
 }
+
+test("normalization preserves source-owned auth and tenant header declarations",async(t)=>{
+  const source=sourceSpec();
+  const form=source.paths["/v3.0/form-displays/slug/{slug}/submit/"].post;
+  form.parameters=[{in:"header",name:"x-api-key",required:false,schema:{type:"string"},description:"Source application prerequisite."},{in:"header",name:"x-workspace",required:false,schema:{type:"string"},description:"Source tenant-key exception."}];
+  source.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters=[{in:"header",name:"x-app-id",required:true,schema:{type:"string"},description:"Source portal context."}];
+  form["x-formaloo-request-context"]={version:1,actor_realm:"respondent"};
+  const artifact=await normalize(t,source);
+  const actual=artifact.paths["/v3.0/form-displays/slug/{slug}/submit/"].post;
+  for(const header of form.parameters)assert.deepEqual(actual.parameters.find(p=>p.name===header.name),header);
+  assert.ok(!actual.parameters.some(p=>p.name==="x-app-id"));
+  assert.deepEqual(artifact.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters,source.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters);
+  assert.deepEqual(actual["x-formaloo-request-context"],form["x-formaloo-request-context"]);
+});
+
+test("normalization keeps backend authentication alternatives, scopes and anonymous access",async(t)=>{
+  const source=sourceSpec();
+  source.components.securitySchemes={cookieAuth:{type:"apiKey",in:"cookie",name:"sessionid"},basicAuth:{type:"http",scheme:"basic"},jwtAuth:{type:"apiKey",in:"header",name:"Authorization"},oauth2:{type:"oauth2",flows:{authorizationCode:{authorizationUrl:"https://example.com/authorize",tokenUrl:"https://example.com/token",scopes:{read:"Read data"}}}}};
+  const op=source.paths["/v3.0/forms/{slug}/rows/"].get;
+  op.security=[{cookieAuth:[]},{basicAuth:[]},{jwtAuth:[]},{oauth2:["read"]},{}];
+  const result=await normalize(t,source);
+  assert.deepEqual(result.paths["/v3.0/forms/{slug}/rows/"].get.security,op.security);
+});
+test("unresolved authentication schemes fail normalization rather than dropping a source gate",async(t)=>{
+  const source=sourceSpec();source.paths["/v3.0/forms/{slug}/rows/"].get.security=[{missingAuth:[]}];
+  await assert.rejects(()=>normalize(t,source),/Unresolved source security scheme/);
+});
