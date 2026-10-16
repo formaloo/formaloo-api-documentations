@@ -83,7 +83,7 @@ for (const [label, unusable] of [
   ["absent", undefined], ["blank", " \n\t"], ["non-string", 42],
   ["unresolved reference", { $ref: "#/missing/description" }]
 ]) {
-  test(`normalization fills ${label} descriptions while preserving source summaries`, async (t) => {
+  test(`normalization fills legacy ${label} descriptions without fabricating source-owned rating guidance`, async (t) => {
     const source = sourceSpec();
     for (const [route, method] of operations) {
       source.paths[route][method].description = unusable;
@@ -93,6 +93,12 @@ for (const [label, unusable] of [
     for (const [route, method, operationId] of operations) {
       const published = artifact.paths[route][method];
       assert.equal(published.operationId, operationId);
+      if (operationId === "fieldsRatingCreate") {
+        // Missing rating guidance must be corrected at its owning backend.
+        assert.deepEqual(published.description, unusable);
+        assert.equal(published.summary, source.paths[route][method].summary);
+        continue;
+      }
       assert.equal(typeof published.description, "string");
       assert.ok(published.description.trim());
       if (operationId !== "formsRowsList") {
@@ -130,4 +136,30 @@ test("normalization keeps backend authentication alternatives, scopes and anonym
 test("unresolved authentication schemes fail normalization rather than dropping a source gate",async(t)=>{
   const source=sourceSpec();source.paths["/v3.0/forms/{slug}/rows/"].get.security=[{missingAuth:[]}];
   await assert.rejects(()=>normalize(t,source),/Unresolved source security scheme/);
+});
+
+
+test("field subtype discovery preserves source vocabulary, defaults and annotations", async (t) => {
+  const source = sourceSpec();
+  const subtype = { allOf: [{ $ref: "#/components/schemas/SourceRatingSubtype" }], default: "star", description: "Source-owned subtype guidance." };
+  source.components.schemas.SourceRatingSubtype = { type: "string", enum: ["star", "embeded", "future-source-subtype"] };
+  source.components.schemas.CreateFormRequest = { type: "object", properties: { title: { type: "string" } } };
+  source.components.schemas.FormUpdate = { type: "object", properties: {
+    forward_submit_emails_to: { type: "object", additionalProperties: {}, readOnly: true, description: "Source notification addresses." },
+  } };
+  source.paths["/v3.0/forms/"] = { post: {
+    operationId: "formsCreate",
+    requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateFormRequest" } } } },
+    responses: { "201": { description: "Created", content: { "application/json": { schema: { $ref: "#/components/schemas/FormUpdate" } } } } },
+  } };
+  source.components.schemas.RatingFieldRequest = { type: "object", properties: { sub_type: subtype } };
+  const artifact = await normalize(t, source);
+  const published = artifact.components.schemas.FormalooRatingFieldCreate.allOf[1].properties.sub_type;
+  assert.deepEqual(published, subtype);
+  assert.deepEqual(artifact.components.schemas.CreateFormRequest.properties, source.components.schemas.CreateFormRequest.properties);
+  assert.deepEqual(artifact.components.schemas.FormUpdate.properties.forward_submit_emails_to, {
+    type: "array", items: { type: "string", format: "email" }, readOnly: true, description: "Source notification addresses.",
+  });
+  assert.deepEqual(artifact.components.schemas.RatingFieldRequest.properties, source.components.schemas.RatingFieldRequest.properties);
+  assert.deepEqual(artifact.components.schemas.SourceRatingSubtype, source.components.schemas.SourceRatingSubtype);
 });
