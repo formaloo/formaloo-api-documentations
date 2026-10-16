@@ -105,7 +105,6 @@ const allowedMetadataKeys = new Set([
   "complexity",
   "statefulness"
 ]);
-const legacySessionSecuritySchemes = new Set(["cookieAuth", "basicAuth"]);
 const tagDefinitions = new Map();
 const sortedPaths = {};
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
@@ -151,22 +150,15 @@ function hasHeaderParameter(operation, headerName) {
   );
 }
 
-function upsertHeaderParameter(operation, parameter) {
-  operation.parameters = operation.parameters ?? [];
-  const existingParameter = operation.parameters.find(
-    (currentParameter) =>
-      currentParameter?.in === "header" &&
-      typeof currentParameter?.name === "string" &&
-      currentParameter.name.toLowerCase() === parameter.name.toLowerCase()
-  );
-
-  if (existingParameter) {
-    existingParameter.description = parameter.description;
-    existingParameter.required = parameter.required;
-    existingParameter.schema = parameter.schema;
+function fillMissingHeaderParameter(operation, parameter, pathKey) {
+  const inherited = spec.paths?.[pathKey]?.parameters ?? [];
+  const existing = [...(operation.parameters ?? []), ...inherited].map(p => p.$ref ? getRefTarget(p.$ref) : p).find(p =>
+    p?.in === "header" && p.name?.toLowerCase() === parameter.name.toLowerCase());
+  if(existing) {
+    existing.description ||= parameter.description;
     return;
   }
-
+  operation.parameters ??= [];
   operation.parameters.push(parameter);
 }
 
@@ -212,62 +204,62 @@ function normalizeHeaderParameters(pathKey, method, operation) {
     const normalizedName = parameter.name.toLowerCase();
 
     if (normalizedName === "x-api-key") {
-      parameter.description = apiKeyHeaderDescription;
+      parameter.description ||= apiKeyHeaderDescription;
     }
 
     if (normalizedName === "x-workspace") {
-      parameter.description = workspaceHeaderDescription;
+      parameter.description ||= workspaceHeaderDescription;
     }
   }
 
   if (pathKey === "/v3.0/oauth2/authorization-token/" && method === "post") {
-    upsertHeaderParameter(operation, {
+    fillMissingHeaderParameter(operation, {
       in: "header",
       name: "Authorization",
       required: true,
       schema: { type: "string" },
       description: clientCredentialsAuthorizationDescription
-    });
+    }, pathKey);
   }
 
   if (pathKey === "/v1.0/end-users/authorize/" && method === "post") {
-    upsertHeaderParameter(operation, {
+    fillMissingHeaderParameter(operation, {
       in: "header",
       name: "Authorization",
       required: true,
       schema: { type: "string" },
       description: endUserSessionAuthorizationDescription
-    });
+    }, pathKey);
   }
 
   if (pathKey === "/v3.0/form-displays/slug/{slug}/submit/" && method === "post") {
-    upsertHeaderParameter(operation, {
+    fillMissingHeaderParameter(operation, {
       in: "header",
       name: "x-app-id",
       required: false,
       schema: { type: "string" },
       description: appIdHeaderDescription
-    });
+    }, pathKey);
   }
 
   if (pathKey === "/v3.0/end-users/request-redirect/" && method === "post") {
-    upsertHeaderParameter(operation, {
+    fillMissingHeaderParameter(operation, {
       in: "header",
       name: "x-scope",
       required: false,
       schema: { type: "string" },
       description: scopeHeaderDescription
-    });
+    }, pathKey);
   }
 
   if (pathKey === "/v3.0/end-users/profile/" && method === "get") {
-    upsertHeaderParameter(operation, {
+    fillMissingHeaderParameter(operation, {
       in: "header",
       name: "x-scope",
       required: false,
       schema: { type: "string" },
       description: scopeHeaderDescription
-    });
+    }, pathKey);
   }
 }
 
@@ -354,54 +346,15 @@ function inferSchemaType(schema, seenRefs = new Set()) {
 }
 
 function normalizeSecurity(operation) {
-  if (!Array.isArray(operation.security) || operation.security.length === 0) {
-    return operation;
+  if(operation.security === undefined)return operation;
+  if(!Array.isArray(operation.security))throw new Error(`Invalid source security on ${operation.operationId}`);
+  const known=new Set(Object.keys(spec.components.securitySchemes ?? {}));
+  for(const requirement of operation.security) {
+    if(!requirement || typeof requirement!=="object" || Array.isArray(requirement))throw new Error(`Invalid source security alternative on ${operation.operationId}`);
+    for(const scheme of Object.keys(requirement))if(!known.has(scheme))throw new Error(`Unresolved source security scheme ${scheme} on ${operation.operationId}`);
   }
-
-  const knownSecuritySchemes = new Set(Object.keys(spec.components.securitySchemes ?? {}));
-  let shouldUsePublicAuthModel = false;
-  const filteredSecurity = [];
-
-  for (const requirement of operation.security) {
-    if (!requirement || typeof requirement !== "object") {
-      continue;
-    }
-
-    const keys = Object.keys(requirement);
-    if (keys.length === 0) {
-      continue;
-    }
-
-    if (keys.every((key) => legacySessionSecuritySchemes.has(key))) {
-      shouldUsePublicAuthModel = true;
-      continue;
-    }
-
-    const safeRequirement = {};
-    for (const key of keys) {
-      if (knownSecuritySchemes.has(key)) {
-        safeRequirement[key] = requirement[key];
-      }
-    }
-
-    if (Object.keys(safeRequirement).length > 0) {
-      filteredSecurity.push(safeRequirement);
-    }
-  }
-
-  if (shouldUsePublicAuthModel) {
-    filteredSecurity.push({
-      ApiKeyAuthentication: [],
-      JwtAuthentication: []
-    });
-  }
-
-  if (filteredSecurity.length > 0) {
-    operation.security = filteredSecurity;
-  } else {
-    delete operation.security;
-  }
-
+  // Keep AND/OR alternatives, scopes, session/basic schemes and anonymous branches.
+  // Authentication policy belongs to the backend, not this publisher.
   return operation;
 }
 
