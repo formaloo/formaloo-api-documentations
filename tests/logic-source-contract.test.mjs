@@ -48,7 +48,7 @@ async function publish(t, source) {
   await fs.mkdir(path.join(dir, 'scripts'));
   await fs.mkdir(path.join(dir, 'spec'));
   await fs.mkdir(path.join(dir, 'artifacts/intermediate'), { recursive: true });
-  for (const script of ['normalize-openapi.mjs', 'build-mcp-openapi.mjs', 'logic-schema-source.mjs', 'form-answer-contract.mjs']) {
+  for (const script of ['normalize-openapi.mjs', 'build-mcp-openapi.mjs', 'logic-schema-source.mjs', 'form-answer-contract.mjs', 'request-context-contract.mjs']) {
     await fs.copyFile(new URL(`scripts/${script}`, rootUrl), path.join(dir, 'scripts', script));
   }
   for (const filename of ['public-contract.json', 'integration-mapping-schemas.json', 'mcp-openapi-settings.json']) {
