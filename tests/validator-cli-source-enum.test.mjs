@@ -40,5 +40,6 @@ for (const [script, summaryName] of [
     assert.doesNotMatch(result.stderr, /ReferenceError|TypeError/);
     const summary = JSON.parse(await fs.readFile(path.join(dir, 'artifacts/validation', summaryName), 'utf8'));
     assert.ok(summary.errors.includes('IntegrationAppTypeEnum must exactly match the raw backend enum.'));
+    assert.ok(summary.errors.includes('Missing source logic component: FormalooFormLogic'));
   });
 }

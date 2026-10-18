@@ -171,7 +171,7 @@ for (const pathItem of Object.values(spec.paths ?? {})) {
   }
 }
 
-errors.push(...validateLogicSourceContract(spec, rawSpec));
+errors.push(...validateLogicSourceContract(spec, rawSpec, { requireLogic: true }));
 
 if (spec.components?.schemas?.FormalooBuilderFieldInput) {
   const builderBulkChoices =

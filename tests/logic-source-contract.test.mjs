@@ -90,3 +90,11 @@ test('source graph validation catches missing and modified reachable contracts',
   changed.components.schemas.SourceAction.properties.args.maxItems = 2;
   assert.ok(validateLogicSourceContract(changed, fixture).length);
 });
+
+test('required publication rejects a completely removed logic contract', () => {
+  const source = { openapi: '3.0.3', paths: {}, components: { schemas: {} } };
+  // Schema-agnostic helper callers can still inspect unrelated service fixtures.
+  assert.deepEqual(validateLogicSourceContract(source), []);
+  assert.ok(validateLogicSourceContract(source, source, { requireLogic: true })
+    .includes('Missing source logic component: FormalooFormLogic'));
+});

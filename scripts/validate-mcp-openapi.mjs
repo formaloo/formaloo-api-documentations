@@ -597,7 +597,7 @@ function validateResponseEnvelopes() {
 }
 
 function validateTypedHelperSchemas() {
-  errors.push(...validateLogicSourceContract(spec, rawMcpSpec));
+  errors.push(...validateLogicSourceContract(spec, rawMcpSpec, { requireLogic: true }));
 
   const builderField = spec.components?.schemas?.FormalooBuilderFieldInput;
   if (builderField?.properties) {

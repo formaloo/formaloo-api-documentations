@@ -22,10 +22,10 @@ export function reachableLogicSchemas(spec) {
   return Object.fromEntries([...names].sort().map((name) => [name, schemas[name]]));
 }
 
-export function validateLogicSourceContract(spec, sourceSpec) {
+export function validateLogicSourceContract(spec, sourceSpec, { requireLogic = false } = {}) {
   const schemas = spec.components?.schemas ?? {};
   const hasLogic = Object.values(schemas).some((schema) => schema?.properties && Object.hasOwn(schema.properties, "logic"));
-  if (!hasLogic && !schemas[canonical] && !sourceSpec?.components?.schemas?.[canonical]) return [];
+  if (!requireLogic && !hasLogic && !schemas[canonical] && !sourceSpec?.components?.schemas?.[canonical]) return [];
   const errors = [];
   try {
     const graph = reachableLogicSchemas(spec);
