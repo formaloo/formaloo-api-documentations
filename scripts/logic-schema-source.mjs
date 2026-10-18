@@ -2,21 +2,34 @@
 // verifies that the reachable source graph survives; it never synthesizes it.
 const prefix = "#/components/schemas/";
 const canonical = "FormalooFormLogic";
+const schemaMaps = new Set(["properties", "patternProperties", "$defs", "definitions", "dependentSchemas", "dependencies"]);
+const schemaValues = new Set(["items", "additionalItems", "additionalProperties", "unevaluatedItems", "unevaluatedProperties", "contains", "propertyNames", "not", "if", "then", "else", "contentSchema"]);
+const schemaArrays = new Set(["allOf", "anyOf", "oneOf", "prefixItems"]);
 
 export function reachableLogicSchemas(spec) {
   const schemas = spec.components?.schemas ?? {};
   const names = new Set();
-  const visit = (node) => {
-    if (!node || typeof node !== "object") return;
-    if (typeof node.$ref === "string" && node.$ref.startsWith(prefix)) {
-      const name = node.$ref.slice(prefix.length);
-      if (!Object.hasOwn(schemas, name)) throw new Error(`Missing source logic component: ${name}`);
-      if (!names.has(name)) {
-        names.add(name);
-        visit(schemas[name]);
-      }
+  const follow = (ref) => {
+    if (typeof ref !== "string" || !ref.startsWith(prefix)) return;
+    const name = ref.slice(prefix.length);
+    if (!Object.hasOwn(schemas, name)) throw new Error(`Missing source logic component: ${name}`);
+    if (!names.has(name)) {
+      names.add(name);
+      visit(schemas[name]);
     }
-    for (const value of Object.values(node)) visit(value);
+  };
+  const visit = (node) => {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return;
+    follow(node.$ref);
+    for (const ref of Object.values(node.discriminator?.mapping || {})) follow(ref);
+    for (const [key, value] of Object.entries(node)) {
+      if (schemaMaps.has(key) && value && typeof value === "object") {
+        for (const child of Object.values(value)) visit(child);
+      } else if (schemaValues.has(key)) {
+        if (Array.isArray(value)) value.forEach(visit);
+        else visit(value);
+      } else if (schemaArrays.has(key) && Array.isArray(value)) value.forEach(visit);
+    }
   };
   visit({ $ref: prefix + canonical });
   return Object.fromEntries([...names].sort().map((name) => [name, schemas[name]]));

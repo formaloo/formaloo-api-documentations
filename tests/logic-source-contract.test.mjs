@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import test from 'node:test';
-import { validateLogicSourceContract } from '../scripts/logic-schema-source.mjs';
+import { reachableLogicSchemas, validateLogicSourceContract } from '../scripts/logic-schema-source.mjs';
 
 const run = promisify(execFile);
 const rootUrl = new URL('../', import.meta.url);
@@ -97,4 +97,23 @@ test('required publication rejects a completely removed logic contract', () => {
   assert.deepEqual(validateLogicSourceContract(source), []);
   assert.ok(validateLogicSourceContract(source, source, { requireLogic: true })
     .includes('Missing source logic component: FormalooFormLogic'));
+});
+
+test('source graph follows schema references and discriminator mappings but preserves literal payloads', () => {
+  const source = structuredClone(fixture);
+  const action = source.components.schemas.SourceAction;
+  action.example = {$ref:'#/components/schemas/LiteralExample'};
+  action.default = {$ref:'#/components/schemas/LiteralDefault'};
+  action.enum = [{$ref:'#/components/schemas/LiteralEnum'}];
+  action.properties.example = {$ref:'#/components/schemas/RealExampleProperty'};
+  action.discriminator = {propertyName:'kind', mapping:{mapped:'#/components/schemas/MappingOnly'}};
+  source.components.schemas.RealExampleProperty = {type:'string'};
+  source.components.schemas.MappingOnly = {type:'object', properties:{kind:{enum:['mapped']}}};
+  const graph = reachableLogicSchemas(source);
+  assert.ok(graph.RealExampleProperty);
+  assert.ok(graph.MappingOnly);
+  assert.deepEqual(graph.SourceAction.example, action.example);
+  assert.deepEqual(validateLogicSourceContract(source, source), []);
+  delete source.components.schemas.RealExampleProperty;
+  assert.ok(validateLogicSourceContract(source, source).some(error => error.includes('RealExampleProperty')));
 });
