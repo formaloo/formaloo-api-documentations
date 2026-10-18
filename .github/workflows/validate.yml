@@ -27,6 +27,8 @@ jobs:
 
       - name: Generate and validate public docs
         run: ./generate.sh
+        env:
+          STAGING_DOCS: ${{ github.base_ref == 'dev' && 'true' || 'false' }}
 
       - name: Upload generated spec
         uses: actions/upload-artifact@v4
