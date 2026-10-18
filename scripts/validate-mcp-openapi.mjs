@@ -236,7 +236,7 @@ function validateIntegrationContracts() {
   const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
   const integrationAppTypeError = backendEnumContractError({
     actual: integrationAppTypes,
-    rawSchemas: rawMcpSpecSchemas,
+    rawSchemas: rawMcpSpec.components?.schemas ?? {},
     schemaName: "IntegrationAppTypeEnum"
   });
   if (integrationAppTypeError) {

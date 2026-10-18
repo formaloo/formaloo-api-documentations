@@ -89,7 +89,7 @@ for (const [schemaName, expectedRef] of Object.entries(integrationMappingRefs)) 
 const integrationAppTypes = spec.components?.schemas?.IntegrationAppTypeEnum?.enum;
 const integrationAppTypeError = backendEnumContractError({
   actual: integrationAppTypes,
-  rawSchemas: rawSpecSchemas,
+  rawSchemas: rawSpec.components?.schemas ?? {},
   schemaName: "IntegrationAppTypeEnum"
 });
 if (integrationAppTypeError) {
