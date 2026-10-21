@@ -60,6 +60,9 @@ bundle_spec "$SPEC_DIR/storage.yaml" "$SPEC_DIR/storage-bundled.json"
 bundle_spec "$SPEC_DIR/ai.yaml" "$SPEC_DIR/ai-bundled.json"
 bundle_spec "$SPEC_DIR/v3.0.yaml" "$SPEC_DIR/v3.0-bundled.json"
 
+echo "Preserving public source security schemes and inheritance..."
+node "$ROOT_DIR/scripts/merge-security-provenance.mjs" "$SPEC_DIR/openapi-merge-v3.0.json"
+
 echo "Merging public specification shell..."
 "$OPENAPI_MERGE_BIN" --config "$SPEC_DIR/openapi-merge-v3.0.json"
 
@@ -75,6 +78,9 @@ PUBLIC_API_URL="$PUBLIC_API_URL" STAGING_DOCS="$STAGING_DOCS" node "$ROOT_DIR/sc
 
 echo "Rendering final YAML artifact..."
 "$REDOCLY_BIN" bundle "$INTERMEDIATE_DIR/openapi-public.normalized.json" --output "$ROOT_DIR/openapi-v3.0.yaml"
+
+echo "Preserving MCP source security schemes and inheritance..."
+node "$ROOT_DIR/scripts/merge-security-provenance.mjs" "$SPEC_DIR/openapi-merge-mcp.json"
 
 echo "Merging MCP specification shell..."
 "$OPENAPI_MERGE_BIN" --config "$SPEC_DIR/openapi-merge-mcp.json"

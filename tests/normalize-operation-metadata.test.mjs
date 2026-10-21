@@ -83,7 +83,7 @@ for (const [label, unusable] of [
   ["absent", undefined], ["blank", " \n\t"], ["non-string", 42],
   ["unresolved reference", { $ref: "#/missing/description" }]
 ]) {
-  test(`normalization fills ${label} descriptions while preserving source summaries`, async (t) => {
+  test(`normalization fills legacy ${label} descriptions without fabricating source-owned rating guidance`, async (t) => {
     const source = sourceSpec();
     for (const [route, method] of operations) {
       source.paths[route][method].description = unusable;
@@ -93,6 +93,12 @@ for (const [label, unusable] of [
     for (const [route, method, operationId] of operations) {
       const published = artifact.paths[route][method];
       assert.equal(published.operationId, operationId);
+      if (operationId === "fieldsRatingCreate") {
+        // Missing rating guidance must be corrected at its owning backend.
+        assert.deepEqual(published.description, unusable);
+        assert.equal(published.summary, source.paths[route][method].summary);
+        continue;
+      }
       assert.equal(typeof published.description, "string");
       assert.ok(published.description.trim());
       if (operationId !== "formsRowsList") {
@@ -104,3 +110,56 @@ for (const [label, unusable] of [
     }
   });
 }
+
+test("normalization preserves source-owned auth and tenant header declarations",async(t)=>{
+  const source=sourceSpec();
+  const form=source.paths["/v3.0/form-displays/slug/{slug}/submit/"].post;
+  form.parameters=[{in:"header",name:"x-api-key",required:false,schema:{type:"string"},description:"Source application prerequisite."},{in:"header",name:"x-workspace",required:false,schema:{type:"string"},description:"Source tenant-key exception."}];
+  source.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters=[{in:"header",name:"x-app-id",required:true,schema:{type:"string"},description:"Source portal context."}];
+  form["x-formaloo-request-context"]={version:1,actor_realm:"respondent"};
+  const artifact=await normalize(t,source);
+  const actual=artifact.paths["/v3.0/form-displays/slug/{slug}/submit/"].post;
+  for(const header of form.parameters)assert.deepEqual(actual.parameters.find(p=>p.name===header.name),header);
+  assert.ok(!actual.parameters.some(p=>p.name==="x-app-id"));
+  assert.deepEqual(artifact.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters,source.paths["/v3.0/form-displays/slug/{slug}/submit/"].parameters);
+  assert.deepEqual(actual["x-formaloo-request-context"],form["x-formaloo-request-context"]);
+});
+
+test("normalization keeps backend authentication alternatives, scopes and anonymous access",async(t)=>{
+  const source=sourceSpec();
+  source.components.securitySchemes={cookieAuth:{type:"apiKey",in:"cookie",name:"sessionid"},basicAuth:{type:"http",scheme:"basic"},jwtAuth:{type:"apiKey",in:"header",name:"Authorization"},oauth2:{type:"oauth2",flows:{authorizationCode:{authorizationUrl:"https://example.com/authorize",tokenUrl:"https://example.com/token",scopes:{read:"Read data"}}}}};
+  const op=source.paths["/v3.0/forms/{slug}/rows/"].get;
+  op.security=[{cookieAuth:[]},{basicAuth:[]},{jwtAuth:[]},{oauth2:["read"]},{}];
+  const result=await normalize(t,source);
+  assert.deepEqual(result.paths["/v3.0/forms/{slug}/rows/"].get.security,op.security);
+});
+test("unresolved authentication schemes fail normalization rather than dropping a source gate",async(t)=>{
+  const source=sourceSpec();source.paths["/v3.0/forms/{slug}/rows/"].get.security=[{missingAuth:[]}];
+  await assert.rejects(()=>normalize(t,source),/Unresolved source security scheme/);
+});
+
+
+test("field subtype discovery preserves source vocabulary, defaults and annotations", async (t) => {
+  const source = sourceSpec();
+  const subtype = { allOf: [{ $ref: "#/components/schemas/SourceRatingSubtype" }], default: "star", description: "Source-owned subtype guidance." };
+  source.components.schemas.SourceRatingSubtype = { type: "string", enum: ["star", "embeded", "future-source-subtype"] };
+  source.components.schemas.CreateFormRequest = { type: "object", properties: { title: { type: "string" } } };
+  source.components.schemas.FormUpdate = { type: "object", properties: {
+    forward_submit_emails_to: { type: "object", additionalProperties: {}, readOnly: true, description: "Source notification addresses." },
+  } };
+  source.paths["/v3.0/forms/"] = { post: {
+    operationId: "formsCreate",
+    requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/CreateFormRequest" } } } },
+    responses: { "201": { description: "Created", content: { "application/json": { schema: { $ref: "#/components/schemas/FormUpdate" } } } } },
+  } };
+  source.components.schemas.RatingFieldRequest = { type: "object", properties: { sub_type: subtype } };
+  const artifact = await normalize(t, source);
+  const published = artifact.components.schemas.FormalooRatingFieldCreate.allOf[1].properties.sub_type;
+  assert.deepEqual(published, subtype);
+  assert.deepEqual(artifact.components.schemas.CreateFormRequest.properties, source.components.schemas.CreateFormRequest.properties);
+  assert.deepEqual(artifact.components.schemas.FormUpdate.properties.forward_submit_emails_to, {
+    type: "array", items: { type: "string", format: "email" }, readOnly: true, description: "Source notification addresses.",
+  });
+  assert.deepEqual(artifact.components.schemas.RatingFieldRequest.properties, source.components.schemas.RatingFieldRequest.properties);
+  assert.deepEqual(artifact.components.schemas.SourceRatingSubtype, source.components.schemas.SourceRatingSubtype);
+});

@@ -1,3 +1,4 @@
+import { sourceHeaderParameters } from "./request-context-contract.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -1564,17 +1565,6 @@ const localDescriptionFixes = {
   }
 };
 
-const mcpApiKeyHeaderDescription = [
-  "Formaloo API key.",
-  "Required for every Formaloo API call.",
-  "Hosted MCP servers and CLI clients should supply this from their configured credentials instead of asking the user or agent to pass it on each request."
-].join(" ");
-const mcpWorkspaceHeaderDescription = [
-  "Workspace identifier for this workspace-scoped request.",
-  "Required whenever an endpoint documents this header; endpoints that are not workspace-scoped omit it entirely.",
-  "Use list_workspaces or the businesses endpoints to discover the correct workspace slug.",
-  "Formaloo API paths and fields still call this resource a business."
-].join(" ");
 const mcpDeleteSuccessDescription =
   "Deleted successfully. Formaloo delete endpoints answer with 200 rather than 204.";
 const mcpEnvelopeResponseDescription =
@@ -1816,72 +1806,33 @@ function annotateResponseEnvelopes(openapiSpec) {
   }
 }
 
-function enforceBoundedLogicHelperSchemas(openapiSpec) {
-  const schemas = openapiSpec.components?.schemas;
-  if (!schemas?.FormalooLogicCondition?.properties || !schemas.FormalooLogicConditionArgument) {
-    return;
-  }
-
-  // Reuse the enum normalize-openapi.mjs already derived from the backend
-  // spec (see logic-schema-source.mjs) instead of a hand-typed snapshot.
-  // A hardcoded array here previously overwrote that correct value right
-  // back to a stale one -- the exact FRM-3448 bug, reintroduced a 4th time
-  // in this same pipeline after normalize-openapi.mjs was fixed to derive it.
-  const conditionOperationEnum = schemas.FormalooLogicCondition.properties.operation?.enum;
-  const operationProperty = {
-    type: "string",
-    description: "Nested condition operation.",
-    enum: conditionOperationEnum
-  };
-
-  schemas.FormalooLogicShallowCondition = {
-    type: "object",
-    description:
-      "Nested condition object used inside `and`/`or` condition args. This bounded shape avoids recursive OpenAPI schemas while still documenting valid nested condition fields.",
-    properties: {
-      operation: operationProperty,
-      args: {
-        type: "array",
-        description:
-          "Nested operation arguments. Kept flexible to avoid over-constraining recursive logic structures in generated clients that cannot represent recursive schemas.",
-        items: {
-          type: "object",
-          additionalProperties: true
-        }
-      }
-    },
-    required: ["operation", "args"]
-  };
-
-  schemas.FormalooLogicCondition.properties.args = {
-    ...(schemas.FormalooLogicCondition.properties.args ?? {}),
-    type: "array",
-    items: {
-      anyOf: [
-        { $ref: "#/components/schemas/FormalooLogicConditionArgument" },
-        { $ref: "#/components/schemas/FormalooLogicShallowCondition" }
-      ],
-      description:
-        "FormalooLogicConditionArgument or nested condition object for `and`/`or`. Uses anyOf so backend-tolerated extension keys do not make otherwise valid condition objects fail schema matching."
-    }
-  };
+function sourceWorkspaceRequirement(operation) {
+  if(typeof operation["x-formaloo-mcp"]?.requires_workspace === "boolean")return operation["x-formaloo-mcp"].requires_workspace;
+  const requirement=operation["x-formaloo-request-context"]?.workspace?.requirement;
+  if(requirement==="required")return true;
+  if(["optional","not_applicable"].includes(requirement))return false;
+  return null; // Unknown: a selector header is not a tenant permission assertion.
 }
 
-function buildMcpAuthMetadata(operation) {
+function buildMcpAuthMetadata(operation, pathItem) {
+  const headers = operationHeaderParameters(operation, pathItem);
+  const context = operation["x-formaloo-request-context"];
   return {
     api_key: {
-      required: true,
+      required: headers.get("x-api-key")?.required === true,
       header: "x-api-key",
-      direct_api_usage: "Callers must send a valid Formaloo API key.",
-      mcp_cli_usage:
-        "Hosted MCP servers and CLI clients should inject a configured API key; do not model it as a natural-language task argument."
+      direct_api_usage: "Follow the source header and security requirements for this operation.",
+      mcp_cli_usage: "Inject configured credentials; keep them outside natural-language task arguments."
     },
     workspace: {
-      required: hasHeaderParameter(operation, "x-workspace"),
+      // This flag describes the HEADER. A workspace-bound key can supply context.
+      required: headers.get("x-workspace")?.required === true,
       header: "x-workspace",
-      usage:
-        "Workspace selector for workspace-scoped requests. Required when the operation documents the x-workspace header. Use list_workspaces or the businesses endpoints to discover the correct workspace slug."
-    }
+      context_requirement: context?.workspace?.requirement ?? "unverified",
+      usage: "Follow the source workspace resolution rules. An optional selector does not prove that tenant context is optional."
+    },
+    security: cloneJson(operation.security ?? spec.security ?? []),
+    provenance: "source_parameters_and_security"
   };
 }
 
@@ -1964,7 +1915,7 @@ function integrationToolName(operationId) {
   return camelToSnake(operationId);
 }
 
-function buildIncludedOperationMcpMetadata(operation, method) {
+function buildIncludedOperationMcpMetadata(operation, method, pathItem) {
   const methodToken = method.toLowerCase();
   const readOnly = methodToken === "get";
   const destructive = methodToken === "delete";
@@ -1977,14 +1928,14 @@ function buildIncludedOperationMcpMetadata(operation, method) {
     tool_name: toolName,
     aliases: [operation.operationId, camelToSnake(operation.operationId)],
     intent: operation.summary || `Use the Formaloo ${toolName} integration operation.`,
-    requires_workspace: hasHeaderParameter(operation, "x-workspace"),
+    requires_workspace: sourceWorkspaceRequirement(operation),
     read_only: readOnly,
     destructive,
     idempotent: readOnly || destructive || methodToken === "patch",
     result_path: resultPaths[operation.operationId] ?? "data",
     user_data: false,
     requires_confirmation: !readOnly,
-    auth: buildMcpAuthMetadata(operation)
+    auth: buildMcpAuthMetadata(operation, pathItem)
   };
 }
 
@@ -2092,75 +2043,12 @@ function applyParameterDescriptions(operation, descriptions = {}) {
   }
 }
 
-function resolveParameter(openapiSpec, parameter) {
-  if (!parameter || typeof parameter !== "object") {
-    return null;
-  }
-
-  return typeof parameter.$ref === "string" ? getRefTarget(openapiSpec, parameter.$ref) : parameter;
+function operationHeaderParameters(operation, pathItem = {}) {
+  return sourceHeaderParameters(spec, pathItem, operation);
 }
 
-function hasHeaderParameter(operation, headerName) {
-  return (operation?.parameters ?? []).some((parameter) => {
-    const target = resolveParameter(spec, parameter);
-    return (
-      target?.in === "header" &&
-      typeof target.name === "string" &&
-      target.name.toLowerCase() === headerName
-    );
-  });
-}
-
-// Every documented Formaloo header is mandatory in the MCP artifact: x-api-key on every call,
-// and x-workspace / Authorization on the operations that mention them. Operations that do not
-// need a workspace or a token omit the header instead of marking it optional.
-function enforceHeaderRequirements(openapiSpec) {
-  const applyPolicy = (parameter) => {
-    const target = resolveParameter(openapiSpec, parameter);
-    if (target?.in !== "header" || typeof target.name !== "string") {
-      return;
-    }
-
-    switch (target.name.toLowerCase()) {
-      case "x-api-key":
-        target.required = true;
-        target.description = mcpApiKeyHeaderDescription;
-        break;
-      case "x-workspace":
-        target.required = true;
-        target.description = mcpWorkspaceHeaderDescription;
-        break;
-      case "authorization":
-        target.required = true;
-        break;
-      default:
-        break;
-    }
-  };
-
-  for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
-    if (!pathItem || typeof pathItem !== "object") {
-      continue;
-    }
-
-    for (const parameter of pathItem.parameters ?? []) {
-      applyPolicy(parameter);
-    }
-
-    for (const method of httpMethods) {
-      for (const parameter of pathItem[method]?.parameters ?? []) {
-        applyPolicy(parameter);
-      }
-    }
-  }
-
-  for (const parameter of Object.values(openapiSpec.components?.parameters ?? {})) {
-    applyPolicy(parameter);
-  }
-}
-
-// Formaloo answers successful deletes with 200, while the generated upstream contracts
-// still declare 204.
+// Header required flags and descriptions belong to backend permissions/schema.
+// Preserve optional selectors, path-level inheritance and operation overrides.
 function enforceDeleteSuccessResponses(openapiSpec) {
   for (const pathItem of Object.values(openapiSpec.paths ?? {})) {
     const operation = pathItem?.delete;
@@ -2278,7 +2166,9 @@ function enrichMcpOperations(openapiSpec) {
         applyOperationDocumentationFallback(operation, coreDefinition);
         operation["x-formaloo-mcp"] = {
           ...coreDefinition.mcp,
-          auth: buildMcpAuthMetadata(operation)
+          requires_workspace: sourceWorkspaceRequirement(operation),
+          ...operation["x-formaloo-mcp"],
+          auth: operation["x-formaloo-mcp"]?.auth ?? buildMcpAuthMetadata(operation, pathItem)
         };
         applyParameterDescriptions(operation, coreDefinition.parameterDescriptions);
         setRequestExamples(operation, coreDefinition.requestExamples);
@@ -2288,7 +2178,10 @@ function enrichMcpOperations(openapiSpec) {
 
       if (includedOperationIds.has(operation.operationId)) {
         repairIncludedOperationContract(openapiSpec, operation);
-        operation["x-formaloo-mcp"] = buildIncludedOperationMcpMetadata(operation, method);
+        operation["x-formaloo-mcp"] = {
+          ...buildIncludedOperationMcpMetadata(operation, method, pathItem),
+          ...operation["x-formaloo-mcp"]
+        };
       }
 
       const descriptionFix = localDescriptionFixes[operation.operationId];
@@ -2422,7 +2315,6 @@ if (putGateErrors.length > 0) {
 
 spec.paths = filteredPaths;
 spec.tags = (spec.tags ?? []).filter((tag) => typeof tag?.name === "string" && usedTagNames.has(tag.name));
-enforceHeaderRequirements(spec);
 enforceDeleteSuccessResponses(spec);
 const inventoryBeforeEnrichment = operationInventory(spec);
 const descriptionsBeforeEnrichment = snapshotOperationDescriptions(spec);
@@ -2433,7 +2325,7 @@ if (inventoryBeforeEnrichment.join("\n") !== inventoryAfterEnrichment.join("\n")
 }
 assertDescriptionsPreserved(spec, descriptionsBeforeEnrichment);
 annotateResponseEnvelopes(spec);
-enforceBoundedLogicHelperSchemas(spec);
+
 
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(mcpSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
