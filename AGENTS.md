@@ -8,6 +8,9 @@ Schemas come from each backend service's generated OpenAPI (sources in
 (drf-spectacular). **Fix a wrong schema in the backend.** Enrich here only what
 the backend cannot express.
 
+When changing an operation, schema, description, normalization rule or MCP
+metadata, read [API contract standards](docs/agents/api-contracts.md).
+
 ## Branches
 
 | Branch | Backend | Publishes |
