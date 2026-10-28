@@ -2178,14 +2178,6 @@ function enrichBlockSchemas() {
       };
     }
 
-    if (schema.properties.filters && schema.properties.filters.type === "object" && JSON.stringify(schema.properties.filters.additionalProperties) === "{}") {
-      const nullable = schema.properties.filters.nullable;
-      schema.properties.filters = {
-        allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
-        ...(nullable ? { nullable: true } : {})
-      };
-    }
-
     if (schema.properties.content_filters && schema.properties.content_filters.type === "object" && JSON.stringify(schema.properties.content_filters.additionalProperties) === "{}") {
       schema.properties.content_filters = {
         allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
