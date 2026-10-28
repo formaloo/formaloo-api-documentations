@@ -137,3 +137,16 @@ test('source Slack fields survive public and MCP publication without inferred sc
     }
   }
 });
+
+
+test('source portal filter shape and permissions survive both publisher stages', async (t) => {
+  const source = structuredClone(fixture);
+  const filters = {type: 'object', additionalProperties: {}, nullable: true,
+    description: 'Service-owned row scope, direct-link permissions and future predicates.'};
+  source.components.schemas.KanbanBlockCreate = {type: 'object', properties: {filters}};
+  source.components.schemas.FormUpdateRequest.properties.block = {$ref: '#/components/schemas/KanbanBlockCreate'};
+  const {normalized, mcp} = await publish(t, source);
+  for (const artifact of [normalized, mcp]) {
+    assert.deepEqual(artifact.components.schemas.KanbanBlockCreate.properties.filters, filters);
+  }
+});
