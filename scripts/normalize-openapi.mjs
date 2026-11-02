@@ -2178,14 +2178,6 @@ function enrichBlockSchemas() {
       };
     }
 
-    if (schema.properties.filters && schema.properties.filters.type === "object" && JSON.stringify(schema.properties.filters.additionalProperties) === "{}") {
-      const nullable = schema.properties.filters.nullable;
-      schema.properties.filters = {
-        allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
-        ...(nullable ? { nullable: true } : {})
-      };
-    }
-
     if (schema.properties.content_filters && schema.properties.content_filters.type === "object" && JSON.stringify(schema.properties.content_filters.additionalProperties) === "{}") {
       schema.properties.content_filters = {
         allOf: [{ $ref: "#/components/schemas/FormalooBlockFilters" }],
@@ -2406,13 +2398,6 @@ function enrichFormSummarySchemas() {
       "Localized UI text overrides for the form. Contains categories like \"errors\" with message keys mapped to translated strings."
   };
 
-  spec.components.schemas.FormalooSlackAccesses = {
-    type: "array",
-    items: { type: "string" },
-    nullable: true,
-    description: "List of Slack access slugs connected to this form for submission notifications."
-  };
-
   const formSchemas = [
     "FormUpdate", "CreateForm", "CreateFormRequest", "ShowForm",
     "FormShort", "FormSummary", "BoardFormBatch", "PatchedFormUpdateRequest",
@@ -2429,16 +2414,6 @@ function enrichFormSummarySchemas() {
 
     if (schema.properties.submission_config && schema.properties.submission_config.type === "object" && JSON.stringify(schema.properties.submission_config.additionalProperties) === "{}") {
       schema.properties.submission_config = { $ref: "#/components/schemas/FormalooSubmissionConfig" };
-    }
-
-    // The backend's JSONField sometimes emits only nullable/description,
-    // without even an object type. Both shapes are opaque to API clients.
-    const slackAccesses = schema.properties.slack_accesses;
-    if (slackAccesses && !slackAccesses.$ref && (
-      (!slackAccesses.type && !slackAccesses.items && !slackAccesses.oneOf && !slackAccesses.allOf) ||
-      (slackAccesses.type === "object" && JSON.stringify(slackAccesses.additionalProperties) === "{}")
-    )) {
-      schema.properties.slack_accesses = { $ref: "#/components/schemas/FormalooSlackAccesses" };
     }
 
     if (schema.properties.forward_submit_emails_to && schema.properties.forward_submit_emails_to.type === "object" && JSON.stringify(schema.properties.forward_submit_emails_to.additionalProperties) === "{}") {
