@@ -1,4 +1,4 @@
-Retrieves one workflow by slug, including its current blueprint, goal, and status.
+Retrieves one saved Workflow solution container by slug, including its process blueprint, goal, context, and status. Bindings identify the forms, apps, and other artifacts implementing the solution; fetch them separately and inspect relevant live resources before continuation.
 
 Use this when an MCP client needs the full plan before editing, validating, generating a graph, managing bindings, or restoring a prior version. Prefer this over list when you already know the slug.
 

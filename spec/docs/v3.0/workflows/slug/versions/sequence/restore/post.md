@@ -39,4 +39,4 @@ Use this when rolling back blueprint or workflow field changes after a bad itera
 }
 ```
 
-After restore, re-check bindings and regenerate the graph if node keys changed.
+Restore changes the Workflow container fields/blueprint only. It does not restore bindings or roll back forms, apps, logic, notifications, or triggers. After restore, reconcile bindings with the restored node keys, inspect live artifacts, and regenerate the graph.
