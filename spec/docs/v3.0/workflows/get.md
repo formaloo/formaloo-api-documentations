@@ -1,5 +1,7 @@
 Lists saved Workflow solution containers for the active workspace. Use this to find a process by title, goal, or status, resume a connected solution, or select it for blueprint, binding, graph, or history inspection. These are saved product artifacts, separate from optional MCP planning aids.
 
+The list omits `context`. Retrieve the workflow to read the handoff.
+
 ## Common query params
 
 - `search`: match title or goal text

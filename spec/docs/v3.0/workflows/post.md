@@ -2,7 +2,7 @@ Creates a saved **Workflow solution container** for the active workspace (called
 
 A Workflow brings together a process, its context, and the Formaloo resources that implement the solution. For example: collect a lead through an incoming event or form submission, use logic to update another form, notify a team, and show progress in an app. Forms and apps are common participants, not a required pair. A Workflow can describe planned resources or adopt a solution that already exists.
 
-The blueprint describes the process; bindings identify its actual artifacts. This saved artifact supports later management, agent continuation, and dashboard presentation where supported by the connected product version. Use returned links rather than inventing a dashboard route.
+The blueprint describes the process; `context` records why that process looks like this; bindings identify its actual artifacts. This saved artifact supports later management, agent continuation, and dashboard presentation where supported by the connected product version. Use returned links rather than inventing a dashboard route.
 
 ## When agents should save a Workflow
 
@@ -14,7 +14,7 @@ The blueprint describes the process; bindings identify its actual artifacts. Thi
 
 ## Critical behavior
 
-- Saving the container records context and relationships. Configure fields, logic, notifications, integrations, and triggers through their own endpoints; they remain the runtime executors.
+- Saving the container records the `context` handoff and relationships. Configure fields, logic, notifications, integrations, and triggers through their own endpoints; they remain the runtime executors.
 - Membership does not move resources, grant access, or activate delivery. `status=live` is a descriptive label, not a deployment operation.
 - `blueprint` is schema-validated and referentially validated before save. This does not verify live artifacts, permissions, provider readiness, or executed acceptance tests.
 - Node `key` values are stable plan-local aliases, not Formaloo artifact slugs. After creating/adopting artifacts, save bindings (`node_key` → `artifact_slug`).
@@ -23,10 +23,48 @@ The blueprint describes the process; bindings identify its actual artifacts. Thi
 ## Request fields
 
 - `title` (required): short workflow name
-- `description` (optional): solution context, decisions, and remaining/manual setup
+- `description` (optional): longer notes for people reading the workflow
 - `goal` (optional): if omitted and `blueprint.goal` is set, goal is copied from the blueprint
+- `context` (optional): handoff for a later editor. Omit it to store `{}`. See below.
 - `status` (optional): `planning` | `draft` | `testing` | `live` | `archived` (default `planning`)
 - `blueprint` (optional but recommended): the plan JSON described below
+
+## Context
+
+`context` is why the workflow looks like this. `goal` stays the one-paragraph requirement. The blueprint stays the map. `description` stays human-facing notes.
+
+Send the whole document on every write. A later `PATCH` that includes `context` replaces the stored document. Omit `context` to leave it unchanged. `null` or `{}` clears it.
+
+Keep the requests, decisions, constraints, and edit notes that still govern the current workflow. Preserve `decisions[].key` across edits. When the user reverses a decision, keep that key, set `status` to `superseded`, and put the old choice in `rejected`. Store the requirement, the choice, and the reason. Do not store chat transcripts, tool traces, credentials, or temporary authorization proofs.
+
+Limits: `intent` and `change_notes` are 2000 characters; other strings are 500; each list holds 20 items; the validated document is at most 16 KB. `schema_version` must be `1.0`. Decision keys are unique. A document over the limit is rejected so the writer folds older requests into `intent`, `decisions`, and `constraints`.
+
+```json
+{
+  "schema_version": "1.0",
+  "intent": "Score a quiz and email people who pass.",
+  "requests": [
+    {
+      "summary": "Email only high scorers.",
+      "outcome": "Pass email sends when the score is at least 70."
+    }
+  ],
+  "decisions": [
+    {
+      "key": "pass-threshold",
+      "status": "active",
+      "choice": "Pass at 70.",
+      "because": "The user named 70 as the passing score.",
+      "rejected": ["Pass at 50."]
+    }
+  ],
+  "constraints": ["Keep node key quiz."],
+  "open_questions": [],
+  "change_notes": "Do not rename node keys. Bindings use them."
+}
+```
+
+List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it before changing a workflow, and write it back in the same request as the blueprint change. Workflow versions record context changes, and restore returns the context saved with that version.
 
 ## Blueprint shape
 
@@ -185,6 +223,11 @@ The blueprint describes the process; bindings identify its actual artifacts. Thi
       "title": "Scored quiz with pass email",
       "status": "planning",
       "goal": "A quiz that scores answers and emails high scorers.",
+      "context": {
+        "schema_version": "1.0",
+        "intent": "Score a quiz and email people who pass.",
+        "decisions": []
+      },
       "blueprint": { "...": "..." }
     }
   }
@@ -195,12 +238,12 @@ The blueprint describes the process; bindings identify its actual artifacts. Thi
 
 After the save decision above, use this sequence. Resource creation may happen before or after saving the container; adopting an existing solution should reuse its resources.
 
-1. `POST /workflows/` with a blueprint
+1. `POST /workflows/` with a blueprint and `context`
 2. Optional `GET /workflows/{slug}/graph/` for Mermaid visualization / user review
 3. Optional `POST /workflows/{slug}/validate/` before large PATCH updates
 4. Build Formaloo artifacts with form/email/PDF endpoints
 5. `POST /workflows/{slug}/bindings/` to map each `node_key` → built `artifact_slug`
-6. Iterate with `PATCH /workflows/{slug}/` on the same workflow
+6. Iterate with `PATCH /workflows/{slug}/` on the same workflow, including a replaced `context` when the user changed a request or decision
 
 For dry-run validation without saving, use `POST /workflows/{slug}/validate/` after the workflow exists.
 
@@ -208,6 +251,6 @@ For dry-run validation without saving, use `POST /workflows/{slug}/validate/` af
 
 An `external_trigger` can describe incoming webhook/event collection with an action such as `submit_form` or `update_row`. A form webhook normally delivers **outbound**. Configure inbound collection through a verified inbound contract or external receiver calling the supported submission/row API; adding a blueprint node does not provision a receiver. Use `via`, mappings, and notes to explain where behavior is implemented and record unsupported/manual setup in `gaps`.
 
-For continuation, read the Workflow and bindings, inspect relevant live artifacts, then update only the requested solution parts. Validate artifact type, workspace, and availability before relying on a binding. Preserve stable node keys and unrelated resource configuration. Keep credentials and temporary authorization proofs out of the saved context.
+For continuation, read the Workflow, its `context`, and its bindings, inspect relevant live artifacts, then update only the requested solution parts. Write `context` back in the same request when a user request changes a decision. Preserve decision keys the user did not reverse. Validate artifact type, workspace, and availability before relying on a binding. Preserve stable node keys and unrelated resource configuration. Keep credentials and temporary authorization proofs out of `context`.
 
 If artifact creation succeeded but binding persistence failed, repair the binding to that artifact. If creation's outcome is unknown, inspect before retrying; blindly recreating can duplicate resources. A binding needs a real artifact slug, so record pre-creation failures and external/manual steps in supported notes rather than fabricated bindings.

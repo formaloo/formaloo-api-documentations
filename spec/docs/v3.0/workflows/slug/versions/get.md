@@ -1,6 +1,6 @@
 Lists version history for a workflow.
 
-Use this when reviewing prior blueprint revisions before restore, or when an MCP client needs to show what changed across plan iterations.
+Use this when reviewing prior blueprint or `context` revisions before restore, or when an MCP client needs to show what changed across plan iterations.
 
 ## Path params
 
@@ -9,7 +9,7 @@ Use this when reviewing prior blueprint revisions before restore, or when an MCP
 ## Notes
 
 - Versions are append-only audit rows (`sequence`, `action`, `changes`, actor metadata).
-- Capture depends on workspace versioning eligibility. The **current** blueprint on `GET /workflows/{slug}/` is always available regardless.
+- Capture depends on workspace versioning eligibility. The **current** blueprint and `context` on `GET /workflows/{slug}/` are always available regardless. Context changes are stored on the same version rows as the other workflow fields.
 - Sort typically newest-first by `sequence`.
 
 ## Example response (`200`)
