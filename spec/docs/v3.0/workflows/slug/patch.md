@@ -1,6 +1,6 @@
-Partially updates a workflow owned by the active business.
+Partially updates a saved Workflow solution container owned by the active workspace. Revise its process context, goal, blueprint, or descriptive status while maintaining the same solution identity.
 
-Use this when iterating on an existing plan after user review: change title/status, or replace `blueprint` with a revised plan. Prefer updating the same workflow rather than creating a duplicate.
+Use this for a requested change to the saved solution. Updating its blueprint does not change the bound forms, apps, logic, notifications, or triggers; configure those through their own endpoints. Preserve unrelated nodes and stable keys. `blueprint` is a full replacement, so read current state first. No expected-revision conflict check is exposed by this contract; coordinate concurrent writers.
 
 ## Path params
 

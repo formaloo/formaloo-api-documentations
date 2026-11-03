@@ -1,4 +1,4 @@
-Creates a binding that maps a blueprint `node_key` to a built Formaloo `artifact_slug`.
+Creates a binding connecting a Workflow solution node (`node_key`) to an existing Formaloo artifact (`artifact_slug`). Binding adopts or records the resource; it does not create, move, activate, or change access to it.
 
 Use this after creating/adopting an artifact so later plan iterations can update the same resource. Bindings are what make plan → actual durable across sessions.
 

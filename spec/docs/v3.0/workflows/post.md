@@ -1,19 +1,29 @@
-Creates a workflow that stores a **blueprint plan** for the active business.
+Creates a saved **Workflow solution container** for the active workspace (called business in API contracts).
 
-Use this when an MCP client turns a user requirement into a durable Formaloo-aware plan that another agent (or a later session) can implement or iterate without the original chat history.
+A Workflow brings together a process, its context, and the Formaloo resources that implement the solution. For example: collect a lead through an incoming event or form submission, use logic to update another form, notify a team, and show progress in an app. Forms and apps are common participants, not a required pair. A Workflow can describe planned resources or adopt a solution that already exists.
+
+The blueprint describes the process; bindings identify its actual artifacts. This saved artifact supports later management, agent continuation, and dashboard presentation where supported by the connected product version. Use returned links rather than inventing a dashboard route.
+
+## When agents should save a Workflow
+
+- When the user asks to build/save a Workflow, create or reuse the container as part of that request.
+- When continuing a named Workflow, read and update the same solution and its bindings.
+- In an agent builder, follow the builder's explicit persistence policy.
+- For a connected solution without a save request, offer once: “Would you like me to save this solution as a Workflow so you can find and manage it later?” Continue authorized resource work while awaiting the optional choice; save after acceptance.
+- Standalone form/app creation and small edits do not require a Workflow or a save question. A meaningful process, rather than a resource count, is the reason to offer one.
 
 ## Critical behavior
 
-- The workflow is a **map only**. It does **not** execute runtime behavior.
-- Form logic, form settings, webhooks, integrations, and schedules remain the executors.
-- `blueprint` is schema-validated and referentially validated before save.
-- Node `key` values are **plan-local aliases**, not Formaloo artifact slugs.
-- After artifacts are built, record mappings with binding endpoints (`node_key` → `artifact_slug`).
+- Saving the container records context and relationships. Configure fields, logic, notifications, integrations, and triggers through their own endpoints; they remain the runtime executors.
+- Membership does not move resources, grant access, or activate delivery. `status=live` is a descriptive label, not a deployment operation.
+- `blueprint` is schema-validated and referentially validated before save. This does not verify live artifacts, permissions, provider readiness, or executed acceptance tests.
+- Node `key` values are stable plan-local aliases, not Formaloo artifact slugs. After creating/adopting artifacts, save bindings (`node_key` → `artifact_slug`).
+- The optional MCP `plan_formaloo_workflow` aid returns a separate temporary build-plan schema. It is not required to save/build a Workflow, and its plan blob is not this endpoint's blueprint.
 
 ## Request fields
 
 - `title` (required): short workflow name
-- `description` (optional): longer notes
+- `description` (optional): solution context, decisions, and remaining/manual setup
 - `goal` (optional): if omitted and `blueprint.goal` is set, goal is copied from the blueprint
 - `status` (optional): `planning` | `draft` | `testing` | `live` | `archived` (default `planning`)
 - `blueprint` (optional but recommended): the plan JSON described below
@@ -52,7 +62,7 @@ Use this when an MCP client turns a user requirement into a durable Formaloo-awa
 ```
 
 - `type`: `form` | `page` | `email_template` | `pdf_template` | `webhook` | `external_trigger` | `app` | `theme` | `integration` | `schedule` | `manual_step`
-- Smallest unit is a **form**. Do not model individual fields as nodes; put field aliases in `spec.inputs` / `spec.outputs`.
+- Nodes represent resources or process participants. Keep individual fields inside form specifications using `spec.inputs` / `spec.outputs`; current `spec` supports only these aliases and `notes`. Record unbuilt decisions in supported notes, not invented properties such as `spec.fields`.
 - `build.operation`: `create` | `adopt` | `update` | `no_op`
 - `adopt` / `update` require `build.ref` (existing Formaloo artifact slug)
 
@@ -181,7 +191,9 @@ Use this when an MCP client turns a user requirement into a durable Formaloo-awa
 }
 ```
 
-## Recommended MCP flow
+## Build or adopt a solution
+
+After the save decision above, use this sequence. Resource creation may happen before or after saving the container; adopting an existing solution should reuse its resources.
 
 1. `POST /workflows/` with a blueprint
 2. Optional `GET /workflows/{slug}/graph/` for Mermaid visualization / user review
@@ -191,3 +203,11 @@ Use this when an MCP client turns a user requirement into a durable Formaloo-awa
 6. Iterate with `PATCH /workflows/{slug}/` on the same workflow
 
 For dry-run validation without saving, use `POST /workflows/{slug}/validate/` after the workflow exists.
+
+## Entrypoints and continuation
+
+An `external_trigger` can describe incoming webhook/event collection with an action such as `submit_form` or `update_row`. A form webhook normally delivers **outbound**. Configure inbound collection through a verified inbound contract or external receiver calling the supported submission/row API; adding a blueprint node does not provision a receiver. Use `via`, mappings, and notes to explain where behavior is implemented and record unsupported/manual setup in `gaps`.
+
+For continuation, read the Workflow and bindings, inspect relevant live artifacts, then update only the requested solution parts. Validate artifact type, workspace, and availability before relying on a binding. Preserve stable node keys and unrelated resource configuration. Keep credentials and temporary authorization proofs out of the saved context.
+
+If artifact creation succeeded but binding persistence failed, repair the binding to that artifact. If creation's outcome is unknown, inspect before retrying; blindly recreating can duplicate resources. A binding needs a real artifact slug, so record pre-creation failures and external/manual steps in supported notes rather than fabricated bindings.
