@@ -89,6 +89,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
   "key": "quiz",
   "title": "Assessment",
   "purpose": "Collects answers and computes a score.",
+  "is_starting_point": true,
   "build": { "operation": "create" },
   "spec": {
     "inputs": ["email", "q1"],
@@ -100,6 +101,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
 ```
 
 - `type`: `form` | `page` | `email_template` | `pdf_template` | `webhook` | `external_trigger` | `app` | `theme` | `integration` | `schedule` | `manual_step`
+- `is_starting_point` (required): `true` when this node can begin the workflow before any of its records exist. A blueprint with nodes needs one `true` node.
 - Nodes represent resources or process participants. Keep individual fields inside form specifications using `spec.inputs` / `spec.outputs`; current `spec` supports only these aliases and `notes`. Record unbuilt decisions in supported notes, not invented properties such as `spec.fields`.
 - `build.operation`: `create` | `adopt` | `update` | `no_op`
 - `adopt` / `update` require `build.ref` (existing Formaloo artifact slug)
@@ -130,8 +132,8 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
 ```
 
 - `on`: `submit` | `update` | `field_change` | `payment_received` | `webhook_received` | `schedule` | `manual`
-- `action`: `submit_form` | `update_row` | `send_email` | `generate_pdf` | `send_webhook` | `call_integration` | `assign` | `set_status` | `set_value` | `score` | `show_page` | `redirect` | `display_data`
-- `to`: target node key (required for connecting actions such as `send_email`, `submit_form`, `generate_pdf`)
+- Allowed node/action pairs are `NODE_ALLOWED_ACTIONS` in formz. Argument counts are `WorkflowActionType.argument_count_validators` in formz.
+- `to`: target node key. Required when the action is in `WorkflowActionType.require_to`.
 - `via`: where runtime implements it — `form_logic` | `form_settings` | `webhook` | `integration` | `schedule` | `manual`
 - `when`: same condition grammar as form logic (`equal`, `gte`, `is`, `and`, `or`, `always`, …)
 - Argument types: `node_field` (`node.field_alias`), `choice` (`node.field.choice`), `node`, `constant`, `role`
@@ -158,6 +160,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
         "key": "quiz",
         "title": "Assessment",
         "purpose": "Collects answers and computes a score.",
+        "is_starting_point": true,
         "build": { "operation": "create" },
         "spec": {
           "inputs": ["email", "q1"],
@@ -190,6 +193,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
         "key": "pass_email",
         "title": "You passed",
         "purpose": "Confirms the result and pipes the score.",
+        "is_starting_point": false,
         "build": { "operation": "create" },
         "spec": { "inputs": ["recipient", "score"], "outputs": [] },
         "actions": []
