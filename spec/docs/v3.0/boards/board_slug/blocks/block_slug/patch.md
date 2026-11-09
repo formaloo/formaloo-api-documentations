@@ -5,14 +5,22 @@ Use this endpoint to update an existing block on a board/app. The API uses one P
 
 For data blocks connected to forms:
 
-- `form_result` uses `form`, `fields`, `filters`, `settings`, edit flags, voting, and export settings.
+- `form_result` uses `form`, `fields`, `excluded_fields`, `filters`, `settings`, edit flags, voting, and export settings.
 - `form_charts` uses `form`, `fields`, `settings`, and `config`.
-- `kanban` uses `form`, `fields`, `card_fields`, `columns_field`, `items_field`, `featured_image_field`, `filters`, `settings`, `mode`, and `display_type`.
+- `kanban` uses `form`, `fields`, `excluded_fields`, `card_fields`, `columns_field`, `items_field`, `featured_image_field`, `filters`, `settings`, `mode`, and `display_type`.
 - `gallery` is a kanban block with `display_type: "grid_view"`.
 - `ai_summary` uses `form`, `user_questions`, `length`, and `ai_engine_id`.
 - `form_display` uses `form`, `display_type`, `style_type`, and optional `fields`.
 
 `filters` is saved block state. Send the complete intended filter snapshot when saving filters on the block. `settings` and `config` are dashboard metadata objects; retrieve the block first and preserve existing keys when changing one nested value.
+
+`fields` and `excluded_fields` are slug lists. Only one may be non-empty. The API returns 400 if a write leaves both set, so send the other list as `[]` in the same request. Omitting a list keeps its saved value.
+
+- Both `[]`: show every form field, including fields added later.
+- `excluded_fields` set and `fields: []`: show every form field except those slugs, including fields added later.
+- `fields` set and `excluded_fields: []`: show only those slugs. A field added later stays hidden.
+
+`excluded_fields` applies to `fields` only. `card_fields` is unchanged. Meta columns stay on `filters.meta_data_fields.exclude`.
 
 For kanban and gallery blocks, `fields` controls the fields available when opening a row. `card_fields` independently controls the values shown on cards and falls back to `fields` when empty.
 

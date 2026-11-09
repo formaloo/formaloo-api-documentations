@@ -1,7 +1,9 @@
 
 Creates a form result block on a board/app. Use this when an app page should show a table or saved result view for one known form.
 
-`form` is the source form slug. `fields` is the ordered list of saved field slugs to show in the table. Omit `fields` only when the default/all-field behavior is intended.
+`form` is the source form slug. `fields` is the ordered list of saved field slugs to show in the table. Omit `fields`, or send `[]`, to show every form field.
+
+`excluded_fields` is the list of field slugs to hide when `fields` is empty. Only one of `fields` and `excluded_fields` may be non-empty. The API returns 400 if a write leaves both set, so send the other list as `[]` in the same request. A field added later stays visible when `fields` is empty, including when `excluded_fields` hides other columns. A non-empty `fields` list does not pick up later fields. `excluded_fields` does not change `filters.meta_data_fields.exclude`.
 
 ```json
 {

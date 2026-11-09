@@ -2,7 +2,7 @@ Creates a kanban block on a board/app. Use this when an app page should show for
 
 `form` is the source form slug. `columns_field` is the field used to group cards and should be choice-like (`choice`, `dropdown`, `rating`, or `yes_no`). `items_field` is the non-file field used as the card title or primary label. `featured_image_field` is a file field used as the card image.
 
-`fields` controls which fields are available when a row is opened. `card_fields` independently controls which field values are returned for each kanban or gallery card. When `card_fields` is empty or omitted, it falls back to `fields`.
+`fields` controls which fields are available when a row is opened. `excluded_fields` hides those slugs when `fields` is empty. Only one of `fields` and `excluded_fields` may be non-empty. The API returns 400 if a write leaves both set, so send the other list as `[]` in the same request. `card_fields` independently controls which field values are returned for each kanban or gallery card and is not changed by `excluded_fields`. When `card_fields` is empty or omitted, it falls back to `fields`.
 
 ```json
 {
