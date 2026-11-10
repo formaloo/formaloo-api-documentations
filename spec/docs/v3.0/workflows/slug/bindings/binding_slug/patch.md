@@ -35,4 +35,4 @@ Use this when recording a rebuilt artifact slug, changing status (`pending` | `b
 }
 ```
 
-Changing `node_key` to a key that already has another binding returns `400`. A sent `is_starting_point` must match the blueprint node with the same `node_key`. `node_key` is that plan-local key, not `artifact_slug`.
+Changing `node_key` to a key that already has another binding returns `400`. A sent `is_starting_point` must match the blueprint node with the same `node_key`. Omit it and the stored flag is still taken from that blueprint node. `node_key` is that plan-local key, not `artifact_slug`.

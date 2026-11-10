@@ -17,6 +17,8 @@ Use this for a requested change to the saved solution. Updating its blueprint do
 
 If `blueprint` is sent, it is schema-validated and referentially validated the same way as create. Invalid node keys, missing `to` targets, unknown `node_field` aliases, or illegal actions for a node type return `400`.
 
+Sending `blueprint` copies each node's `is_starting_point` onto the binding with the same `node_key`. A binding whose node is no longer in the blueprint is stored as not a starting point. Artifact slugs and binding status stay as they are.
+
 For large or uncertain plans, dry-run first:
 
 `POST /workflows/{slug}/validate/`
@@ -50,4 +52,4 @@ For large or uncertain plans, dry-run first:
 }
 ```
 
-After a successful blueprint update, refresh bindings if node keys changed, and re-check `GET /workflows/{slug}/graph/`.
+After a successful blueprint update, add or remove bindings when node keys were added or removed, and re-check `GET /workflows/{slug}/graph/`. The starting-point flag on an existing binding is already copied from the blueprint.

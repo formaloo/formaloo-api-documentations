@@ -39,4 +39,4 @@ Use this when rolling back blueprint, `context`, or other workflow field changes
 }
 ```
 
-Restore changes the Workflow container fields, including blueprint and `context`. It does not restore bindings or roll back forms, apps, logic, notifications, or triggers. After restore, reconcile bindings with the restored node keys, inspect live artifacts, and regenerate the graph.
+Restore changes the Workflow container fields, including blueprint and `context`. It rewrites `is_starting_point` on existing bindings from the restored nodes. It does not restore artifact slugs or binding status, and it does not roll back forms, apps, logic, notifications, or triggers. After restore, add or remove bindings when the restored node keys differ, inspect live artifacts, and regenerate the graph.

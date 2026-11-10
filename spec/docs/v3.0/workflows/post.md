@@ -101,7 +101,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
 ```
 
 - `type`: `form` | `page` | `email_template` | `pdf_template` | `webhook` | `external_trigger` | `app` | `theme` | `integration` | `schedule` | `manual_step`
-- `is_starting_point` (required): `true` when this node can begin the workflow before any of its records exist. A blueprint with nodes needs one `true` node.
+- `is_starting_point` (required on every node): `true` only when this node can begin the workflow before any of its records exist. It creates the first row, or it receives the first inbound event. A later step is `false`, including a public form that only updates a row this workflow already has. More than one `true` node is valid only when each one can begin the workflow by itself. A blueprint with nodes needs at least one `true` node.
 - Nodes represent resources or process participants. Keep individual fields inside form specifications using `spec.inputs` / `spec.outputs`; current `spec` supports only these aliases and `notes`. Record unbuilt decisions in supported notes, not invented properties such as `spec.fields`.
 - `build.operation`: `create` | `adopt` | `update` | `no_op`
 - `adopt` / `update` require `build.ref` (existing Formaloo artifact slug)
@@ -133,7 +133,7 @@ List responses omit `context`. `GET /workflows/{slug}/` returns it. Read it befo
 
 - `on`: `submit` | `update` | `field_change` | `payment_received` | `webhook_received` | `schedule` | `manual`
 - Allowed node/action pairs are `NODE_ALLOWED_ACTIONS` in formz. Argument counts are `WorkflowActionType.argument_count_validators` in formz.
-- `to`: target node key. Required when the action is in `WorkflowActionType.require_to`.
+- `to`: target node key. Required when the action is in `WorkflowActionType.require_to`. `to` and field paths must resolve to nodes and aliases inside the blueprint.
 - `via`: where runtime implements it — `form_logic` | `form_settings` | `webhook` | `integration` | `schedule` | `manual`
 - `when`: same condition grammar as form logic (`equal`, `gte`, `is`, `and`, `or`, `always`, …)
 - Argument types: `node_field` (`node.field_alias`), `choice` (`node.field.choice`), `node`, `constant`, `role`
@@ -246,7 +246,7 @@ After the save decision above, use this sequence. Resource creation may happen b
 2. Optional `GET /workflows/{slug}/graph/` for Mermaid visualization / user review
 3. Optional `POST /workflows/{slug}/validate/` before large PATCH updates
 4. Build Formaloo artifacts with form/email/PDF endpoints
-5. `POST /workflows/{slug}/bindings/` to map each `node_key` → built `artifact_slug`
+5. `POST /workflows/{slug}/bindings/` to map each `node_key` → built `artifact_slug`, with `is_starting_point` equal to that blueprint node
 6. Iterate with `PATCH /workflows/{slug}/` on the same workflow, including a replaced `context` when the user changed a request or decision
 
 For dry-run validation without saving, use `POST /workflows/{slug}/validate/` after the workflow exists.

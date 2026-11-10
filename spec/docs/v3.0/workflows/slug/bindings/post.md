@@ -15,7 +15,7 @@ Use this after creating/adopting an artifact so later plan iterations can update
 - `status` (optional): `pending` | `built` | `failed` (default `pending`)
 - `error` (optional): JSON object with actionable failure details when `failed`
 
-`node_key` must be unique within the workflow (`400` if duplicated). A mismatch on `is_starting_point` returns `400`.
+`node_key` must be unique within the workflow (`400` if duplicated). A mismatch on `is_starting_point` returns `400`. A node key that is absent from the blueprint cannot be saved with `is_starting_point` true. The stored flag is the blueprint node's flag.
 
 ## Example request
 
