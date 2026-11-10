@@ -591,7 +591,7 @@ function enrichThemeSchemas() {
 
     if (schema.properties.form_type) {
       schema.properties.form_type.description =
-        "Canonical form presentation type for this theme. Valid API values are `simple` and `multi_step`. Prefer this over legacy form-level `form_type`.";
+        "Presentation type for this theme. Valid API values are `simple` and `multi_step`.";
     }
 
 
@@ -692,14 +692,6 @@ function deprecateLegacyFormFields() {
       };
     }
 
-    if (schema.properties.form_type) {
-      schema.properties.form_type = {
-        ...schema.properties.form_type,
-        deprecated: true,
-        description:
-          "Deprecated legacy form-level presentation type. Prefer theme.form_type (`simple` or `multi_step`); runtime reads prefer the assigned theme when present."
-      };
-    }
   }
 }
 

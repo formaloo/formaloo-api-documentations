@@ -12,9 +12,9 @@ Use `PATCH` for targeted form edits. Send only the fields you intend to change.
 
 Common patch fields include:
 
-- `title`, `description`, `address`, `show_title`, `button_text`, `success_message`, and `error_message`.
+- `title`, `description`, `address`, `button_text`, `success_message`, and `error_message`.
 - `theme`: reusable v5 theme slug to assign to the form. Use `/v3.0/themes/` to list, create, copy, or edit reusable themes first.
-- asset slug fields such as `logo_slug`, `background_image_slug`, `favicon_slug`, `meta_image_slug`, `banner_slug`, and `cover_image_slug`.
+- `cover_image_slug`: form-specific cover override. Logo, background, favicon, meta image, and banner slugs belong on the theme.
 - field membership/order fields such as `form_fields` when supported by the returned form schema.
 - `primary_field`: primary field slug.
 - `logic`: complete logic array to save on the form.
@@ -23,7 +23,7 @@ Common patch fields include:
 
 Before patching `logic`, retrieve the form and use exact field, choice, variable, template, webhook, and success-page slugs. Sending `logic` replaces the saved logic array; it is not a merge, append, or natural-language instruction.
 
-For styling changes, prefer assigning or updating a reusable theme resource. Older form-level styling fields such as `theme_config`, `button_color`, `text_color`, and image slug fields may still be accepted for compatibility/fallback rendering, but they are not the preferred current theme workflow.
+For styling changes, assign or update the form's theme. The form patch no longer accepts `form_type`, colors, `theme_config`, `show_title`, `custom_css`, or the theme image slugs.
 
 ---
 
