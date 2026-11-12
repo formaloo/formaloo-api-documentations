@@ -60,6 +60,11 @@ bundle_spec "$SPEC_DIR/storage.yaml" "$SPEC_DIR/storage-bundled.json"
 bundle_spec "$SPEC_DIR/ai.yaml" "$SPEC_DIR/ai-bundled.json"
 bundle_spec "$SPEC_DIR/v3.0.yaml" "$SPEC_DIR/v3.0-bundled.json"
 
+echo "Applying local operation descriptions missing from the upstream contracts..."
+node "$ROOT_DIR/scripts/apply-local-operation-docs.mjs" \
+  "$SPEC_DIR/formz-bundled.json" \
+  "$SPEC_DIR/formz-mcp-bundled.json"
+
 echo "Preserving public source security schemes and inheritance..."
 node "$ROOT_DIR/scripts/merge-security-provenance.mjs" "$SPEC_DIR/openapi-merge-v3.0.json"
 
