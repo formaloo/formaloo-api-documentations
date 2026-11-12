@@ -553,7 +553,6 @@ const coreMcpOperations = {
             title: "Customer Feedback",
             slug: "customer-feedback",
             address: "customer-feedback",
-            show_title: true,
             theme: {
               title: "Customer Feedback Theme",
               slug: "customer-feedback-theme",
@@ -736,7 +735,6 @@ const coreMcpOperations = {
         summary: "Create a simple form",
         value: {
           title: "Customer Feedback",
-          show_title: true,
           description: "Collect customer feedback."
         }
       }
@@ -748,8 +746,7 @@ const coreMcpOperations = {
           value: {
             title: "Customer Feedback",
             slug: "customer-feedback",
-            address: "customer-feedback",
-            show_title: true
+            address: "customer-feedback"
           }
         }
       }
@@ -853,8 +850,7 @@ const coreMcpOperations = {
           value: {
             title: "Updated Customer Feedback",
             slug: "customer-feedback",
-            address: "customer-feedback",
-            show_title: true
+            address: "customer-feedback"
           }
         }
       }

@@ -1,7 +1,9 @@
 
 Returns runtime content for a board block.
 
-For kanban and gallery blocks, row objects include only the fields configured in `card_fields`. When `card_fields` is empty, the endpoint falls back to `fields`. The block payload still returns `fields` separately for clients that configure the open-row editor.
+For a form result block, row data and `columns` follow `fields` and `excluded_fields`. A non-empty `fields` list returns those slugs. When `fields` is empty, the response returns every form field except `excluded_fields`. Both empty returns every form field. A field added later is included unless `fields` is a non-empty list or the new slug is in `excluded_fields`.
+
+For kanban and gallery blocks, row objects include only the fields configured in `card_fields`. When `card_fields` is empty, the endpoint falls back to `fields`, with `excluded_fields` applied when `fields` is empty. The block payload still returns `fields` and `excluded_fields` separately for clients that configure the open-row editor. `card_fields` is not filtered by `excluded_fields`.
 
 ## Searching for a text on all fields
 

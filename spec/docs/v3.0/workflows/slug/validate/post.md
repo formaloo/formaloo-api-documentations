@@ -18,9 +18,11 @@ Use this when an MCP client wants hard confirmation that a proposed plan is sche
 }
 ```
 
+Validation is structural and database-free. It does not verify live artifact existence, workspace/type matches, installed triggers, enforced access rules, provider readiness, or successful delivery. Stored `tests` are acceptance scenarios, not executed results.
+
 ## What is checked
 
-1. Schema shape (`BluePrintSerializer`)
+1. Schema shape (`BluePrintSerializer`), including argument counts from `WorkflowActionType.argument_count_validators`
 2. Referential rules (`WorkflowValidator`), including:
    - unique node keys
    - every `to` resolves to a declared node

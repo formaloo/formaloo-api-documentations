@@ -1,6 +1,6 @@
 Restores a workflow to a previous version sequence.
 
-Use this when rolling back blueprint or workflow field changes after a bad iteration. Prefer listing versions first to choose the correct `sequence`.
+Use this when rolling back blueprint, `context`, or other workflow field changes after a bad iteration. Prefer listing versions first to choose the correct `sequence`. Restore returns the `context` saved with that version.
 
 ## Path params
 
@@ -39,4 +39,4 @@ Use this when rolling back blueprint or workflow field changes after a bad itera
 }
 ```
 
-After restore, re-check bindings and regenerate the graph if node keys changed.
+Restore changes the Workflow container fields, including blueprint and `context`. It rewrites `is_starting_point` on existing bindings from the restored nodes. It does not restore artifact slugs or binding status, and it does not roll back forms, apps, logic, notifications, or triggers. After restore, add or remove bindings when the restored node keys differ, inspect live artifacts, and regenerate the graph.

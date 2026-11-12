@@ -8,6 +8,9 @@ Schemas come from each backend service's generated OpenAPI (sources in
 (drf-spectacular). **Fix a wrong schema in the backend.** Enrich here only what
 the backend cannot express.
 
+When adding a new API or updating an existing API, including legacy endpoints,
+follow [CODING_STANDARDS.md](CODING_STANDARDS.md).
+
 ## Branches
 
 | Branch | Backend | Publishes |

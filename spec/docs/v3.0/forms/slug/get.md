@@ -7,7 +7,7 @@ Current v5 form styling is managed through reusable theme resources:
 - The form response includes `theme` as the assigned theme object, or `null` when no reusable theme is assigned.
 - Use `/v3.0/themes/` to list or create reusable themes.
 - Use `PATCH /v3.0/forms/{slug}/` with `{ "theme": "theme_slug" }` to assign a theme to a form.
-- Older form-level styling fields such as `theme_config`, `button_color`, `text_color`, and image slug fields may still appear for compatibility/fallback rendering. Prefer theme resources for new theme workflows.
+- Colors, `form_type`, `show_title`, `theme_config`, and theme images are fields of `theme`. The form keeps `custom_js` and the `cover_image_slug` / `cover_image_url` override.
 
 ## Example response (`200`)
 
@@ -23,11 +23,9 @@ Current v5 form styling is managed through reusable theme resources:
       "slug": "cv7kTWdv",
       "address": "vxag2",
       "title": "Customer Feedback",
-      "show_title": true,
       "description": "Tell us how we can improve.",
       "success_message": "Thanks for your feedback.",
       "button_text": "Submit",
-      "form_type": "simple",
       "active": true,
       "theme": null,
       "fields_list": [

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const specDir = path.join(rootDir, "spec");

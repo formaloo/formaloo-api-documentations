@@ -15,7 +15,6 @@ Common create fields include:
 - `title`: form display name.
 - `description`: form description.
 - `address`: optional public address/slug-like identifier. If omitted, the API can generate one.
-- `show_title`: whether the title is visible on the form.
 - `button_text`, `success_message`, `error_message`: user-facing submit/result text.
 - `category`, `tags`, `board`: organization fields by slug.
 - `logic`: array of form logic rules. See the logic structure below.
@@ -706,10 +705,8 @@ Both items belong in the same `logic` array, together with the `schedule` sectio
 {
   "title": "Customer Feedback",
   "description": "Tell us how we can improve.",
-  "show_title": true,
   "button_text": "Submit",
-  "success_message": "Thanks for your feedback.",
-  "form_type": "simple"
+  "success_message": "Thanks for your feedback."
 }
 ```
 
@@ -727,11 +724,9 @@ Both items belong in the same `logic` array, together with the `schedule` sectio
       "slug": "kTX4WMpC",
       "address": "oukll",
       "title": "Customer Feedback",
-      "show_title": true,
       "description": "Tell us how we can improve.",
       "success_message": "Thanks for your feedback.",
       "button_text": "Submit",
-      "form_type": "simple",
       "fields": {},
       "submit_count": 0,
       "theme": null
@@ -744,14 +739,12 @@ Create fields next with `POST /v3.0/fields/` (or a per-type field endpoint), the
 
 ## Example request: create a multi-step form
 
-Set `form_type` to `multi_step`, then add page breaks with `meta` + `sub_type: page_break` fields after the form exists.
+One question at a time is the assigned theme's `form_type` value `multi_step`. Page breaks are `meta` fields with `sub_type` `page_break` on a classic theme.
 
 ```json
 {
   "title": "Onboarding Survey",
   "description": "A short multi-page onboarding form.",
-  "form_type": "multi_step",
-  "show_title": true,
   "button_text": "Continue"
 }
 ```

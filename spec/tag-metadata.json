@@ -237,6 +237,6 @@
   },
   "business-engines": {
     "displayName": "Business Engines",
-    "description": "Manage business engine resources and their configuration."
+    "description": "Create, update, test, and remove a workspace's own AI engines. Credentials stay write-only."
   }
 }

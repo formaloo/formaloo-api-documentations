@@ -1,6 +1,6 @@
-Partially updates a workflow owned by the active business.
+Partially updates a saved Workflow solution container owned by the active workspace. Revise its `context`, goal, blueprint, or descriptive status while maintaining the same solution identity.
 
-Use this when iterating on an existing plan after user review: change title/status, or replace `blueprint` with a revised plan. Prefer updating the same workflow rather than creating a duplicate.
+Use this for a requested change to the saved solution. Updating its blueprint does not change the bound forms, apps, logic, notifications, or triggers; configure those through their own endpoints. Preserve unrelated nodes and stable keys. `blueprint` and `context` are each a full replacement, so read current state first and keep decision keys the user did not reverse. No expected-revision conflict check is exposed by this contract; coordinate concurrent writers.
 
 ## Path params
 
@@ -11,10 +11,13 @@ Use this when iterating on an existing plan after user review: change title/stat
 - `title`, `description`, `goal`
 - `status`: `planning` | `draft` | `testing` | `live` | `archived`
 - `blueprint`: full replacement of the plan JSON (same shape as create)
+- `context`: full replacement of the handoff document (same shape and limits as create). Omit it to leave the stored document unchanged. `null` or `{}` clears it.
 
 ## Validation
 
 If `blueprint` is sent, it is schema-validated and referentially validated the same way as create. Invalid node keys, missing `to` targets, unknown `node_field` aliases, or illegal actions for a node type return `400`.
+
+Sending `blueprint` copies each node's `is_starting_point` onto the binding with the same `node_key`. A binding whose node is no longer in the blueprint is stored as not a starting point. Artifact slugs and binding status stay as they are.
 
 For large or uncertain plans, dry-run first:
 
@@ -49,4 +52,4 @@ For large or uncertain plans, dry-run first:
 }
 ```
 
-After a successful blueprint update, refresh bindings if node keys changed, and re-check `GET /workflows/{slug}/graph/`.
+After a successful blueprint update, add or remove bindings when node keys were added or removed, and re-check `GET /workflows/{slug}/graph/`. The starting-point flag on an existing binding is already copied from the blueprint.

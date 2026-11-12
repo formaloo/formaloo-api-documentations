@@ -25,6 +25,7 @@ Use this when an MCP client needs to see which blueprint `node_key` values are a
         "node_key": "quiz",
         "node_type": "form",
         "artifact_slug": "kTX4WMpC",
+        "is_starting_point": true,
         "status": "built"
       }
     ]
@@ -32,4 +33,4 @@ Use this when an MCP client needs to see which blueprint `node_key` values are a
 }
 ```
 
-`artifact_slug` is the Formaloo resource slug (form, email template, PDF template, etc.) created or adopted during build.
+`artifact_slug` is the Formaloo resource slug (form, email template, PDF template, etc.) created or adopted during build. `node_key` is the plan-local blueprint key, not `artifact_slug`. `is_starting_point` matches the blueprint node with the same `node_key`.

@@ -1,4 +1,4 @@
-Creates a binding that maps a blueprint `node_key` to a built Formaloo `artifact_slug`.
+Creates a binding connecting a Workflow solution node (`node_key`) to an existing Formaloo artifact (`artifact_slug`). Binding adopts or records the resource; it does not create, move, activate, or change access to it.
 
 Use this after creating/adopting an artifact so later plan iterations can update the same resource. Bindings are what make plan → actual durable across sessions.
 
@@ -8,13 +8,14 @@ Use this after creating/adopting an artifact so later plan iterations can update
 
 ## Request fields
 
-- `node_key` (required): plan-local node key from the blueprint
+- `node_key` (required): plan-local node key from the blueprint. This is not `artifact_slug`.
 - `node_type` (required): matching node type (`form`, `email_template`, …)
 - `artifact_slug` (required): slug of the built Formaloo artifact
+- `is_starting_point` (required): must equal `is_starting_point` on the blueprint node with the same `node_key`
 - `status` (optional): `pending` | `built` | `failed` (default `pending`)
 - `error` (optional): JSON object with actionable failure details when `failed`
 
-`node_key` must be unique within the workflow (`400` if duplicated).
+`node_key` must be unique within the workflow (`400` if duplicated). A mismatch on `is_starting_point` returns `400`. A node key that is absent from the blueprint cannot be saved with `is_starting_point` true. The stored flag is the blueprint node's flag.
 
 ## Example request
 
@@ -23,6 +24,7 @@ Use this after creating/adopting an artifact so later plan iterations can update
   "node_key": "quiz",
   "node_type": "form",
   "artifact_slug": "kTX4WMpC",
+  "is_starting_point": true,
   "status": "built"
 }
 ```
@@ -39,6 +41,7 @@ Use this after creating/adopting an artifact so later plan iterations can update
       "node_key": "quiz",
       "node_type": "form",
       "artifact_slug": "kTX4WMpC",
+      "is_starting_point": true,
       "status": "built"
     }
   }

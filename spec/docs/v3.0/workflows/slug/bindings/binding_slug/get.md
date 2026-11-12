@@ -19,6 +19,7 @@ Use this when checking build status, artifact slug, or error details for a singl
       "node_key": "quiz",
       "node_type": "form",
       "artifact_slug": "kTX4WMpC",
+      "is_starting_point": true,
       "status": "built",
       "error": {}
     }
@@ -26,4 +27,4 @@ Use this when checking build status, artifact slug, or error details for a singl
 }
 ```
 
-To find a binding by `node_key`, list bindings and filter client-side, or keep the binding slug returned at create time.
+To find a binding by `node_key`, list bindings and filter client-side, or keep the binding slug returned at create time. `node_key` is the plan-local blueprint key, not `artifact_slug`. `is_starting_point` matches the blueprint node with the same `node_key`.
