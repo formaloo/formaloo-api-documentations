@@ -46,8 +46,9 @@ async function normalize(t, source) {
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.mkdir(path.join(root, "scripts"));
   await fs.mkdir(path.join(root, "spec"));
+  await fs.cp(new URL("spec/renderer-contracts", sourceRoot), path.join(root, "spec/renderer-contracts"), {recursive: true});
   await fs.mkdir(path.join(root, "artifacts", "intermediate"), { recursive: true });
-  for (const script of ["normalize-openapi.mjs", "form-answer-contract.mjs", "logic-schema-source.mjs"]) {
+  for (const script of ["normalize-openapi.mjs", "renderer-contracts.mjs", "form-answer-contract.mjs", "logic-schema-source.mjs"]) {
     await fs.copyFile(new URL(`scripts/${script}`, sourceRoot), path.join(root, "scripts", script));
   }
   for (const filename of ["public-contract.json", "integration-mapping-schemas.json", "tag-metadata.json"]) {

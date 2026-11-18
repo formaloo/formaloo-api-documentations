@@ -1,0 +1,397 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:formaloo:background-effect:1",
+  "title": "Form background effect",
+  "description": "Renderer authoring input for theme_config.background_effect. Filters require a background image; generators draw their own background. This does not change the API JSON-field replacement policy.",
+  "x-formaloo-image-input": {
+    "type": "string",
+    "pattern": "^\\s*(?:http://|https://|/|data:image/)"
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["color_overlay"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "color": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#111827"
+            },
+            "opacity": { "type": "number", "default": 0.4 },
+            "blendMode": {
+              "type": "string",
+              "enum": ["normal", "multiply", "overlay"],
+              "default": "normal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["blur"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "amount": { "type": "number", "default": 6 },
+            "tintColor": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#ffffff"
+            },
+            "tintOpacity": { "type": "number", "default": 0 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["film_grain"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "amount": { "type": "number", "default": 0.35 },
+            "size": { "type": "number", "default": 3 },
+            "monochrome": { "type": "boolean", "default": true },
+            "animated": { "type": "boolean", "default": false },
+            "blendMode": {
+              "type": "string",
+              "enum": ["overlay", "soft-light", "normal"],
+              "default": "overlay"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["halftone_dots"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "originalColors": { "type": "boolean", "default": true },
+            "colorFront": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#111827"
+            },
+            "colorBack": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#f8fafc"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["classic", "gooey", "holes", "soft"],
+              "default": "gooey"
+            },
+            "size": { "type": "number", "default": 0.4 },
+            "grid": { "type": "string", "enum": ["square", "hex"], "default": "hex" },
+            "inverted": { "type": "boolean", "default": false },
+            "radius": { "type": "number", "default": 1 },
+            "contrast": { "type": "number", "default": 0.5 },
+            "grainMixer": { "type": "number", "default": 0 },
+            "grainOverlay": { "type": "number", "default": 0 },
+            "grainSize": { "type": "number", "default": 0.5 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["fluted_glass"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "shape": {
+              "type": "string",
+              "enum": ["lines", "linesIrregular", "wave", "zigzag", "pattern"],
+              "default": "lines"
+            },
+            "size": { "type": "number", "default": 0.5 },
+            "angle": { "type": "number", "default": 0 },
+            "distortion": { "type": "number", "default": 0.5 },
+            "blur": { "type": "number", "default": 0.1 },
+            "distortionShape": {
+              "type": "string",
+              "enum": ["prism", "lens", "contour", "cascade", "flat"],
+              "default": "lens"
+            },
+            "shadows": { "type": "number", "default": 0.3 },
+            "highlights": { "type": "number", "default": 0.3 },
+            "shift": { "type": "number", "default": 0 },
+            "stretch": { "type": "number", "default": 0 },
+            "edges": { "type": "number", "default": 0 },
+            "margin": { "type": "number", "default": 0 },
+            "grainMixer": { "type": "number", "default": 0 },
+            "grainOverlay": { "type": "number", "default": 0 },
+            "colorBack": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#00000000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["lens_distortion"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "spread": { "type": "number", "default": 0.4 },
+            "angle": { "type": "number", "default": 0 },
+            "lensBulge": { "type": "number", "default": 0.2 },
+            "swirl": { "type": "number", "default": 0 },
+            "perspective": { "type": "number", "default": 0 },
+            "count": { "type": "number", "default": 8 },
+            "dispersion": { "type": "number", "default": 0.6 },
+            "dispersionColor": { "type": "number", "default": 0.5 },
+            "grainOverlay": { "type": "number", "default": 0 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "filter",
+      "properties": {
+        "type": { "type": "string", "enum": ["paper_texture"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "style": {
+              "type": "string",
+              "enum": ["smooth", "crumpled", "folded", "laid"],
+              "default": "smooth"
+            },
+            "colorPaper": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#fdfaf4"
+            },
+            "blending": { "type": "number", "default": 0.3 },
+            "roughness": { "type": "number", "default": 0.15 },
+            "fiber": { "type": "number", "default": 0.1 },
+            "folds": { "type": "number", "default": 0 },
+            "wrinkles": { "type": "number", "default": 0 },
+            "crumples": { "type": "number", "default": 0 },
+            "drops": { "type": "number", "default": 0.05 },
+            "distortion": { "type": "number", "default": 0.15 },
+            "angle": { "type": "number", "default": 45 },
+            "seed": { "type": "number", "default": 1 },
+            "colorShadow": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#3f3a33"
+            },
+            "clip": { "type": "boolean", "default": true }
+          },
+          "x-formaloo-presets": [
+            {
+              "selector": "style",
+              "values": {
+                "smooth": {
+                  "roughness": 0.15,
+                  "fiber": 0.1,
+                  "folds": 0,
+                  "wrinkles": 0,
+                  "crumples": 0,
+                  "drops": 0.05
+                },
+                "crumpled": {
+                  "roughness": 0.3,
+                  "fiber": 0.2,
+                  "folds": 0,
+                  "wrinkles": 0.6,
+                  "crumples": 0.5,
+                  "drops": 0.15
+                },
+                "folded": {
+                  "roughness": 0.2,
+                  "fiber": 0.15,
+                  "folds": 0.7,
+                  "wrinkles": 0.1,
+                  "crumples": 0,
+                  "drops": 0.1
+                },
+                "laid": {
+                  "roughness": 0.4,
+                  "fiber": 0.35,
+                  "folds": 0,
+                  "wrinkles": 0,
+                  "crumples": 0,
+                  "drops": 0.05
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "generator",
+      "properties": {
+        "type": { "type": "string", "enum": ["mesh_gradient"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "colors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$"
+              },
+              "default": ["#8b5cf6", "#f472b6", "#38bdf8"]
+            },
+            "speed": { "type": "number", "default": 0.5 },
+            "distortion": { "type": "number", "default": 0.6 },
+            "swirl": { "type": "number", "default": 0.3 },
+            "grainMixer": { "type": "number", "default": 0 },
+            "grainOverlay": { "type": "number", "default": 0 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "generator",
+      "properties": {
+        "type": { "type": "string", "enum": ["simplex_noise"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "colors": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$"
+              },
+              "default": ["#06b6d4", "#3b82f6", "#8b5cf6"]
+            },
+            "speed": { "type": "number", "default": 1 },
+            "softness": { "type": "number", "default": 0.6 },
+            "stepsPerColor": { "type": "number", "default": 2 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "x-formaloo-effect-kind": "generator",
+      "properties": {
+        "type": { "type": "string", "enum": ["dot_grid"] },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scale": { "type": "number", "default": 1 },
+            "rotation": { "type": "number", "default": 0 },
+            "offsetX": { "type": "number", "default": 0 },
+            "offsetY": { "type": "number", "default": 0 },
+            "colorBack": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#f1f5f9"
+            },
+            "colorFill": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#111827"
+            },
+            "shape": {
+              "type": "string",
+              "enum": ["circle", "diamond", "square", "triangle"],
+              "default": "circle"
+            },
+            "size": { "type": "number", "default": 10 },
+            "gapX": { "type": "number", "default": 32 },
+            "gapY": { "type": "number", "default": 32 },
+            "colorStroke": {
+              "type": "string",
+              "pattern": "^\\s*(#[0-9a-fA-F]{3,8}|([rR][gG][bB]|[hH][sS][lL])[aA]?\\([0-9a-zA-Z\\s.,%/-]+\\))\\s*$",
+              "default": "#000000"
+            },
+            "strokeWidth": { "type": "number", "default": 0 },
+            "sizeRange": { "type": "number", "default": 0 },
+            "opacityRange": { "type": "number", "default": 0 }
+          }
+        }
+      }
+    },
+    { "type": "null" }
+  ]
+}
