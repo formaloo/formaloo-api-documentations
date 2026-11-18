@@ -1,3 +1,4 @@
+import {attachRendererContracts} from "./renderer-contracts.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { normalizeFormAnswerProperties } from "./form-answer-contract.mjs";
@@ -2914,6 +2915,8 @@ pruneUnusedSchemas();
 const preservedLogicErrors = validateLogicSourceContract(spec, sourceLogicSpec);
 if (preservedLogicErrors.length) throw new Error(preservedLogicErrors.join("\n"));
 
+// Attach after schema conversion: this opaque extension contains JSON Schema, not OpenAPI schemas.
+await attachRendererContracts(spec);
 await fs.mkdir(intermediateDir, { recursive: true });
 await fs.writeFile(normalizedSpecPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
 

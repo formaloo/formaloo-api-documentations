@@ -47,8 +47,9 @@ async function publish(t, source) {
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   await fs.mkdir(path.join(dir, 'scripts'));
   await fs.mkdir(path.join(dir, 'spec'));
+  await fs.cp(new URL("spec/renderer-contracts", rootUrl), path.join(dir, "spec/renderer-contracts"), {recursive: true});
   await fs.mkdir(path.join(dir, 'artifacts/intermediate'), { recursive: true });
-  for (const script of ['normalize-openapi.mjs', 'build-mcp-openapi.mjs', 'logic-schema-source.mjs', 'form-answer-contract.mjs', 'request-context-contract.mjs']) {
+  for (const script of ['normalize-openapi.mjs', 'renderer-contracts.mjs', 'build-mcp-openapi.mjs', 'logic-schema-source.mjs', 'form-answer-contract.mjs', 'request-context-contract.mjs']) {
     await fs.copyFile(new URL(`scripts/${script}`, rootUrl), path.join(dir, 'scripts', script));
   }
   for (const filename of ['public-contract.json', 'integration-mapping-schemas.json', 'mcp-openapi-settings.json']) {
@@ -67,6 +68,8 @@ test('future source semantics, recursion and guide survive normalization and MCP
   const { normalized, mcp } = await publish(t, fixture);
   for (const artifact of [normalized, mcp]) {
     assert.deepEqual(validateLogicSourceContract(artifact, fixture), []);
+    const owner = JSON.parse(await fs.readFile(new URL('../spec/renderer-contracts/background-effect.schema.json', import.meta.url)));
+    assert.deepEqual(artifact['x-formaloo-renderer-contracts'].background_effect.schema, owner);
     const body = artifact.paths['/v3.0/forms/{slug}/'].patch.requestBody.content['application/json'].schema;
     assert.equal(body.$ref, '#/components/schemas/FormUpdateRequest');
     assert.equal(artifact.components.schemas.FormalooFormLogic.description, fixture.components.schemas.FormalooFormLogic.description);
