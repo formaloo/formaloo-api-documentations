@@ -1,1 +1,0 @@
-Retrieves full details for a board the user can access, including the caller's access level and board configuration. Use this as the primary endpoint for opening an app or inspecting its editable settings.

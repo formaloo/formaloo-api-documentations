@@ -1,1 +1,0 @@
-Registers a custom SMTP email server for the active business. Use this when the workspace wants outgoing emails to be sent through its own domain or mail provider instead of the default Formaloo sender.

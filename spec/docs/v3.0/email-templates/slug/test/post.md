@@ -1,1 +1,0 @@
-Sends a test email using the selected template configuration. Use this before enabling a template in a live workflow to verify rendering, subject, sender setup, and deliverability to a chosen test recipient.

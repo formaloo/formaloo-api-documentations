@@ -1,1 +1,0 @@
-Searches boards, folders, and forms in the active workspace and returns a small grouped result set. Use this for global search, autocomplete, or quick navigation where the client does not yet know the exact resource type.
