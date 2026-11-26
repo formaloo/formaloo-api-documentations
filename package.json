@@ -5,7 +5,6 @@
     "test": "node --test tests/*.test.mjs",
     "build:docs": "./generate.sh",
     "fetch-specs": "node ./scripts/fetch-specs.mjs",
-    "prepare-doc-stubs": "node ./scripts/prepare-doc-stubs.mjs",
     "strip-put-operations": "node ./scripts/strip-put-operations.mjs",
     "normalize-spec": "node ./scripts/normalize-openapi.mjs",
     "build:mcp-spec": "node ./scripts/build-mcp-openapi.mjs",

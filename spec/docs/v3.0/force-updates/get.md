@@ -1,1 +1,0 @@
-Returns force-update notices for the current application, including update messages and platform/version constraints. Use this when a client application needs to decide whether the user must upgrade before continuing.

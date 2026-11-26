@@ -70,7 +70,7 @@ Target `dev` first for new documentation or generated-spec improvements unless t
 
 ### MCP-Focused OpenAPI Guidance
 
-The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). Endpoint description Markdown files are shared with the public build and keep resolving from `spec/docs/v3.0/`; `scripts/fetch-specs.mjs` rewrites any `docs/mcp-1.0/` references in the fetched mcp-1.0 contract to `docs/v3.0/`, so no separate Markdown set exists for MCP. The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
+The MCP artifact (`openapi-v3.0.mcp.yaml`) is built from the formz service contract fetched with `?version=mcp-1.0`, merged with the other services (which stay on `?version=3.0`). The public artifact (`openapi-v3.0.yaml`) continues to use the formz `?version=3.0` contract.
 
 While the upstream `mcp-1.0` contract is being rolled out, `scripts/backfill-mcp-operations.mjs` copies validator-required operations that are missing from the `mcp-1.0` merge (for example `formsRetrieve`, `formsPartialUpdate`, `formsDestroy`, `fieldsCreate`, `fieldsRetrieve`, `fieldsDestroy`, `fieldsPartialUpdate`) from the formz v3.0 bundle and logs each backfilled operation. The step is a no-op once the upstream contract exposes them; remove the script when the rollout is complete.
 
@@ -85,29 +85,9 @@ The MCP artifact should stay accurate for direct API users and easy to use for M
 - For high-value MCP operations, include clear summaries, examples, result paths, pagination notes, and `x-formaloo-mcp` metadata so agents can choose the right operation without guessing from raw operation IDs.
 - Magic AI endpoints support Formaloo dashboard/product AI experiences. Document them where applicable, but curate MCP/CLI usage case by case. Prefer stable resource contracts such as forms, fields, themes, rows, form-display submission, and file/import flows unless a Magic endpoint has a clear integration value, such as Magic Import.
 
-### Adding Manual Descriptions
+### Operation Descriptions
 
-Each operation can have one Markdown file. That file is inlined into the generated spec as the operation description. The OpenAPI schema already documents parameters, headers, field names, types, and request/response structure. The Markdown file is for human/agent guidance that the schema cannot express.
-
-#### File location
-
-Store files under `spec/docs/v3.0/`. Mirror the API path as directories; use the lowercase HTTP method as the filename. Path parameters are the parameter name without braces.
-
-| Endpoint | File |
-| --- | --- |
-| `DELETE /v3.0/boards/{boardSlug}/` | `spec/docs/v3.0/boards/board_slug/delete.md` |
-| `PATCH /v3.0/forms/{slug}/` | `spec/docs/v3.0/forms/slug/patch.md` |
-| `GET /v3.0/forms/` | `spec/docs/v3.0/forms/get.md` |
-
-One file per HTTP method on that path. PUT is stripped from the public spec; do not add `put.md`.
-
-To create empty placeholder files for operations that the fetched specs already reference, run:
-
-```bash
-npm run prepare-doc-stubs
-```
-
-`./generate.sh` also prepares these paths during the build, but it removes temporary stubs before exiting so the worktree stays clean. Fill in the file that matches the endpoint, then keep that file in git.
+Operation descriptions come from the source services, not from this repository. Each service sets them with drf-spectacular `extend_schema(description=...)` on the endpoint: inline for short text, or `api_doc('<path>/<method>.md')` for a Markdown file under that service's `docs/api/v3.0/`. This repository does not store or inject descriptions; to add or fix one, change the owning service.
 
 #### What to include
 
@@ -116,8 +96,6 @@ Write what a caller needs to use the endpoint correctly, not a restatement of th
 - **What it does.** One or two sentences in product language. Mention UI names when they differ from API names (for example, a board is an app in the Formaloo UI).
 - **Considerations.** Defaults, side effects, destructive or irreversible behavior, flags that change scope, confirmation requirements, related endpoints to prefer instead, and async or lifecycle notes when the `200` does not mean the work is finished.
 - **Request and response examples.** Short, realistic JSON (or HTTP) snippets for the non-obvious cases: a success body, a notable error, or a request that shows a flag or payload shape the schema does not make obvious.
-
-Reference example: `spec/docs/v3.0/boards/board_slug/delete.md`. It states that the call deletes a board/app, that connected forms are kept unless `delete_forms=true`, shows that flag as a query string and as a body, includes a `200` envelope and a `400` error, and notes that form cleanup is queued in the background.
 
 #### What not to include
 
@@ -128,7 +106,7 @@ Do not duplicate the auto-generated OpenAPI contract. Leave these out of the Mar
 - Auth headers, path parameters, query parameter inventories, or status-code catalogs that already appear on the operation
 - Exhaustive copies of resource objects
 
-A snippet that shows a payload shape is fine. A field-by-field spec is not. If the generated schema is wrong, fix it in the source service contract, not by documenting the fields here.
+A snippet that shows a payload shape is fine. A field-by-field spec is not. If the generated schema is wrong, fix it in the source service contract.
 
 ### Version Introductions
 

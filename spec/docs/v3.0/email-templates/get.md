@@ -1,1 +1,0 @@
-Lists reusable business email templates that are not campaign instances. Use this when an agent needs to show, search, or choose notification and autoresponder templates available in the active workspace.

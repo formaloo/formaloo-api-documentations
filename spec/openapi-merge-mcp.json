@@ -17,6 +17,9 @@
     },
     {
       "inputFile": "./ai-bundled.json"
+    },
+    {
+      "inputFile": "./agent-builder-bundled.json"
     }
   ],
   "output": "../artifacts/intermediate/openapi-merged.mcp.raw.json"

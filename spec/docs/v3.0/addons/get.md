@@ -1,1 +1,0 @@
-Lists enabled add-ons. Use this to show the catalog of add-on capabilities that can be purchased or used with plans, including each add-on's title, description, type, unit, and access-level availability.

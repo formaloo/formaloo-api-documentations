@@ -1,1 +1,0 @@
-Retrieves the specified profile.
