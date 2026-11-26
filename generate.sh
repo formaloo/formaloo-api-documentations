@@ -57,6 +57,7 @@ bundle_spec "$SPEC_DIR/formz-mcp.yaml" "$SPEC_DIR/formz-mcp-bundled.json"
 bundle_spec "$SPEC_DIR/authentication.yaml" "$SPEC_DIR/authentication-bundled.json"
 bundle_spec "$SPEC_DIR/storage.yaml" "$SPEC_DIR/storage-bundled.json"
 bundle_spec "$SPEC_DIR/ai.yaml" "$SPEC_DIR/ai-bundled.json"
+bundle_spec "$SPEC_DIR/agent-builder.yaml" "$SPEC_DIR/agent-builder-bundled.json"
 bundle_spec "$SPEC_DIR/v3.0.yaml" "$SPEC_DIR/v3.0-bundled.json"
 
 echo "Preserving public source security schemes and inheritance..."

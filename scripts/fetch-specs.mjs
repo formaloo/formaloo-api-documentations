@@ -13,7 +13,8 @@ const sources = staging
       "formz-mcp": "https://api.staging.formaloo.com/docs/openapi/yaml/?version=mcp-1.0",
       authentication: "https://auth.staging.formaloo.com/docs/openapi/yaml?version=3.0",
       storage: "https://storage.staging.formaloo.com/docs/openapi/yaml/?version=3.0",
-      ai: "https://ai.staging.formaloo.com/docs/openapi/yaml/?version=3.0"
+      ai: "https://ai.staging.formaloo.com/docs/openapi/yaml/?version=3.0",
+      "agent-builder": "https://noform-staging.formaloo.com/docs/openapi/json"
     }
   : {
       icas: "https://id.formaloo.com/docs/openapi/yaml/?version=3.0",
@@ -21,7 +22,8 @@ const sources = staging
       "formz-mcp": "https://api.formaloo.me/docs/openapi/yaml/?version=mcp-1.0",
       authentication: "https://auth.formaloo.me/docs/openapi/yaml?version=3.0",
       storage: "https://storage.formaloo.me/docs/openapi/yaml/?version=3.0",
-      ai: "https://ai-api.formaloo.co/docs/openapi/yaml/?version=3.0"
+      ai: "https://ai-api.formaloo.co/docs/openapi/yaml/?version=3.0",
+      "agent-builder": "https://agent-nf.formaloo.me/docs/openapi/json"
     };
 
 await fs.mkdir(specDir, { recursive: true });

@@ -238,5 +238,9 @@
   "business-engines": {
     "displayName": "Business Engines",
     "description": "Create, update, test, and remove a workspace's own AI engines. Credentials stay write-only."
+  },
+  "intake-agents": {
+    "displayName": "Intake Agents",
+    "description": "Configure the AI agent that collects a form's responses in conversation over email and WhatsApp."
   }
 }

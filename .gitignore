@@ -3,6 +3,7 @@ spec/crm*
 spec/storage*
 spec/icas*
 spec/ai*
+spec/agent-builder*
 spec/authentication*
 spec/*bundled.*
 openapi-v*

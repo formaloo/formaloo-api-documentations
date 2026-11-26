@@ -80,7 +80,8 @@
     ],
     "services": [
       "authentication",
-      "ai"
+      "ai",
+      "agent-builder"
     ],
     "pathPrefixes": [
       "/social-auth/",
